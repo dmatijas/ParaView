@@ -55,6 +55,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QDebug>
 #include <QFileInfo>
 
+#ifdef VTK_USE_GL2PS
+#include "vtkGL2PSExporter.h"
+#include "vtkRenderWindow.h"
+#include "pqRenderView.h"
+#include "QVTKWidget.h"
+#endif
+
 //-----------------------------------------------------------------------------
 pqSaveScreenshotReaction::pqSaveScreenshotReaction(QAction* parentObject)
   : Superclass(parentObject)
@@ -121,6 +128,17 @@ void pqSaveScreenshotReaction::saveScreenshot()
   filters += ";;PPM image (*.ppm)";
   filters += ";;JPG image (*.jpg)";
   filters += ";;PDF file (*.pdf)";
+#ifdef VTK_USE_GL2PS
+  const QString type (view->getViewType());
+  // Reason for this limitation to RenderView is that class vtkExporter
+  // only supports RenderView objects.
+  if (type == pqRenderView::renderViewType())
+    {
+    filters += ";;Postscript file (*.ps)";
+    filters += ";;Encapsulated Postscript file (*.eps)";
+    filters += ";;Scalable Vector Graphics file (*.svg)";
+    }
+#endif
   pqFileDialog file_dialog(NULL,
     pqCoreUtilities::mainWidget(),
     tr("Save Screenshot:"), QString(), filters);
@@ -201,7 +219,98 @@ void pqSaveScreenshotReaction::saveScreenshot(
     }
   else
     {
+#ifdef VTK_USE_GL2PS
+    // (Code does not respect magnification requests, but that does not make
+    //  a difference as increasing magnification does not improve
+    //  rendering resolution in ParaView currently.)
+
+    QFileInfo fileInfo = QFileInfo( filename );
+    if (fileInfo.suffix() == "ps" || fileInfo.suffix() == "eps" || fileInfo.suffix() == "svg")
+      {
+      QString filePsExporter (filename);
+      const QString type (view->getViewType());
+
+      // Reason for this limitation to RenderView is that class vtkExporter - the superclass
+      // of vtkGL2PSExporter and the underlying library GL2PS - only supports RenderView objects.
+      if (type != pqRenderView::renderViewType())
+        {
+        qCritical() << "Vector graphics output only supported for RenderView objects (= 2D/3D views).";
+        return;
+        }
+
+      pqRenderView* const render_module = qobject_cast<pqRenderView*>(view);
+      if(!render_module)
+        {
+        qCritical() << "Cannnot save image. No active render module.";
+        return;
+        }
+
+      QVTKWidget* const widget =
+        qobject_cast<QVTKWidget*>(render_module->getWidget());
+      if (!widget)
+        {
+        qCritical() << "Cannnot save image. No widget available.";
+        return;
+        }
+
+      vtkSmartPointer< vtkGL2PSExporter > psExporter( vtkGL2PSExporter::New() );
+
+      // Pass current view to GL2PS
+      // Simple variant
+      psExporter->SetRenderWindow(widget->GetRenderWindow());
+
+      // More complex variant:
+      // enforce maximal smoothing. Not sure whether this makes a difference or
+      // is needed at all, though.
+//    vtkRenderWindow *smoothing = vtkRenderWindow::New();
+//    smoothing = widget->GetRenderWindow();
+//    smoothing->LineSmoothingOn();
+//    smoothing->PointSmoothingOn();
+//    smoothing->PolygonSmoothingOn();
+//    psExporter->SetRenderWindow(smoothing);
+
+      // Deny generation of mixed vector/raster images.
+      // (All the 3D props in the scene would be written as a raster image
+      //  and all 2D actors will be written as vector graphic primitives.
+      //  This makes it possible to handle transparency and complex 3D scenes.)
+      psExporter->Write3DPropsAsRasterImageOff();
+
+      // Treat filename, it already contains a suffix which needs to be cut off
+      // because psExporter->Write will automatically append the suitable suffix.
+      if( filePsExporter.toLower().endsWith( ".ps" ) )
+        {
+        filePsExporter.chop( 3 );
+        psExporter->SetFileFormatToPS();
+        }
+      if( filePsExporter.toLower().endsWith( ".eps" ) )
+        {
+        filePsExporter.chop( 4 );
+        psExporter->SetFileFormatToEPS();
+        }
+      if( filePsExporter.toLower().endsWith( ".svg" ) )
+        {
+        filePsExporter.chop( 4 );
+        psExporter->SetFileFormatToSVG();
+        }
+      psExporter->SetFilePrefix( filePsExporter.toStdString().c_str() );
+
+      psExporter->CompressOff();
+      psExporter->DrawBackgroundOn();
+      psExporter->TextOn();
+      psExporter->PS3ShadingOn();
+      psExporter->OcclusionCullOn();
+      psExporter->SetSortToBSP();
+
+      psExporter->Write();
+      psExporter->Delete();
+      } // end suffix = ps|eps|svg
+    else
+      {
+#endif
     pqImageUtil::saveImage(img, filename, quality);
+#ifdef VTK_USE_GL2PS
+      }
+#endif
     }
 
 #ifdef PARAVIEW_ENABLE_PYTHON

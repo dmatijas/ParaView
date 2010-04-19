@@ -37,6 +37,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #cmakedefine PARAVIEW_BUILD_SHARED_LIBS
 #endif
 
+// Indicates that GL2PS support is enabled in VTK.
+#cmakedefine VTK_USE_GL2PS
+
 #if defined(WIN32) && defined(PARAVIEW_BUILD_SHARED_LIBS)
 # if defined(pqApplicationComponents_EXPORTS)
 #   define PQAPPLICATIONCOMPONENTS_EXPORT __declspec(dllexport)
