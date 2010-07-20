@@ -23,7 +23,7 @@
       <!-- End of StreamingViewBase -->
     </Proxy>
 
-    <StreamingViewProxy name="StreamingRenderView" 
+    <StreamingViewProxy name="StreamingRenderView"
       base_proxygroup="views" base_proxyname="StreamingViewBase">
       <Documentation>
         A render view that streams to reduce memory footprint.
@@ -91,14 +91,14 @@
       <!-- End of StreamingRenderView -->
     </StreamingViewProxy>
 
-    <StreamingViewProxy name="StreamingClientServerRenderView" 
+    <StreamingViewProxy name="StreamingClientServerRenderView"
       base_proxygroup="views" base_proxyname="StreamingViewBase">
       <Documentation>
         A render view that streams to reduce memory footprint.
       </Documentation>
 
       <SubProxy>
-        <Proxy name="RootView" 
+        <Proxy name="RootView"
                proxygroup="views" proxyname="ClientServerRenderView">
         </Proxy>
         <ExposedProperties>
@@ -161,14 +161,14 @@
       <!-- End of StreamingClientServerRenderView -->
     </StreamingViewProxy>
 
-    <StreamingViewProxy name="StreamingIceTDesktopRenderView" 
+    <StreamingViewProxy name="StreamingIceTDesktopRenderView"
       base_proxygroup="views" base_proxyname="StreamingViewBase">
       <Documentation>
         A render view that streams to reduce memory footprint.
       </Documentation>
 
       <SubProxy>
-        <Proxy name="RootView" 
+        <Proxy name="RootView"
                proxygroup="views" proxyname="IceTDesktopRenderView">
         </Proxy>
         <ExposedProperties>
@@ -241,7 +241,7 @@
 
   <ProxyGroup name="representations">
     <StreamingRepresentation name="StreamingGeometryRepresentation"
-      base_proxygroup="representations" 
+      base_proxygroup="representations"
       base_proxyname="GeometryRepresentation">
       <Option representation="0" subproxy="SurfaceRepresentation" value="0" />
       <Option representation="1" subproxy="SurfaceRepresentation" value="1" />
@@ -276,16 +276,16 @@
 
   <ProxyGroup name="strategies">
     <StreamingSerialStrategy name="StreamingPolyDataStrategy"
-      base_proxygroup="strategies" 
+      base_proxygroup="strategies"
       base_proxyname="PolyDataStrategy">
 
       <SubProxy>
-        <Proxy name="ViewSorter" 
+        <Proxy name="ViewSorter"
           proxygroup="filters" proxyname="ViewSorter" />
       </SubProxy>
 
       <SubProxy>
-        <Proxy name="PieceCache" 
+        <Proxy name="PieceCache"
           proxygroup="filters" proxyname="PieceCache" />
       </SubProxy>
 
@@ -300,17 +300,24 @@
     </StreamingSerialStrategy>
 
     <StreamingParallelStrategy name="StreamingParallelStrategy"
-      base_proxygroup="strategies" 
+      base_proxygroup="strategies"
       base_proxyname="PolyDataParallelStrategy">
 
       <SubProxy>
-        <Proxy name="ViewSorter" 
-          proxygroup="filters" proxyname="ViewSorter" />
+        <Proxy name="PieceCache"
+          proxygroup="filters" proxyname="PieceCache" />
       </SubProxy>
 
       <SubProxy>
-        <Proxy name="PieceCache" 
-          proxygroup="filters" proxyname="PieceCache" />
+        <Proxy name="Collect"
+          override="1"
+          proxygroup="filters" proxyname="StreamingMoveData">
+        </Proxy>
+      </SubProxy>
+
+      <SubProxy>
+        <Proxy name="ParallelPieceCache"
+          proxygroup="filters" proxyname="ParallelPieceCache" />
       </SubProxy>
 
       <SubProxy>
@@ -321,14 +328,21 @@
       </SubProxy>
 
       <SubProxy>
-        <Proxy name="PostCollectUpdateSuppressor" 
+        <Proxy name="Collect"
+          override="1"
+          proxygroup="filters" proxyname="StreamingMoveData">
+        </Proxy>
+      </SubProxy>
+
+      <SubProxy>
+        <Proxy name="PostCollectUpdateSuppressor"
           override="1"
           proxygroup="filters" proxyname="StreamingUpdateSuppressor">
         </Proxy>
       </SubProxy>
 
       <SubProxy>
-        <Proxy name="PostDistributorSuppressor" 
+        <Proxy name="PostDistributorSuppressor"
           override="1"
           proxygroup="filters" proxyname="StreamingUpdateSuppressor">
         </Proxy>
@@ -344,13 +358,13 @@
 
   <ProxyGroup name="sources">
 
-   <SourceProxy name="StridedReader" 
+   <SourceProxy name="StridedReader"
                 class="vtkRawStridedReader"
                 label="Strided image reader">
      <Documentation
-       short_help="Read raw regular rectilinear grid data from a file." 
+       short_help="Read raw regular rectilinear grid data from a file."
        long_help="Read raw regular rectilinear grid data from a file. The dimensions and type of the data must be specified.">
-       The Image reader reads raw regular rectilinear grid (image/volume) data from a file. Because no metadata is provided, the user must specify information about the size, spacing, dimensionality, etc. about the dataset. 
+       The Image reader reads raw regular rectilinear grid (image/volume) data from a file. Because no metadata is provided, the user must specify information about the size, spacing, dimensionality, etc. about the dataset.
      </Documentation>
 
      <Hints>
@@ -358,7 +372,7 @@
           file_description="Raw float binary image data file" />
      </Hints>
 
-      <StringVectorProperty 
+      <StringVectorProperty
          name="FileName"
          command="SetFilename"
          animateable="0"
@@ -391,10 +405,10 @@
         </Documentation>
       </DoubleVectorProperty>
 
-     <IntVectorProperty 
+     <IntVectorProperty
         name="WholeExtent"
         command="SetWholeExtent"
-        number_of_elements="6" 
+        number_of_elements="6"
         default_values="0 359 0 239 0 4" >
        <IntRangeDomain name="range"/>
        <Documentation>
@@ -402,30 +416,30 @@
        </Documentation>
      </IntVectorProperty>
 
-     <IntVectorProperty 
+     <IntVectorProperty
         name="Stride"
         command="SetStride"
-        number_of_elements="3" 
+        number_of_elements="3"
         default_values="1 1 1" >
        <Documentation>
          This property specifies the skip dimension.
        </Documentation>
      </IntVectorProperty>
 
-     <IntVectorProperty 
+     <IntVectorProperty
         name="BlockReadSize"
         command="SetBlockReadSize"
-        number_of_elements="1" 
+        number_of_elements="1"
         default_values="4000" >
        <Documentation>
          This property specifies the skip dimension.
        </Documentation>
      </IntVectorProperty>
 
-     <IntVectorProperty 
+     <IntVectorProperty
         name="SwapEndian"
         command="SwapDataByteOrder"
-        number_of_elements="1" 
+        number_of_elements="1"
         default_values="0" >
        <BooleanDomain name="bool" />
        <Documentation>
@@ -441,10 +455,10 @@
 
   <!-- ================================================================= -->
   <ProxyGroup name="filters">
-    <UpdateSuppressorProxy 
-      name="StreamingUpdateSuppressor" 
+    <UpdateSuppressorProxy
+      name="StreamingUpdateSuppressor"
       class="vtkStreamingUpdateSuppressor"
-      base_proxygroup="filters" 
+      base_proxygroup="filters"
       base_proxyname="UpdateSuppressor2"
       executive="vtkUpdateSuppressorPipeline">
 
@@ -481,12 +495,70 @@
         <SimpleIntInformationHelper/>
       </IntVectorProperty>
 
+      <ProxyProperty name="PieceCacheFilter" command="SetPieceCacheFilter">
+        <ProxyGroupDomain name="groups">
+          <Group name="filters"/>
+        </ProxyGroupDomain>
+      </ProxyProperty>
+
+      <ProxyProperty name="ParallelPieceCacheFilter" command="SetParallelPieceCacheFilter">
+        <ProxyGroupDomain name="groups">
+          <Group name="filters"/>
+        </ProxyGroupDomain>
+      </ProxyProperty>
+
       <DoubleVectorProperty
-        name="SerializedList"
-        command="GetSerializedPriorities"
-        information_only="1">
-        <DoubleArrayInformationHelper/>
+        name="SetCamera"
+        command="SetCameraState"
+        argument_is_array="1"
+        number_of_elements="9"
+        default_values="0.0 0.0 -1.0 0.0 1.0 0.0 0.0 0.0 0.0" >
+        <Documentation>
+          Let it know how the camera is situated.
+        </Documentation>
       </DoubleVectorProperty>
+
+      <DoubleVectorProperty
+        name="SetFrustum"
+        command="SetFrustum"
+        argument_is_array="1"
+        number_of_elements="32"
+        default_values="0.0 0.0 0.0 1.0 0.0 0.0 1.0 1.0 0.0 1.0 0.0 1.0 0.0 1.0 1.0 1.0 1.0 0.0 0.0 1.0 1.0 0.0 1.0 1.0 1.0 1.0 0.0 1.0 1.0 1.0 1.0 1.0" >
+        <Documentation>
+          Let it know what the view frustum is.
+        </Documentation>
+      </DoubleVectorProperty>
+
+      <Property name="Serialize" command="SerializeLists" />
+
+      <StringVectorProperty
+        name="SerializedLists"
+        command="GetSerializedLists"
+        information_only="1">
+        <SimpleStringInformationHelper/>
+      </StringVectorProperty>
+
+      <StringVectorProperty
+        name="UnSerialize"
+        command="UnSerializeLists"
+        number_of_elements="1">
+      </StringVectorProperty>
+
+      <ProxyProperty name="AddPieceList" command="AddPieceList">
+        <ProxyGroupDomain name="groups">
+          <Group name="helpers"/>
+        </ProxyGroupDomain>
+      </ProxyProperty>
+
+      <Property name="PrintPieceLists" command="PrintPieceLists" />
+      <Property name="PrintSerialized" command="PrintSerializedLists" />
+      <Property name="PrintMe" command="PrintMe" />
+
+      <ProxyProperty name="CopyBuddy" command="CopyBuddy">
+        <ProxyGroupDomain name="groups">
+          <Group name="helpers"/>
+        </ProxyGroupDomain>
+      </ProxyProperty>
 
       <!-- End StreamingUpdateSuppressor -->
     </UpdateSuppressorProxy>
@@ -563,8 +635,45 @@
       <!-- End of PieceCacheFilter -->
    </SourceProxy>
 
+    <SourceProxy name="StreamingMoveData" class="vtkStreamingMoveData"
+      base_proxygroup="filters"
+      base_proxyname="MPIMoveData">
+
+      <!-- End of StreamingMoveData -->
+    </SourceProxy>
+
+
+    <SourceProxy name="ParallelPieceCache" class="vtkParallelPieceCacheFilter"
+      executive="vtkParallelPieceCacheExecutive">
+
+      <Documentation>
+        A client side cache for all server side generated data objects.
+      </Documentation>
+
+      <InputProperty name="Input"
+         command="SetInputConnection">
+       <DataTypeDomain name="input_type">
+         <DataType value="vtkMultiPieceDataSet"/>
+       </DataTypeDomain>
+       <Documentation>
+         The input which is cached and passed through
+       </Documentation>
+      </InputProperty>
+
+      <Property name="MakeDummyList" command="MakeDummyList" />
+
+      <IntVectorProperty
+        name="HasRequestedPieces"
+        command="HasRequestedPieces"
+        information_only="1">
+        <SimpleIntInformationHelper/>
+      </IntVectorProperty>
+
+      <!-- End of ParallelPieceCacheFilter -->
+   </SourceProxy>
+
     <!-- End Filters -->
-  </ProxyGroup> 
+  </ProxyGroup>
 
   <!-- ================================================================= -->
 
@@ -592,7 +701,7 @@
         command="SetEnableStreamMessages"
         immediate_update="1"
         number_of_elements="1"
-        information_property="EnableStreamMessagesInfo" 
+        information_property="EnableStreamMessagesInfo"
         default_values="0">
         <BooleanDomain name="bool"/>
         <Documentation>
@@ -651,7 +760,20 @@
       <!-- End of StreamingOptions -->
     </StreamingOptionsProxy>
 
+    <Proxy name="PieceList" class="vtkPieceList">
+      <Property name="Print" command="Print" />
+      <Property name="Clear" command="Clear" />
+      <Property name= "Serialize" command = "Serialize" />
+      <Property name="DummyFill" command="DummyFill" />
+      <Property name="PrintSerialized" command="PrintSerializedList" />
+      <ProxyProperty name="CopyBuddy" command="CopyBuddy">
+        <ProxyGroupDomain name="groups">
+          <Group name="helpers" />
+        </ProxyGroupDomain>
+      </ProxyProperty>
+    </Proxy>
+
     <!-- End helpers -->
-  </ProxyGroup> 
+  </ProxyGroup>
 
 </ServerManagerConfiguration>

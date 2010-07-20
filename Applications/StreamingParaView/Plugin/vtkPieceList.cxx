@@ -3,6 +3,18 @@
 #include "vtkPiece.h"
 #include "vtkstd/vector"
 #include "vtkstd/algorithm"
+#include <vtksys/ios/sstream>
+#include "vtkStreamingOptions.h"
+#include <string.h>
+#include <sstream>
+#include <iostream>
+
+#define LOG(arg)\
+  {\
+  std::ostringstream stream;\
+  stream << arg;\
+  vtkStreamingOptions::Log(stream.str().c_str());\
+  }
 
 vtkStandardNewMacro(vtkPieceList);
 
@@ -22,17 +34,17 @@ public:
     delete[] this->SerializeBuffer;
     }
   }
-  vtkstd::vector<vtkPiece *> Pieces;
-  double *SerializeBuffer;
+  vtkstd::vector<vtkPiece> Pieces;
+  char *SerializeBuffer;
   int BufferSize;
 };
 
-class vtkPieceListByPriority 
+class vtkPieceListByPriority
 {
 public:
-  bool operator() (vtkPiece *one, vtkPiece *two)
+  bool operator() (vtkPiece one, vtkPiece two)
   {
-  return one->ComparePriority(two);
+  return one.ComparePriority(two);
   }
 };
 
@@ -58,20 +70,30 @@ void vtkPieceList::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-void vtkPieceList::AddPiece(vtkPiece *piece)
+void vtkPieceList::AddPiece(vtkPiece piece)
 {
   this->Internals->Pieces.push_back(piece);
-  piece->Register(this);
 }
 
 //----------------------------------------------------------------------------
-vtkPiece *vtkPieceList::GetPiece(int n)
+vtkPiece vtkPieceList::GetPiece(int n)
 {
   if (this->Internals->Pieces.size() > (unsigned int)n)
     {
     return this->Internals->Pieces[n];
     }
-  return NULL;
+  vtkPiece p;
+  p.SetPiece(-1);
+  return p;
+}
+
+//----------------------------------------------------------------------------
+void vtkPieceList::SetPiece(int n, vtkPiece other)
+{
+  if (this->Internals->Pieces.size() > (unsigned int)n)
+    {
+    this->Internals->Pieces[n] = other;
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -79,18 +101,21 @@ void vtkPieceList::RemovePiece(int n)
 {
   if (this->Internals->Pieces.size() > (unsigned int)n)
     {
-    this->Internals->Pieces[n]->UnRegister(this);
     this->Internals->Pieces.erase(this->Internals->Pieces.begin()+n);
     }
+}
+
+//------------------------------------------------------------------------------
+vtkPiece vtkPieceList::PopPiece(int n /*= 0*/)
+{
+  vtkPiece p = this->GetPiece(n);
+  this->RemovePiece(n);
+  return p;
 }
 
 //----------------------------------------------------------------------------
 void vtkPieceList::Clear()
 {
-  for (unsigned int i = 0; i < this->Internals->Pieces.size(); i++)
-    {
-    this->Internals->Pieces[i]->UnRegister(this);
-    }  
   this->Internals->Pieces.clear();
 }
 
@@ -106,7 +131,7 @@ int vtkPieceList::GetNumberNonZeroPriority()
   int last = this->Internals->Pieces.size()-1;
   for (int i = last; i >= 0 ; --i)
     {
-    if (this->Internals->Pieces[i]->GetPriority() > 0.0)
+    if (this->Internals->Pieces[i].GetPriority() > 0.0)
       {
       return i+1;
       }
@@ -122,47 +147,70 @@ void vtkPieceList::SortPriorities()
        vtkPieceListByPriority());
 }
 
-
 //-----------------------------------------------------------------------------
 void vtkPieceList::Print()
 {
   int np = this->GetNumberOfPieces();
-  cerr << "PL(" << this << "):" << np << " [";
+  LOG("PL(" << this << "):" << np << " [";);
   for (int i = 0; i < np; i++)
     {
-    cerr << "{"
-         << this->GetPiece(i)->GetPiece() << " "
-         << this->GetPiece(i)->GetPriority() << " "
-         << "},";
+    LOG(
+    "{"
+    << this->GetPiece(i).GetProcessor() << ":"
+    << this->GetPiece(i).GetPiece() << "/"
+    << this->GetPiece(i).GetNumPieces() << "@"
+    << this->GetPiece(i).GetResolution() << "->["
+    << this->GetPiece(i).GetBounds()[0] << "-"
+    << this->GetPiece(i).GetBounds()[1] << ","
+    << this->GetPiece(i).GetBounds()[2] << "-"
+    << this->GetPiece(i).GetBounds()[3] << ","
+    << this->GetPiece(i).GetBounds()[4] << "-"
+    << this->GetPiece(i).GetBounds()[5] << "]=("
+    << this->GetPiece(i).GetPipelinePriority() << " "
+    << this->GetPiece(i).GetViewPriority() << " "
+    << this->GetPiece(i).GetCachedPriority() << ")"
+    << "},";);
     }
-  cerr << "]" << endl;
+
+  LOG("]" << endl;);
 }
 
 //----------------------------------------------------------------------------
 void vtkPieceList::Serialize()
-{  
+{
   if (this->Internals->SerializeBuffer != NULL)
     {
     delete[] this->Internals->SerializeBuffer;
     this->Internals->BufferSize = 0;
     }
+  vtksys_ios::ostringstream temp;
   int np = this->GetNumberOfPieces();
-  this->Internals->SerializeBuffer = new double[1+np*sizeof(vtkPiece)];
-  double *ptr = this->Internals->SerializeBuffer;
-  *ptr = (double)np;
-  ptr++;
-  double *optr = NULL;
+  temp << np << " ";
   for (int i = 0; i < np; i++)
     {
-    vtkPiece *mine = this->GetPiece(i);
-    mine->Serialize(ptr, &optr);
-    ptr = optr;
+    vtkPiece mine = this->GetPiece(i);
+    temp << mine.Processor << " "
+         << mine.Piece << " "
+         << mine.NumPieces << " "
+         << mine.Resolution << " "
+         << mine.PipelinePriority << " "
+         << mine.ViewPriority << " "
+         << mine.CachedPriority << " "
+         << mine.Bounds[0] << " "
+         << mine.Bounds[1] << " "
+         << mine.Bounds[2] << " "
+         << mine.Bounds[3] << " "
+         << mine.Bounds[4] << " "
+         << mine.Bounds[5] << " ";
     }
-  this->Internals->BufferSize = optr - this->Internals->SerializeBuffer;
+  int len = strlen(temp.str().c_str());
+  this->Internals->SerializeBuffer = new char[len+10];
+  strcpy(this->Internals->SerializeBuffer, temp.str().c_str());
+  this->Internals->BufferSize = len;
 }
 
 //----------------------------------------------------------------------------
-void vtkPieceList::GetSerializedList(double **ret, int *size)
+void vtkPieceList::GetSerializedList(char **ret, int *size)
 {
   if (!ret || !size)
     {
@@ -173,41 +221,49 @@ void vtkPieceList::GetSerializedList(double **ret, int *size)
 }
 
 //----------------------------------------------------------------------------
-void vtkPieceList::UnSerialize(double *buff)
+void vtkPieceList::UnSerialize(char *buffer, int *bytes)
 {
   this->Clear();
-  if (!buff)
+  if (!buffer || !bytes)
     {
     return;
     }
-  double *ptr = buff;
-  int np = (int)*ptr;
-  ptr++;
+  vtksys_ios::istringstream temp;
+  temp.str(buffer);
+
+  int start = temp.tellg();
+
+  int np;
+  temp >> np;
   for (int i = 0; i < np; i++)
     {
-    double *optr = NULL;
-    vtkPiece *mine = vtkPiece::New();
-    mine->UnSerialize(ptr, &optr);
-    ptr = optr;
+    vtkPiece mine;;
+    temp >> mine.Processor;
+    temp >> mine.Piece;
+    temp >> mine.NumPieces;
+    temp >> mine.Resolution;
+    temp >> mine.PipelinePriority;
+    temp >> mine.ViewPriority;
+    temp >> mine.CachedPriority;
+    temp >> mine.Bounds[0];
+    temp >> mine.Bounds[1];
+    temp >> mine.Bounds[2];
+    temp >> mine.Bounds[3];
+    temp >> mine.Bounds[4];
+    temp >> mine.Bounds[5];;
     this->AddPiece(mine);
-    mine->Delete();
     }
+  int end = temp.tellg();
+  *bytes = end-start;
 }
 
-//------------------------------------------------------------------------------
-vtkPiece *vtkPieceList::PopPiece(int n /*= 0*/)
-{
-  vtkPiece *p = this->GetPiece(n);
-  p->Register(NULL);
-  this->RemovePiece(n);
-  return p;
-}
 
 //------------------------------------------------------------------------------
 void vtkPieceList::CopyPieceList(vtkPieceList *other)
 {
   this->CopyInternal(other, 0);
 }
+
 //------------------------------------------------------------------------------
 void vtkPieceList::MergePieceList(vtkPieceList *other)
 {
@@ -227,14 +283,64 @@ void vtkPieceList::CopyInternal(vtkPieceList *other, int merge)
     }
   for (int i = 0; i < other->GetNumberOfPieces(); i++)
     {
-    vtkPiece *mine = vtkPiece::New();
-    vtkPiece *his = other->GetPiece(i);
-    mine->CopyPiece(his);
+    vtkPiece mine;
+    vtkPiece his = other->GetPiece(i);
+    mine.CopyPiece(his);
     this->AddPiece(mine);
-    mine->Delete();
     }
   if (merge)
     {
     other->Clear();
     }
+}
+
+//------------------------------------------------------------------------------
+void vtkPieceList::DummyFill()
+{
+  //Used for testing, it makes up a small piecelist with known content.
+  static int myid = 0;
+  //autoincrements to make it easy to identify which piecelist each piece
+  //was originally generated by after it has been shuffled around
+  this->Clear();
+  int numPieces=5;
+  for (int i = 0; i < numPieces; i++)
+    {
+    vtkPiece mine;
+    mine.SetPiece(i);
+    mine.SetNumPieces(numPieces);
+    mine.SetResolution(myid);
+    mine.SetPipelinePriority((double)i/(double)numPieces);
+    this->AddPiece(mine);
+    }
+  myid++;
+}
+
+//------------------------------------------------------------------------------
+void vtkPieceList::PrintSerializedList()
+{
+  char *buffer;
+  int len;
+  this->GetSerializedList(&buffer, &len);
+  LOG("LEN = " << len << endl;);
+  LOG(buffer << endl;);
+}
+
+//------------------------------------------------------------------------------
+void vtkPieceList::CopyBuddy(vtkPieceList *buddy)
+{
+  if (!buddy)
+    {
+    cerr << "WHO?" << endl;
+    return;
+    }
+  buddy->Serialize();
+
+  char *buffer;
+  int len;
+  buddy->GetSerializedList(&buffer, &len);
+  cerr << "LEN = " << len << endl;
+  cerr << buffer << endl;
+
+  this->UnSerialize(buffer, &len);
+  this->Print();
 }

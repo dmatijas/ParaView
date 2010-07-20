@@ -60,6 +60,9 @@ public:
   void SetUpdateTime(double utime);
   vtkGetMacro(UpdateTime, double);
 
+
+  void PrintMe();
+
 protected:
   vtkPVUpdateSuppressor();
   ~vtkPVUpdateSuppressor();

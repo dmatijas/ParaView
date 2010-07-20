@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkPieceCacheExecutive.h
+  Module:    $RCSfile$
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,30 +12,30 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkPieceCacheExecutive - An executive for the PieceCacheFilter
+// .NAME vtkParallelPieceCacheExecutive - An executive for the ParallelPieceCacheFilter
 // .SECTION Description
-// vtkPieceCacheExecutive is used along with the PieceCacheFilter to cache
+// vtkParallelPieceCacheExecutive is used along with the ParallelPieceCacheFilter to cache
 // data pieces. The filter stores the data. The executive prevents requests
 // that can be satisfied by the cache from causing upstream pipeline updates.
 // .SEE ALSO
-// vtkPieceCacheFilter
+// vtkParallelPieceCacheFilter
 
-#ifndef __vtkPieceCacheExecutive_h
-#define __vtkPieceCacheExecutive_h
+#ifndef __vtkParallelPieceCacheExecutive_h
+#define __vtkParallelPieceCacheExecutive_h
 
 #include "vtkCompositeDataPipeline.h"
 
-class VTK_EXPORT vtkPieceCacheExecutive :
+class VTK_EXPORT vtkParallelPieceCacheExecutive :
   public vtkCompositeDataPipeline
 {
 public:
-  static vtkPieceCacheExecutive* New();
-  vtkTypeMacro(vtkPieceCacheExecutive,
+  static vtkParallelPieceCacheExecutive* New();
+  vtkTypeRevisionMacro(vtkParallelPieceCacheExecutive,
                        vtkCompositeDataPipeline);
 
 protected:
-  vtkPieceCacheExecutive();
-  ~vtkPieceCacheExecutive();
+  vtkParallelPieceCacheExecutive();
+  ~vtkParallelPieceCacheExecutive();
 
   //overridden to short circuit upstream requests when cache has data
   virtual int NeedToExecuteData(int outputPort,
@@ -43,8 +43,8 @@ protected:
                                 vtkInformationVector* outInfoVec);
 
 private:
-  vtkPieceCacheExecutive(const vtkPieceCacheExecutive&);  // Not implemented.
-  void operator=(const vtkPieceCacheExecutive&);  // Not implemented.
+  vtkParallelPieceCacheExecutive(const vtkParallelPieceCacheExecutive&);  // Not implemented.
+  void operator=(const vtkParallelPieceCacheExecutive&);  // Not implemented.
 };
 
 #endif

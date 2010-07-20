@@ -16,16 +16,14 @@
 // .SECTION Description
 // vtkPieceCacheFilter caches the pieces given to it in its input and then
 // passes the data through to its output. Later requests will then
-// reuse the cached piece data when present. 
+// reuse the cached piece data when present.
 //
 // Additionally, if the data type stored in the cache is vtkPolyData, the cache
-// filter will agregate all cache results into a single polydata, storing the
-// aggregated result into the first filled cache slot. This helps speed up 
-// rendering in the streaming paraview application because all cached data can
-// be rerendered in a single pipeline update pass.
+// filter can be asked to agregate all cache results into a single polydata.
+// Afterward a single request can obtain everything.
 //
-// This filter must be paired with a vtkPieceCacheExecutive, so that cache hits
-// prevent upstream filters from executing, otherwise no time is saved.
+// This filter must be paired with a vtkPieceCacheExecutive. The Executive
+// prevents upstream filter execution in the event of a cache hit.
 //
 // .SEE ALSO
 // vtkPieceCacheExecutive
@@ -38,6 +36,7 @@
 #include <vtkstd/map> // used for the cache
 
 class vtkAppendPolyData;
+class vtkPolyData;
 
 class VTK_EXPORT vtkPieceCacheFilter : public vtkDataSetAlgorithm
 {
@@ -47,63 +46,84 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // This is the maximum number of time steps that can be retained in memory.
-  // it defaults to -1, meaning unbounded.
+  // This is the maximum number of pieces that can be retained in memory.
+  // It defaults to -1, meaning unbounded.
   void SetCacheSize(int size);
   vtkGetMacro(CacheSize,int);
 
-  // Description:
-  // Removes all data from the cache.
-  void EmptyCache();
-
-  // Description:
-  // Returns the data set stored in the i'th cache slot.
+  //Description:
+  //Returns the data set stored in the i'th cache slot.
+  //Note: There is no SetPiece because Pieces are put into slots
+  //during pipeline updates.
   vtkDataSet *GetPiece(int i);
 
-  // Description:
-  // Deletes the data set stored in the i'th cache slot. Resetting Append slot
-  // if necessary.
+  //Description:
+  //Deletes the data set stored in the i'th cache slot.
   void DeletePiece(int i);
 
   //Description:
-  //Convert piece and number of pieces into a unique cache slot index
+  //Removes all data from the cache.
+  void EmptyCache();
+
+  //Description:
+  //Convert piece/number of pieces into a unique cache slot index
   int ComputeIndex(int piece, int numPieces) const
   {
     return (((piece&0x0000FFFF)<<16) | (numPieces&0x0000FFFF));
   }
 
   //Description:
-  //Retrieve the piece number from a unique cache slot index
+  //Retrieve the piece number corresponding to a unique cache slot index
   int ComputePiece(int index) const
   {
     return index>>16;
   }
 
   //Description:
-  //Retrieve the number of pieces from a unique cache slot index
+  //Retrieve the number of pieces corresponding to a unique cache slot index
   int ComputeNumberOfPieces(int index) const
   {
     return index&0x0000FFFF;
   }
 
+  //Description:
+  //Returns true if a given piece is in the cache and is stored with at
+  //least the requested resolution.
+  bool InCache(int piece, int numPieces, double res);
+
+  //Description:
+  //Call to append all cached vtkPolyDatas into one
+  void AppendPieces();
+  //Description:
+  //Call to obtain the appended result.
+  vtkPolyData *GetAppendedData();
+  //Description:
+  //Returns true if a given piece has been placed into the appended result
+  //and was stored with at least the requested resolution.
+  bool InAppend(int piece, int numpieces, double res);
+
+  //Description:
+  //For debugging to selectively silence diagnostic messages.
+  vtkSetMacro(Silenced, int);
+  vtkGetMacro(Silenced, int);
+  vtkBooleanMacro(Silenced, int);
+
 protected:
   vtkPieceCacheFilter();
   ~vtkPieceCacheFilter();
 
-  virtual int ProcessRequest(vtkInformation *,
-                             vtkInformationVector **,
-                             vtkInformationVector *);
-  
-  virtual int RequestUpdateExtent (vtkInformation *,
-                                   vtkInformationVector **,
-                                   vtkInformationVector *);
-  
+  //Description:
+  //Overriden to retrieve results from cache if present and to insert them into the
+  //cache when not
   virtual int RequestData(vtkInformation *,
                           vtkInformationVector **,
                           vtkInformationVector *);
 
+  void ClearAppendTable();
 
 //BTX
+  //The cache is a map of slots to datasets. The datasets are stored with their
+  //pipeline time so that they do not become stale.
   typedef vtkstd::map<
     int, //slot
     vtkstd::pair<
@@ -111,14 +131,20 @@ protected:
     vtkDataSet *> //data
     > CacheType;
   CacheType Cache;
+
+  //The filter keeps track of what contents are part of the append table, along
+  //with the resolution they were stored at
+  typedef vtkstd::map<
+    int, //slot
+    double //resolution
+    > AppendIndex;
+  AppendIndex AppendTable;
 //ETX
 
   int CacheSize;
-  int EnableStreamMessages;
-
-  int TryAppend;
+  int Silenced;
   vtkAppendPolyData *AppendFilter;
-  int AppendSlot;
+  vtkPolyData *AppendResult;
 
 private:
   vtkPieceCacheFilter(const vtkPieceCacheFilter&);  // Not implemented.

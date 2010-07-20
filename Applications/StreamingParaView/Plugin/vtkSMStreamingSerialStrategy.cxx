@@ -31,6 +31,7 @@
     }
 
 vtkStandardNewMacro(vtkSMStreamingSerialStrategy);
+
 //----------------------------------------------------------------------------
 vtkSMStreamingSerialStrategy::vtkSMStreamingSerialStrategy()
 {
@@ -49,11 +50,11 @@ void vtkSMStreamingSerialStrategy::BeginCreateVTKObjects()
   this->Superclass::BeginCreateVTKObjects();
 
   //Get hold of the caching filter proxy
-  this->PieceCache = 
+  this->PieceCache =
     vtkSMSourceProxy::SafeDownCast(this->GetSubProxy("PieceCache"));
 
   //Get hold of the filter that does view dependent prioritization
-  this->ViewSorter = 
+  this->ViewSorter =
     vtkSMSourceProxy::SafeDownCast(this->GetSubProxy("ViewSorter"));
   this->ViewSorter->SetServers(vtkProcessModule::CLIENT_AND_SERVERS);
 }
@@ -70,7 +71,7 @@ void vtkSMStreamingSerialStrategy::CreatePipeline(vtkSMSourceProxy* input, int o
 //----------------------------------------------------------------------------
 void vtkSMStreamingSerialStrategy::GatherInformation(vtkPVInformation* info)
 {
-  //gather information without requesting the whole data  
+  //gather information without requesting the whole data
   vtkSMIntVectorProperty* ivp;
   DEBUGPRINT_STRATEGY(
     cerr << "SSS(" << this << ") Gather Info" << endl;
@@ -86,7 +87,7 @@ void vtkSMStreamingSerialStrategy::GatherInformation(vtkPVInformation* info)
   ivp = vtkSMIntVectorProperty::SafeDownCast(
     this->UpdateSuppressor->GetProperty("SetNumberOfPasses"));
   int nPasses = vtkStreamingOptions::GetStreamedPasses();
-  ivp->SetElement(0, nPasses); 
+  ivp->SetElement(0, nPasses);
 
   this->UpdateSuppressor->UpdateVTKObjects();
   vtkSMProperty *p = this->UpdateSuppressor->GetProperty("ComputePriorities");
@@ -102,7 +103,7 @@ void vtkSMStreamingSerialStrategy::GatherInformation(vtkPVInformation* info)
 
     this->UpdateSuppressor->UpdateVTKObjects();
     this->UpdatePipeline();
-    
+
     // For simple strategy information sub-pipline is same as the full pipeline
     // so no data movements are involved.
     vtkProcessModule* pm = vtkProcessModule::GetProcessModule();
@@ -132,7 +133,7 @@ void vtkSMStreamingSerialStrategy::SetPassNumber(int val, int force)
   DEBUGPRINT_STRATEGY(
     cerr << "SSS(" << this << ") SetPassNumber(" << val << "/" << nPasses << (force?"FORCE":"LAZY") << ")" << endl;
                       );
-  
+
   ivp = vtkSMIntVectorProperty::SafeDownCast(
     this->UpdateSuppressor->GetProperty("PassNumber"));
   ivp->SetElement(0, val);
@@ -140,7 +141,7 @@ void vtkSMStreamingSerialStrategy::SetPassNumber(int val, int force)
   if (force)
     {
     ivp->Modified();
-    this->UpdateSuppressor->UpdateVTKObjects(); 
+    this->UpdateSuppressor->UpdateVTKObjects();
     vtkSMProperty *p = this->UpdateSuppressor->GetProperty("ForceUpdate");
     p->Modified();
     this->UpdateSuppressor->UpdateVTKObjects();
@@ -154,13 +155,13 @@ int vtkSMStreamingSerialStrategy::ComputePriorities()
   int ret = nPasses;
 
   vtkSMIntVectorProperty* ivp;
-  
+
   //put diagnostic settings transfer here in case info not gathered yet
   int cacheLimit = vtkStreamingOptions::GetPieceCacheLimit();
 
   DEBUGPRINT_STRATEGY(
     cerr << "SSS(" << this << ") ComputePriorities" << endl;
-                      )  
+                      )
   ivp = vtkSMIntVectorProperty::SafeDownCast(
       this->PieceCache->GetProperty("SetCacheSize"));
   ivp->SetElement(0, cacheLimit);
@@ -169,7 +170,7 @@ int vtkSMStreamingSerialStrategy::ComputePriorities()
   //let US know NumberOfPasses for CP
   ivp = vtkSMIntVectorProperty::SafeDownCast(
       this->UpdateSuppressor->GetProperty("SetNumberOfPasses"));
-  ivp->SetElement(0, nPasses); 
+  ivp->SetElement(0, nPasses);
 
   this->UpdateSuppressor->UpdateVTKObjects();
 
@@ -178,7 +179,7 @@ int vtkSMStreamingSerialStrategy::ComputePriorities()
   vtkSMIntVectorProperty* rp = vtkSMIntVectorProperty::SafeDownCast(
     this->UpdateSuppressor->GetProperty("GetMaxPass"));
   cp->Modified();
-  this->UpdateSuppressor->UpdateVTKObjects();      
+  this->UpdateSuppressor->UpdateVTKObjects();
   //get the result
   this->UpdateSuppressor->UpdatePropertyInformation(rp);
   ret = rp->GetElement(0);
@@ -201,7 +202,7 @@ void vtkSMStreamingSerialStrategy::CopyPieceList(
 {
   if (src && dest)
     {
-    (*stream) 
+    (*stream)
       << vtkClientServerStream::Invoke
       << src->GetID()
       << "GetPieceList"
@@ -212,63 +213,6 @@ void vtkSMStreamingSerialStrategy::CopyPieceList(
       << vtkClientServerStream::LastResult
       << vtkClientServerStream::End;
     }
-}
-
-//----------------------------------------------------------------------------
-void vtkSMStreamingSerialStrategy::SharePieceList(
-   vtkSMRepresentationStrategy *destination)
-{
-  vtkSMStreamingSerialStrategy *dest = 
-    vtkSMStreamingSerialStrategy::SafeDownCast(destination);
-  if (!dest)
-    {
-    vtkErrorMacro("Can't copy my piecelist to that");
-    return;
-    }
-
-  vtkProcessModule *pm = vtkProcessModule::GetProcessModule();
-
-  vtkSMSourceProxy *US1 =
-    this->UpdateSuppressor;
-
-  vtkSMSourceProxy *US2 =
-    vtkSMSourceProxy::SafeDownCast(
-      dest->GetSubProxy("UpdateSuppressor"));
-
-  vtkClientServerStream s2c;
-  s2c << vtkClientServerStream::Invoke
-      << US1->GetID()
-      << "SerializePriorities" 
-      << vtkClientServerStream::End;
-  pm->SendStream(this->GetConnectionID(),
-                 vtkProcessModule::DATA_SERVER_ROOT,
-                 s2c);
-  
-  //TODO: Find another way to get this. As I recall the info helper has
-  //limited length.
-  vtkSMDoubleVectorProperty *dvp = vtkSMDoubleVectorProperty::SafeDownCast(
-    US1->GetProperty("SerializedList"));
-  US1->UpdatePropertyInformation(dvp);
-  int np = dvp->GetNumberOfElements();
-  
-  //cerr << "US1 " << US1 << " ";
-  //cerr << "US2 " << US2 << " ";
-  //cerr << "NP " << np << endl;
-
-  if (!np)
-    {
-    return;
-    }
-  double *elems = dvp->GetElements();
-  vtkClientServerStream s3c;
-  s3c << vtkClientServerStream::Invoke
-      << US2->GetID()
-      << "UnSerializePriorities"
-      << vtkClientServerStream::InsertArray(elems, np)
-      << vtkClientServerStream::End;
-  pm->SendStream(this->GetConnectionID(),
-                 vtkProcessModule::CLIENT,
-                 s3c);  
 }
 
 //----------------------------------------------------------------------------
@@ -292,5 +236,5 @@ void vtkSMStreamingSerialStrategy::SetViewState(double *camera, double *frustum)
   dvp = vtkSMDoubleVectorProperty::SafeDownCast(
     this->ViewSorter->GetProperty("SetFrustum"));
   dvp->SetElements(frustum);
-  this->ViewSorter->UpdateVTKObjects();      
+  this->ViewSorter->UpdateVTKObjects();
 }

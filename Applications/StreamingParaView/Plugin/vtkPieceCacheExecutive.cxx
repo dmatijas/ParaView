@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkPieceCacheExecutive.cxx
+  Module:    $RCSfile$
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -14,24 +14,32 @@
 =========================================================================*/
 #include "vtkPieceCacheExecutive.h"
 
-#include "vtkInformationIntegerKey.h"
-#include "vtkInformationIntegerVectorKey.h"
-#include "vtkObjectFactory.h"
-
-#include "vtkStreamingOptions.h"
-#include "vtkAlgorithm.h"
-#include "vtkAlgorithmOutput.h"
 #include "vtkImageData.h"
 #include "vtkInformation.h"
+#include "vtkInformationIntegerKey.h"
+#include "vtkInformationIntegerVectorKey.h"
 #include "vtkInformationVector.h"
-#include "vtkPointData.h"
+#include "vtkObjectFactory.h"
 #include "vtkPieceCacheFilter.h"
+#include "vtkStreamingOptions.h"
 
 vtkStandardNewMacro(vtkPieceCacheExecutive);
 
+#include <vtksys/ios/sstream>
+#include <string.h>
+#include <sstream>
+#include <iostream>
+#define LOG(arg)\
+  {\
+  std::ostringstream stream;\
+  stream << arg;\
+  vtkStreamingOptions::Log(stream.str().c_str());\
+  }
+
 #define DEBUGPRINT_CACHING(arg) \
-  if (vtkStreamingOptions::GetEnableStreamMessages()) \
-    { \
+  if (!vtkPieceCacheFilter::SafeDownCast(this->GetAlgorithm())->GetSilenced()\
+      && vtkStreamingOptions::GetEnableStreamMessages())\
+    {\
       arg;\
     }
 
@@ -53,7 +61,7 @@ int vtkPieceCacheExecutive
                     vtkInformationVector** inInfoVec,
                     vtkInformationVector* outInfoVec)
 {
-  vtkPieceCacheFilter *myPCF = 
+  vtkPieceCacheFilter *myPCF =
     vtkPieceCacheFilter::SafeDownCast(this->GetAlgorithm());
 
   // If no port is specified, check all ports.  This behavior is
@@ -64,6 +72,7 @@ int vtkPieceCacheExecutive
                                                inInfoVec, outInfoVec);
     }
 
+#if 0
   // Does the superclass want to execute? We must skip our direct superclass
   // because it looks at update extents but does not know about the cache
   if(this->vtkDemandDrivenPipeline::NeedToExecuteData(outputPort,
@@ -71,6 +80,7 @@ int vtkPieceCacheExecutive
     {
     return 1;
     }
+#endif
 
   // Has the algorithm asked to be executed again?
   if(this->ContinueExecuting)
@@ -86,28 +96,34 @@ int vtkPieceCacheExecutive
   vtkDataObject* dataObject = outInfo->Get(vtkDataObject::DATA_OBJECT());
   vtkInformation* dataInfo = dataObject->GetInformation();
   int updatePiece = outInfo->Get(UPDATE_PIECE_NUMBER());
+  int updateNumberOfPieces = outInfo->Get(UPDATE_NUMBER_OF_PIECES());
+  int index = myPCF->ComputeIndex(updatePiece, updateNumberOfPieces);
+  double updateResolution = outInfo->Get(UPDATE_RESOLUTION());
   if(dataInfo->Get(vtkDataObject::DATA_EXTENT_TYPE()) == VTK_PIECES_EXTENT)
     {
-    int updateNumberOfPieces = outInfo->Get(UPDATE_NUMBER_OF_PIECES());
     int updateGhostLevel = outInfo->Get(UPDATE_NUMBER_OF_GHOST_LEVELS());
 
     // check to see if any data in the cache fits this request
-    vtkDataSet *ds = myPCF->GetPiece(updatePiece);
+    vtkDataSet *ds = myPCF->GetPiece(index);
     if (ds)
       {
       dataInfo = ds->GetInformation();
-      // Check the unstructured extent.  
+      // Check the unstructured extent.
       // If the piece we have doesn't match what was requested
       // we need to execute.
       int dataPiece = dataInfo->Get(vtkDataObject::DATA_PIECE_NUMBER());
-      int dataNumberOfPieces = 
+      int dataNumberOfPieces =
         dataInfo->Get(vtkDataObject::DATA_NUMBER_OF_PIECES());
-      int dataGhostLevel = 
+      int dataGhostLevel =
         dataInfo->Get(vtkDataObject::DATA_NUMBER_OF_GHOST_LEVELS());
-      if (dataInfo->Get(vtkDataObject::DATA_EXTENT_TYPE()) == 
+      double dataResolution =
+        dataInfo->Get(vtkDataObject::DATA_RESOLUTION());
+      if (dataInfo->Get(vtkDataObject::DATA_EXTENT_TYPE()) ==
           VTK_PIECES_EXTENT && dataPiece == updatePiece &&
           dataNumberOfPieces == updateNumberOfPieces &&
-          dataGhostLevel == updateGhostLevel)
+          dataGhostLevel == updateGhostLevel &&
+          dataResolution >= updateResolution
+        )
         {
         vtkDataSet *dso = vtkDataSet::SafeDownCast(dataObject);
         if (dso)
@@ -115,41 +131,44 @@ int vtkPieceCacheExecutive
           // we have a match
           // Give the cached result to the requester
           dso->ShallowCopy(ds);
-          DEBUGPRINT_CACHING(
-          cerr << "PCE(" << this << ") cache hit piece " 
+          LOG(//DEBUGPRINT_CACHING(
+              //cerr <<
+          "PCE(" << this << ") cache hit piece "
                << updatePiece << "/"
-               << updateNumberOfPieces << " "
-               << dso->GetNumberOfPoints() << endl;
+               << updateNumberOfPieces << "@"
+               << updateResolution << " DR=" << dataResolution <<endl;
           );
           //pipeline request can terminate now, yeah!
           return 0;
-          }     
+          }
         }
       else
         {
-        DEBUGPRINT_CACHING(
-          cerr << "PCE(" << this << ") miss, cached has wrong extent" << endl;
-          cerr << dataInfo->Get(vtkDataObject::DATA_EXTENT_TYPE()) << "!="
-               <<  VTK_PIECES_EXTENT << "||"
-               << dataPiece << "/" << dataNumberOfPieces << "!="
-               << updatePiece << "/" << updateNumberOfPieces << "||"
-               << dataGhostLevel << "!=" << updateGhostLevel << endl;
-                           );
-          myPCF->DeletePiece(updatePiece);
+        LOG(//DEBUGPRINT_CACHING(
+        "PCE(" << this << ") miss, cached has wrong extent" << endl
+             << dataInfo->Get(vtkDataObject::DATA_EXTENT_TYPE()) << "!="
+             <<  VTK_PIECES_EXTENT << "||"
+             << dataPiece << "/" << dataNumberOfPieces << "!="
+             << updatePiece << "/" << updateNumberOfPieces << "||"
+             << dataGhostLevel << "!=" << updateGhostLevel << "||"
+             << dataResolution << "!=" << updateResolution << endl;
+        );
+        myPCF->DeletePiece(index);
         }
       }
     else
       {
-      DEBUGPRINT_CACHING(
-      cerr << "PCE(" << this << ") miss, nothing cached for "
+      LOG(//DEBUGPRINT_CACHING(
+      "PCE(" << this << ") miss, nothing cached for "
            << updatePiece << "/"
-           << updateNumberOfPieces << endl;
+           << updateNumberOfPieces << "@"
+           << updateResolution << endl;
                          );
       }
     }
   else if (dataInfo->Get(vtkDataObject::DATA_EXTENT_TYPE()) == VTK_3D_EXTENT)
     {
-    //WARNING: THIS CODE HASN'T BEEN TESTED RECENTLY
+    LOG("WARNING: THIS CODE HASN'T BEEN TESTED RECENTLY" << endl;);
 
     // Check the structured extent.  If the update extent is outside
     // of the extent and not empty, we need to execute.
@@ -157,12 +176,12 @@ int vtkPieceCacheExecutive
     int updateExtent[6];
     outInfo->Get(UPDATE_EXTENT(), updateExtent);
 
-    vtkDataSet *ds = myPCF->GetPiece(updatePiece);
+    vtkDataSet *ds = myPCF->GetPiece(index);
     if (ds)
       {
       dataInfo = ds->GetInformation();
       dataInfo->Get(vtkDataObject::DATA_EXTENT(), dataExtent);
-      if(dataInfo->Get(vtkDataObject::DATA_EXTENT_TYPE()) == 
+      if(dataInfo->Get(vtkDataObject::DATA_EXTENT_TYPE()) ==
          VTK_3D_EXTENT &&
          !(updateExtent[0] < dataExtent[0] ||
            updateExtent[1] > dataExtent[1] ||
@@ -191,57 +210,8 @@ int vtkPieceCacheExecutive
     }
 
   // We do need to execute
-  DEBUGPRINT_CACHING(
-  cerr << "PCE(" << this << ") cache miss " << updatePiece << endl;
+  LOG(//DEBUGPRINT_CACHING(
+  "PCE(" << this << ") cache miss " << updatePiece << endl;
                      );
   return 1;
 }
-
-//----------------------------------------------------------------------------
-int vtkPieceCacheExecutive::ProcessRequest(vtkInformation* request,
-                                            vtkInformationVector** inInfoVec,
-                                            vtkInformationVector* outInfoVec)
-{
-  // Prevent RUE from being short circuited as other requests are
-  if(request->Has(REQUEST_UPDATE_EXTENT()))
-    {
-    // Get the output port from which the request was made.
-    this->LastPropogateUpdateExtentShortCircuited = 1;
-    int outputPort = -1;
-    if(request->Has(FROM_OUTPUT_PORT()))
-      {
-      outputPort = request->Get(FROM_OUTPUT_PORT());
-      }
-    
-    // Make sure the information on the output port is valid.
-    if(!this->VerifyOutputInformation(outputPort,inInfoVec,outInfoVec))
-      {
-      return 0;
-      }
-
-    // If we need to execute, propagate the update extent.
-    int result = 1;
-
-    // Do not check need to execute data! Filter uses this request to keep 
-    // cache valid.
-    //if(this->NeedToExecuteData(outputPort,inInfoVec,outInfoVec))
-    //{
-      // Invoke the request on the algorithm.
-      this->LastPropogateUpdateExtentShortCircuited = 0;
-      result = this->CallAlgorithm(request, vtkExecutive::RequestUpstream,
-                                   inInfoVec, outInfoVec);
-      
-      // Propagate the update extent to all inputs.
-      if(result)
-        {
-        result = this->ForwardUpstream(request);
-        }
-      result = 1;
-    //}
-    return result;
-    }
-
-  // Let the superclass handle other requests.
-  return this->Superclass::ProcessRequest(request, inInfoVec, outInfoVec);
-}
-

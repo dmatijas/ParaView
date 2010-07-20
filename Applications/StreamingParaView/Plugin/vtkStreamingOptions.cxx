@@ -19,6 +19,10 @@
 //----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkStreamingOptions);
 
+#include <unistd.h>
+#include <iostream>
+#include <fstream>
+
 class vtkStreamingOptionsInternal {
 public:
   vtkStreamingOptionsInternal() {
@@ -28,8 +32,18 @@ public:
     this->UseViewOrdering = true;
     this->PieceCacheLimit = 16;
     this->PieceRenderCutoff = 16;
+    int pid = getpid();
+
+    char fname[128];
+    sprintf(fname, "LF.%d.txt", pid);
+    myfile.open(fname);
+  }
+  ~vtkStreamingOptionsInternal()
+  {
+    myfile.close();
   }
 
+  ofstream myfile;
   bool EnableStreamMessages;
   int StreamedPasses;
   bool UsePrioritization;
@@ -128,3 +142,9 @@ void vtkStreamingOptions::PrintSelf(ostream& os, vtkIndent indent)
   this->Superclass::PrintSelf(os,indent);
 }
 
+//----------------------------------------------------------------------------
+void vtkStreamingOptions::Log(const char *str)
+{
+  cerr << str << endl;
+  TheInstance.myfile << str;
+}

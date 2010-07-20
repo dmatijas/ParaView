@@ -40,9 +40,6 @@ public:
   // Orders the pieces from most to least important.
   virtual int ComputePriorities();
   // Description:
-  // Copies the piece ordering to dest via serialization.
-  virtual void SharePieceList(vtkSMRepresentationStrategy *dest);
-  // Description:
   // Clears the data object cache in the streaming display pipeline.
   virtual void ClearStreamCache();
 
@@ -58,7 +55,7 @@ protected:
   // Description:
   // Copies ordered piece list from one UpdateSupressor to the other.
   virtual void CopyPieceList(vtkClientServerStream *stream,
-                             vtkSMSourceProxy *src, 
+                             vtkSMSourceProxy *src,
                              vtkSMSourceProxy *dest);
 
   // Description:
@@ -68,11 +65,11 @@ protected:
   // Description:
   // Create and initialize the data pipeline.
   virtual void CreatePipeline(vtkSMSourceProxy* input, int outputport);
-  
+
   // Description:
   // Gather the information of the displayed data (non-LOD).
   // Update the part of the pipeline needed to gather full information
-  // and then gather that information. 
+  // and then gather that information.
   virtual void GatherInformation(vtkPVInformation*);
 
   // Description:
@@ -89,4 +86,3 @@ private:
 };
 
 #endif
-

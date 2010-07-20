@@ -51,6 +51,8 @@ class VTK_EXPORT vtkStreamingOptions : public vtkObject
   static int GetPieceRenderCutoff();
   static void SetPieceRenderCutoff(int);
 
+  static void Log(const char *);
+
 protected:
   vtkStreamingOptions();
   ~vtkStreamingOptions();

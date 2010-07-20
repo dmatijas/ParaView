@@ -102,6 +102,9 @@ public:
     COLLECT_AND_PASS_THROUGH=3
   };
 //ETX
+
+  virtual void PrintMe();
+
 protected:
   vtkMPIMoveData();
   ~vtkMPIMoveData();
@@ -129,14 +132,14 @@ protected:
 
   void DataServerAllToN(vtkDataObject* inData, vtkDataObject* outData, int n);
   void DataServerGatherAll(vtkDataObject* input, vtkDataObject* output);
-  void DataServerGatherToZero(vtkDataObject* input, vtkDataObject* output);
+  virtual void DataServerGatherToZero(vtkDataObject* input, vtkDataObject* output);
   void DataServerSendToRenderServer(vtkDataObject* output);
   void RenderServerReceiveFromDataServer(vtkDataObject* output);
   void DataServerZeroSendToRenderServerZero(vtkDataObject* data);
   void RenderServerZeroReceiveFromDataServerZero(vtkDataObject* data);
   void RenderServerZeroBroadcast(vtkDataObject* data);
-  void DataServerSendToClient(vtkDataObject* output);
-  void ClientReceiveFromDataServer(vtkDataObject* output);
+  virtual void DataServerSendToClient(vtkDataObject* output);
+  virtual void ClientReceiveFromDataServer(vtkDataObject* output);
 
   int        NumberOfBuffers;
   vtkIdType* BufferLengths;

@@ -1,17 +1,19 @@
 #include "vtkPiece.h"
-#include "vtkObjectFactory.h"
-#include "vtkMath.h"
-#include "vtkBoundingBox.h"
-#include "vtkDataObject.h"
 
-vtkStandardNewMacro(vtkPiece);
+#include <iostream>
+using namespace std;
 
 //----------------------------------------------------------------------------
 vtkPiece::vtkPiece()
 {
+  this->Processor = 0;
   this->Piece = 0;
   this->NumPieces = 1;
-  this->Priority = 1.0;
+  this->Resolution = 1.0;
+
+  this->Bounds[0] = this->Bounds[2] = this->Bounds[4] = 0;
+  this->Bounds[1] = this->Bounds[3] = this->Bounds[5] = -1;
+  this->PipelinePriority = this->ViewPriority = this->CachedPriority = 1.0;
 }
 
 //----------------------------------------------------------------------------
@@ -20,56 +22,19 @@ vtkPiece::~vtkPiece()
 }
 
 //----------------------------------------------------------------------------
-void vtkPiece::PrintSelf(ostream& os, vtkIndent indent)
+void vtkPiece::CopyPiece(vtkPiece other)
 {
-  this->Superclass::PrintSelf(os,indent);
-}
-
-//----------------------------------------------------------------------------
-void vtkPiece::CopyPiece(vtkPiece *other)
-{
-  if (!other)
+  if (!other.IsValid())
     {
     cerr << "Warning attempt to copy from NULL vtkPiece" << endl;
     return;
     }
-  this->SetPiece(other->GetPiece());
-  this->SetNumPieces(other->GetNumPieces());
-  this->SetPriority(other->GetPriority());
+  this->SetProcessor(other.GetProcessor());
+  this->SetPiece(other.GetPiece());
+  this->SetNumPieces(other.GetNumPieces());
+  this->SetResolution(other.GetResolution());
+  this->SetPipelinePriority(other.GetPipelinePriority());
+  this->SetViewPriority(other.GetViewPriority());
+  this->SetCachedPriority(other.GetCachedPriority());
+  this->SetBounds(other.GetBounds());
 }
-
-//----------------------------------------------------------------------------
-void vtkPiece::Serialize(double *buff, double **optr)
-{
-  double *ptr = buff;
-  if (!buff || !optr)
-    {
-    return;
-    }
-  *ptr = (double)this->Piece;
-  ptr++;
-  *ptr = (double)this->NumPieces;
-  ptr++;
-  *ptr = this->Priority;
-  ptr++;
-  *optr = ptr;
-}
-
-//----------------------------------------------------------------------------
-void vtkPiece::UnSerialize(double *buff, double **optr)
-{
-  double *ptr = buff;
-  if (!buff || !optr)
-    {
-    return;
-    }
-  this->Piece = (int)*ptr;
-  ptr++;
-  this->NumPieces = (int)*ptr;
-  ptr++;
-  this->Priority = *ptr;
-  ptr++;
-
-  *optr = ptr;
-}
-

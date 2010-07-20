@@ -19,8 +19,8 @@
 #define __vtkPieceList_h
 
 #include "vtkObject.h"
+#include "vtkPiece.h"
 
-class vtkPiece;
 class vtkInternals;
 
 class VTK_EXPORT vtkPieceList : public vtkObject
@@ -29,14 +29,19 @@ public:
   static vtkPieceList* New();
   vtkTypeMacro(vtkPieceList, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
-  
+
+  //BTX
   //Description
   //Add a piece to the list.
-  void AddPiece(vtkPiece *Piece);
+  void AddPiece(vtkPiece Piece);
 
   //Description:
   //Get the n'th piece.
-  vtkPiece *GetPiece(int n);
+  vtkPiece GetPiece(int n);
+
+  //Description:
+  //Replace the n'th piece.
+  void SetPiece(int n, vtkPiece p);
 
   //Description:
   //Removes the n'th piece.
@@ -44,8 +49,8 @@ public:
 
   //Description:
   //GetPiece followed by RemovePiece.
-  //WARNING Caller must eventually call Delete on the returned piece.
-  vtkPiece *PopPiece(int n = 0);
+  vtkPiece PopPiece(int n = 0);
+  //ETX
 
   //Description:
   //Removes all of the Pieces
@@ -71,14 +76,20 @@ public:
   //Moves all entries from other to me.
   //WARNING: This does not do any sorting.
   void MergePieceList(vtkPieceList *other);
-  
+
+  //Description:
+  //Call to convert into a string buffer that can be transfered
+  //over the netork and reconstituted on another procss
+  void Serialize();
+  void GetSerializedList(char **buffer, int *sz);
+  void UnSerialize(char *buffer, int *sz);
+
   //Description:
   //For debugging.
   void Print();
-
-  void Serialize();
-  void GetSerializedList(double **buffer, int *sz);
-  void UnSerialize(double *buffer);
+  void PrintSerializedList();
+  void DummyFill();
+  void CopyBuddy(vtkPieceList *buddy);
 
 protected:
   vtkPieceList();

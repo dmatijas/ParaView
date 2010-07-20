@@ -228,3 +228,9 @@ void vtkPVUpdateSuppressor::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Enabled: " << this->Enabled << endl;
   os << indent << "UpdateTime: " << this->UpdateTime << endl;
 }
+
+void vtkPVUpdateSuppressor::PrintMe()
+{
+  cerr << "PVUS(" << this << ")" << endl;
+  this->PrintSelf(cerr, vtkIndent(0));
+}

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    vtkSMStreamingParallelStrategy.h
+  Module:    $RCSfile$
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -18,21 +18,16 @@
 #ifndef __vtkSMStreamingParallelStrategy_h
 #define __vtkSMStreamingParallelStrategy_h
 
-#include "vtkSMUnstructuredDataParallelStrategy.h"
+#include "vtkSMSimpleParallelStrategy.h"
 
-class VTK_EXPORT vtkSMStreamingParallelStrategy 
-: public vtkSMUnstructuredDataParallelStrategy
+class VTK_EXPORT vtkSMStreamingParallelStrategy
+: public vtkSMSimpleParallelStrategy
 {
 public:
   static vtkSMStreamingParallelStrategy* New();
   vtkTypeMacro(vtkSMStreamingParallelStrategy,
-                       vtkSMUnstructuredDataParallelStrategy);
+               vtkSMSimpleParallelStrategy);
   void PrintSelf(ostream& os, vtkIndent indent);
-
-  // Description:
-  // LOD and streaming are not working yet.
-  virtual void SetEnableLOD(bool vtkNotUsed(enable))
-  {}
 
   // Description:
   // Tells server side to work with a particular piece until further notice.
@@ -40,9 +35,7 @@ public:
   // Description:
   // Orders the pieces from most to least important.
   virtual int ComputePriorities();
-  // Description:
-  // Copies the piece ordering to dest via serialization.
-  virtual void SharePieceList(vtkSMRepresentationStrategy *dest);
+
   // Description:
   // Clears the data object cache in the streaming display pipeline.
   virtual void ClearStreamCache();
@@ -66,7 +59,7 @@ protected:
   // Description:
   // Copies ordered piece list from one UpdateSupressor to the other.
   virtual void CopyPieceList(vtkClientServerStream *stream,
-                             vtkSMSourceProxy *src, 
+                             vtkSMSourceProxy *src,
                              vtkSMSourceProxy *dest);
 
   // Description:
@@ -83,8 +76,9 @@ protected:
   virtual void UpdatePipeline();
 
   vtkSMSourceProxy* PieceCache;
-  vtkSMSourceProxy* ViewSorter;
+  vtkSMSourceProxy* ParallelPieceCache;
 
+  bool HaveLocalCache();
 private:
   vtkSMStreamingParallelStrategy(const vtkSMStreamingParallelStrategy&); // Not implemented
   void operator=(const vtkSMStreamingParallelStrategy&); // Not implemented
@@ -93,4 +87,3 @@ private:
 };
 
 #endif
-

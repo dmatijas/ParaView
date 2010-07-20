@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    vtkStreamingUpdateSuppressor.cxx
+  Module:    $RCSfile$
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -15,40 +15,87 @@
 #include "vtkStreamingUpdateSuppressor.h"
 
 #include "vtkAlgorithmOutput.h"
+#include "vtkBoundingBox.h"
+#include "vtkCharArray.h"
 #include "vtkDataSet.h"
+#include "vtkExtractSelectedFrustum.h"
 #include "vtkInformation.h"
 #include "vtkInformationExecutivePortKey.h"
 #include "vtkInformationVector.h"
-#include "vtkObjectFactory.h"
-#include "vtkProcessModule.h"
-#include "vtkUpdateSuppressorPipeline.h"
-#include "vtkPieceCacheFilter.h"
-#include "vtkStreamingOptions.h"
-
-#include "vtkPiece.h"
-#include "vtkPieceList.h"
-#include "vtkBoundingBox.h"
-#include "vtkDoubleArray.h"
+#include "vtkMath.h"
 #include "vtkMultiProcessController.h"
 #include "vtkMPIMoveData.h"
+#include "vtkObjectFactory.h"
+#include "vtkParallelPieceCacheFilter.h"
+#include "vtkPiece.h"
+#include "vtkPieceCacheFilter.h"
+#include "vtkPieceList.h"
+#include "vtkPolyData.h"
+#include "vtkProcessModule.h"
+#include "vtkStreamingOptions.h"
+#include "vtkUpdateSuppressorPipeline.h"
 
+#include <vtksys/ios/sstream>
+#include <string.h>
+#include <sstream>
+#include <iostream>
+
+vtkCxxRevisionMacro(vtkStreamingUpdateSuppressor, "$Revision$");
 vtkStandardNewMacro(vtkStreamingUpdateSuppressor);
+
+#define LOG(arg)\
+  {\
+  std::ostringstream stream;\
+  stream << arg;\
+  vtkStreamingOptions::Log(stream.str().c_str());\
+  }
 
 #define DEBUGPRINT_EXECUTION(arg)\
   if (vtkStreamingOptions::GetEnableStreamMessages()) \
     { \
       arg;\
     }
-  
+
+#define DEBUGPRINT_PRIORITY(arg)\
+  if (vtkStreamingOptions::GetEnableStreamMessages())\
+    { \
+      arg;\
+    }
+
 //----------------------------------------------------------------------------
 vtkStreamingUpdateSuppressor::vtkStreamingUpdateSuppressor()
 {
   this->Pass = 0;
   this->NumberOfPasses = 1;
+
   this->PieceList = NULL;
-  this->MaxPass = 0;
-  this->SerializedPriorities = NULL;
+
+  this->ParPLs = NULL;
+  this->NumPLs = 0;
+
+  this->SerializedLists = NULL;
+
   this->MPIMoveData = NULL;
+  this->PieceCacheFilter = NULL;
+  this->ParallelPieceCacheFilter = NULL;
+
+  this->CameraState = new double[9];
+  const double caminit[9] = {0.0,0.0,-1.0, 0.0,1.0,0.0, 0.0,0.0,0.0};
+  memcpy(this->CameraState, caminit, 9*sizeof(double));
+  this->Frustum = new double[32];
+  const double frustinit[32] = {
+    0.0, 0.0, 0.0, 1.0,
+    0.0, 0.0, 1.0, 1.0,
+    0.0, 1.0, 0.0, 1.0,
+    0.0, 1.0, 1.0, 1.0,
+    1.0, 0.0, 0.0, 1.0,
+    1.0, 0.0, 1.0, 1.0,
+    1.0, 1.0, 0.0, 1.0,
+    1.0, 1.0, 1.0, 1.0};
+  memcpy(this->Frustum, frustinit, 32*sizeof(double));
+  this->FrustumTester = vtkExtractSelectedFrustum::New();
+
+  this->UseAppend = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -58,22 +105,102 @@ vtkStreamingUpdateSuppressor::~vtkStreamingUpdateSuppressor()
     {
     this->PieceList->Delete();
     }
-  if (this->SerializedPriorities)
+  if (this->ParPLs)
     {
-    this->SerializedPriorities->Delete();
+    for (int i = 0; i < NumPLs; i++)
+      {
+      this->ParPLs[i]->Delete();
+      }
+    delete[] this->ParPLs;
+    }
+  if (this->SerializedLists)
+    {
+    delete[] this->SerializedLists;
+    }
+
+  this->FrustumTester->Delete();
+  delete[] this->CameraState;
+  delete[] this->Frustum;
+}
+
+//----------------------------------------------------------------------------
+void vtkStreamingUpdateSuppressor::PrintSelf(ostream& os, vtkIndent indent)
+{
+  this->Superclass::PrintSelf(os,indent);
+  cerr << "PPC = ";
+  if (this->ParallelPieceCacheFilter)
+    {
+    cerr << this->ParallelPieceCacheFilter;
+    }
+  else
+    {
+    cerr << "NONE";
+    }
+  cerr << endl;
+  cerr << "PCF = ";
+  if (this->PieceCacheFilter)
+    {
+    cerr << this->PieceCacheFilter;
+    }
+  else
+    {
+    cerr << "NONE";
+    }
+  cerr << endl;
+  this->PrintPieceLists();
+  os << "EYE:" << this->CameraState[0] << "," << this->CameraState[1] << "," << this->CameraState[2] << endl;
+  os << "UP: " << this->CameraState[3] << "," << this->CameraState[4] << "," << this->CameraState[5] << endl;
+  os << "AT: " << this->CameraState[6] << "," << this->CameraState[7] << "," << this->CameraState[8] << endl;
+  os << "FRUST: " << endl;
+  for (int i = 0; i < 8; i++)
+    {
+    os << this->Frustum[i*4+0] << ","
+       << this->Frustum[i*4+1] << ","
+       << this->Frustum[i*4+2] << ","
+       << this->Frustum[i*4+3] << endl;
     }
 }
 
 //----------------------------------------------------------------------------
 void vtkStreamingUpdateSuppressor::ForceUpdate()
-{    
+{
+  cerr << "SUS(" << this << ") FU!" << endl;
+  if (this->UseAppend)
+    {
+    cerr << "TRYING APPEND" << endl;
+    this->UseAppend = 0;
+    if (this->ParallelPieceCacheFilter)
+      {
+      cerr << "TRYING PPCF" << endl;
+      if (this->ParallelPieceCacheFilter->GetAppendedData())
+        {
+        cerr << "GOT SOMETHING" << endl;
+        vtkPolyData *output = vtkPolyData::SafeDownCast(this->GetOutput());
+        output->ShallowCopy(this->ParallelPieceCacheFilter->GetAppendedData());
+        this->PipelineUpdateTime.Modified();
+        return;
+        }
+      }
+    if (this->PieceCacheFilter)
+      {
+      LOG("TRYING PCF" << endl;)
+      if (this->PieceCacheFilter->GetAppendedData())
+        {
+        LOG("GOT SOMETHING" << endl;)
+        vtkDataObject *output = this->GetOutput();
+        output->ShallowCopy(this->PieceCacheFilter->GetAppendedData());
+        this->PipelineUpdateTime.Modified();
+        return;
+        }
+      }
+    }
 
   int gPiece = this->UpdatePiece*this->NumberOfPasses + this->GetPiece();
   int gPieces = this->UpdateNumberOfPieces*this->NumberOfPasses;
 
-  DEBUGPRINT_EXECUTION(
-  cerr << "US(" << this << ") ForceUpdate " << gPiece << "/" << gPieces << endl;
-                       );
+  //DEBUGPRINT_EXECUTION(
+  LOG("US(" << this << ") ForceUpdate " << this->Pass << "/" << this->NumberOfPasses << "->" << gPiece << "/" << gPieces << endl;)
+  //                     );
 
   // Make sure that output type matches input type
   this->UpdateInformation();
@@ -85,7 +212,7 @@ void vtkStreamingUpdateSuppressor::ForceUpdate()
     return;
     }
   vtkDataObject *output = this->GetOutput();
-  vtkPiece *cachedPiece = NULL;
+  vtkPiece cachedPiece;
   if (this->PieceList)
     {
     cachedPiece = this->PieceList->GetPiece(this->Pass);
@@ -101,22 +228,22 @@ void vtkStreamingUpdateSuppressor::ForceUpdate()
        source->IsA("vtkCollectPolyData") ||
        source->IsA("vtkM2NDuplicate") ||
        source->IsA("vtkM2NCollect") ||
-       source->IsA("vtkOrderedCompositeDistributor") || 
+       source->IsA("vtkOrderedCompositeDistributor") ||
        source->IsA("vtkClientServerMoveData")))
     {
     source->Modified();
     }
 
   vtkInformation* info = input->GetPipelineInformation();
-  vtkStreamingDemandDrivenPipeline* sddp = 
+  vtkStreamingDemandDrivenPipeline* sddp =
     vtkStreamingDemandDrivenPipeline::SafeDownCast(
       vtkExecutive::PRODUCER()->GetExecutive(info));
 
   if (sddp)
     {
     sddp->SetUpdateExtent(info,
-                          gPiece, 
-                          gPieces, 
+                          gPiece,
+                          gPieces,
                           0);
     }
   else
@@ -133,10 +260,23 @@ void vtkStreamingUpdateSuppressor::ForceUpdate()
   DEBUGPRINT_EXECUTION(
   cerr << "US(" << this << ") Update " << this->Pass << "->" << gPiece << endl;
   );
-  
+
   input->Update();
   output->ShallowCopy(input);
 
+  if (cachedPiece.IsValid())
+    {
+    vtkDataSet *ds = vtkDataSet::SafeDownCast(input);
+    cachedPiece.SetBounds(ds->GetBounds());
+    double bds[6];
+    cachedPiece.GetBounds(bds);
+    LOG("SUS(" << this << ") UPDATE PRODUCED"
+        << ds->GetClassName() << " "
+        << ds->GetNumberOfPoints() << " "
+        << bds[0] << ".." << bds[1] << ","
+        << bds[2] << ".." << bds[3] << ","
+        << bds[4] << ".." << bds[5] << endl;)
+    }
   this->PipelineUpdateTime.Modified();
 }
 
@@ -146,14 +286,14 @@ int vtkStreamingUpdateSuppressor::GetPiece(int p)
   int piece;
   int pass = p;
 
-  //check validity  
+  //check validity
   if (pass < 0 || pass >= this->NumberOfPasses)
     {
     pass = this->Pass;
     }
 
   //lookup piece corresponding to pass
-  vtkPiece *pStruct = NULL;
+  vtkPiece pStruct;
   if (!this->PieceList)
     {
     piece = pass;
@@ -161,16 +301,47 @@ int vtkStreamingUpdateSuppressor::GetPiece(int p)
   else
     {
     pStruct = this->PieceList->GetPiece(pass);
-    if (!pStruct)
+    if (!pStruct.IsValid())
       {
       piece = pass;
       }
     else
       {
-      piece = pStruct->GetPiece();
+      piece = pStruct.GetPiece();
+      LOG("LOOKUP FOUND " << piece << "@" << pStruct.GetPriority() << endl;)
       }
     }
   return piece;
+}
+
+//----------------------------------------------------------------------------
+bool vtkStreamingUpdateSuppressor::HasSliceCached(int pass)
+{
+  bool ret = false;
+  if (this->ParallelPieceCacheFilter)
+    {
+    vtkPieceList *pl = vtkPieceList::New();
+
+    for (int i = 0; i < this->NumPLs; i++)
+      {
+      vtkPiece pStruct = this->ParPLs[i]->GetPiece(pass);
+      pStruct.SetProcessor(i);
+      pl->AddPiece(pStruct);
+      }
+
+    this->ParallelPieceCacheFilter->SetRequestedPieces(pl);
+    if (this->ParallelPieceCacheFilter->HasRequestedPieces())
+      {
+      cerr << "IT HAS THEM ALL" << endl;
+      ret = true;
+      }
+    else
+      {
+      cerr << "SOME ARE MISSING" << endl;
+      }
+    pl->Delete();
+    }
+  return ret;
 }
 
 //----------------------------------------------------------------------------
@@ -181,7 +352,7 @@ void vtkStreamingUpdateSuppressor::MarkMoveDataModified()
     //We have to ensure that communication isn't halted when a piece is reused.
     //This is called whenever we set the pass, because any processor might
     //(because of view dependent reordering) rerender the same piece in two
-    //subsequent frames in which case the pipeline would not update and 
+    //subsequent frames in which case the pipeline would not update and
     //communications will hang.
     this->MPIMoveData->Modified();
     }
@@ -195,7 +366,12 @@ void vtkStreamingUpdateSuppressor::SetPassNumber(int pass, int NPasses)
                        );
   this->SetPass(pass);
   this->SetNumberOfPasses(NPasses);
-  this->MarkMoveDataModified();
+  //Calling this to check if we client can go alone
+  this->GetPiece();
+  if (!this->ParallelPieceCacheFilter || !this->ParallelPieceCacheFilter->HasPieceList())
+    {
+    this->MarkMoveDataModified();
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -213,72 +389,93 @@ void vtkStreamingUpdateSuppressor::SetPieceList(vtkPieceList *other)
     {
     other->Register(this);
     }
-  this->MaxPass = this->NumberOfPasses;
-  if (this->PieceList)
+}
+
+//-----------------------------------------------------------------------------
+void vtkStreamingUpdateSuppressor::SerializeLists()
+{
+  //cerr << "SUS(" << this << ") SerializeLists" << endl;
+  for (int i = 0; i < this->NumPLs; i++)
     {
-    this->MaxPass = this->PieceList->GetNumberNonZeroPriority();
+    this->ParPLs[i]->Serialize();
     }
 }
 
 //-----------------------------------------------------------------------------
-void vtkStreamingUpdateSuppressor::SerializePriorities()
+char * vtkStreamingUpdateSuppressor::GetSerializedLists()
 {
-  DEBUGPRINT_EXECUTION(
-  cerr << "US(" << this << ") SERIALIZE PRIORITIES" << endl;
-  );
-  this->PieceList->Serialize();
-  DEBUGPRINT_EXECUTION(
-  this->PieceList->Print();
-  );
-}
-
-//-----------------------------------------------------------------------------
-vtkDoubleArray *vtkStreamingUpdateSuppressor::GetSerializedPriorities()
-{
-  if (this->SerializedPriorities)
+  if (this->SerializedLists)
     {
-    this->SerializedPriorities->Delete();
+    delete[] this->SerializedLists;
     }
-  this->SerializedPriorities = vtkDoubleArray::New();
-  double *buffer;
+
+  vtksys_ios::ostringstream temp;
+  int np = this->NumPLs;
+  temp << np << " ";
+
+  char *buffer;
   int len=0;
-  this->PieceList->GetSerializedList(&buffer, &len);
-  this->SerializedPriorities->SetNumberOfComponents(1);
-  this->SerializedPriorities->SetNumberOfTuples(len);
-  this->SerializedPriorities->SetArray(buffer, len, 1);
-  DEBUGPRINT_EXECUTION(
-  cerr << "US(" << this << ") My list was " << len << ":";
-  for (int i = 0; i < len; i++)
+  for (int i = 0; i < this->NumPLs; i++)
     {
-    cerr << this->SerializedPriorities->GetValue(i) << " ";
+    this->ParPLs[i]->GetSerializedList(&buffer, &len);
+    temp << buffer << " ";
     }
-  cerr << endl;
-  );
-  return this->SerializedPriorities;
+
+  int total_len = strlen(temp.str().c_str());
+  this->SerializedLists = new char[total_len];
+  strcpy(this->SerializedLists, temp.str().c_str());
+
+  return this->SerializedLists;
 }
 
 //-----------------------------------------------------------------------------
-void vtkStreamingUpdateSuppressor::UnSerializePriorities(double *buffer)
+void vtkStreamingUpdateSuppressor::UnSerializeLists(char *buffer)
 {
-  DEBUGPRINT_EXECUTION(
-  cerr << "US(" << this << ") UNSERIALIZE PRIORITIES" << endl;
-  );
-
-  if (!this->PieceList)
+  LOG("SUS(" << this << ") UnSerializeLists" << endl;)
+  if (!buffer)
     {
-    this->PieceList = vtkPieceList::New();
+    return;
     }
-  this->PieceList->UnSerialize(buffer);
+  vtksys_ios::istringstream temp;
+  temp.str(buffer);
 
-  DEBUGPRINT_EXECUTION(
-  int len = (int)*buffer * 6 + 1;
-  for (int i = 0; i < len; i++)
+  int numProcs;
+  temp >> numProcs;
+  //allocate the piecelists if necessary
+  if (this->ParPLs == NULL || this->NumPLs != numProcs)
     {
-    cerr << buffer[i] << " ";
-    };
-  cerr << endl;
-  this->PieceList->Print();
-  );
+    for (int i = 0; i < this->NumPLs; i++)
+      {
+      this->ParPLs[i]->Delete();
+      }
+    delete[] this->ParPLs;
+
+    this->NumPLs = numProcs;
+    this->ParPLs = new vtkPieceList*[numProcs];
+    for (int i = 0; i < numProcs; i++)
+      {
+      this->ParPLs[i] = vtkPieceList::New();
+      }
+    }
+
+  //serialize each one's own region of the buffer into itself
+  int pos = temp.tellg();
+  for (int i = 0; i < numProcs; i++)
+    {
+    int len;
+    this->ParPLs[i]->UnSerialize(buffer+pos, &len);
+    if (i == this->UpdatePiece)
+      {
+      //copy mine to where I will use it for future updates
+      if (!this->PieceList)
+        {
+        this->PieceList = vtkPieceList::New();
+        this->PieceList->Clear();
+        }
+      this->PieceList->CopyPieceList(this->ParPLs[i]);
+      }
+    pos = pos + len;
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -293,10 +490,20 @@ void vtkStreamingUpdateSuppressor::ClearPriorities()
     this->PieceList->Delete();
     this->PieceList = NULL;
     }
+
+  if (this->ParPLs)
+    {
+    for (int i = 0; i < this->NumPLs; i++)
+      {
+      this->ParPLs[i]->Delete();
+      }
+    delete[] this->ParPLs;
+    }
+  this->NumPLs = 0;
 }
 
 //-----------------------------------------------------------------------------
-void vtkStreamingUpdateSuppressor::ComputePriorities()
+void vtkStreamingUpdateSuppressor::ComputeLocalPipelinePriorities()
 {
   DEBUGPRINT_EXECUTION(
   cerr << "US(" << this << ") COMPUTE PRIORITIES ";
@@ -316,7 +523,7 @@ void vtkStreamingUpdateSuppressor::ComputePriorities()
   this->PieceList = vtkPieceList::New();
   this->PieceList->Clear();
   vtkInformation* info = input->GetPipelineInformation();
-  vtkStreamingDemandDrivenPipeline* sddp = 
+  vtkStreamingDemandDrivenPipeline* sddp =
     vtkStreamingDemandDrivenPipeline::SafeDownCast(
       vtkExecutive::PRODUCER()->GetExecutive(info));
   if (sddp)
@@ -324,25 +531,27 @@ void vtkStreamingUpdateSuppressor::ComputePriorities()
     for (int i = 0; i < this->NumberOfPasses; i++)
       {
       double priority = 1.0;
-      vtkPiece *piece = vtkPiece::New();    
+      vtkPiece piece;
       int gPiece = this->UpdatePiece*this->NumberOfPasses + i;
       int gPieces = this->UpdateNumberOfPieces*this->NumberOfPasses;
+      double pBounds[6] = {0,-1,0,-1,0,-1};
       if (vtkStreamingOptions::GetUsePrioritization())
         {
         DEBUGPRINT_EXECUTION(
         cerr << "US(" << this << ") COMPUTE PRIORITY ON " << gPiece << endl;
         );
-        sddp->SetUpdateExtent(info, gPiece, gPieces, 0); 
+        sddp->SetUpdateExtent(info, gPiece, gPieces, 0);
         priority = sddp->ComputePriority();
+        sddp->GetPieceBoundingBox(0, pBounds);
         DEBUGPRINT_EXECUTION(
         cerr << "US(" << this << ") result was " << priority << endl;
         );
         }
-      piece->SetPiece(i);
-      piece->SetNumPieces(this->NumberOfPasses);
-      piece->SetPriority(priority);
+      piece.SetPiece(i);
+      piece.SetNumPieces(this->NumberOfPasses);
+      piece.SetPipelinePriority(priority);
+      piece.SetBounds(pBounds);
       this->PieceList->AddPiece(piece);
-      piece->Delete();
       }
     }
   DEBUGPRINT_EXECUTION(
@@ -351,17 +560,96 @@ void vtkStreamingUpdateSuppressor::ComputePriorities()
   );
 
   //sorts pieces from priority 1.0 down to 0.0
-  this->PieceList->SortPriorities();    
+  this->PieceList->SortPriorities();
 
-  //All nodes in server now have to agree on which pieces to process in order
-  //to avoid deadlock.
-  this->MergePriorities();
+  //Send piecelists to root node where client can get it
+  this->GatherPriorities();
+}
 
-  //The client can use this to know when it can stop.
-  this->MaxPass = this->PieceList->GetNumberNonZeroPriority();
-  DEBUGPRINT_EXECUTION(
-  cerr << "US(" << this << ") " << this->MaxPass << " pieces that matter" << endl;
-  );
+//-----------------------------------------------------------------------------
+void vtkStreamingUpdateSuppressor::ComputeLocalViewPriorities()
+{
+  LOG("COMPUTING VIEW PRIORITIES" << endl;)
+  this->ComputeViewPriorities(this->PieceList);
+  this->PieceList->SortPriorities();
+}
+
+//-----------------------------------------------------------------------------
+void vtkStreamingUpdateSuppressor::ComputeGlobalViewPriorities()
+{
+  for (int i = 0; i < this->NumPLs; i++)
+    {
+    this->ComputeViewPriorities(this->ParPLs[i]);
+    this->ParPLs[i]->SortPriorities();
+    }
+}
+
+//-----------------------------------------------------------------------------
+void vtkStreamingUpdateSuppressor::ComputeViewPriorities(vtkPieceList *pl)
+{
+  if (!pl)
+    {
+    return;
+    }
+
+  for (int i = 0; i < pl->GetNumberOfPieces(); i++)
+    {
+    vtkPiece p = pl->GetPiece(i);
+    double pp = this->ComputeViewPriority(p.GetBounds());
+    p.SetViewPriority(pp);
+    pl->SetPiece(i, p);
+    }
+}
+
+//-----------------------------------------------------------------------------
+void vtkStreamingUpdateSuppressor::ComputeLocalCachePriorities()
+{
+  if (!this->PieceCacheFilter || !this->PieceList)
+    {
+    return;
+    }
+
+  vtkPieceList *pl = this->PieceList;
+  for (int j = 0; j < pl->GetNumberOfPieces(); j++)
+    {
+    vtkPiece p = pl->GetPiece(j);
+    int piece = p.GetPiece();
+    int pieces = p.GetNumPieces();
+    double res = p.GetResolution();
+    if (this->PieceCacheFilter->InCache(piece,pieces,res))
+      {
+      p.SetCachedPriority(0.0);
+      pl->SetPiece(j, p);
+      }
+    }
+}
+
+//-----------------------------------------------------------------------------
+void vtkStreamingUpdateSuppressor::ComputeGlobalCachePriorities()
+{
+  if (!this->ParallelPieceCacheFilter)
+    {
+    return;
+    }
+
+  for (int i = 0; i < this->NumPLs; i++)
+    {
+    vtkPieceList *pl = this->ParPLs[i];
+    if (!pl)
+      {
+      continue;
+      }
+
+    for (int j = 0; j < pl->GetNumberOfPieces(); j++)
+      {
+      vtkPiece p = pl->GetPiece(j);
+      if (this->ParallelPieceCacheFilter->HasPiece(&p))
+        {
+        p.SetCachedPriority(0.0);
+        pl->SetPiece(j, p);
+        }
+      }
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -370,7 +658,7 @@ void vtkStreamingUpdateSuppressor::PrintPipe(vtkAlgorithm *alg)
   //for debugging, this helps me understand which US is which in the messages
   vtkAlgorithm *algptr = alg;
   if (!algptr) return;
-  if (algptr->GetNumberOfInputPorts() && 
+  if (algptr->GetNumberOfInputPorts() &&
       algptr->GetNumberOfInputConnections(0))
     {
     vtkAlgorithmOutput *ao = algptr->GetInputConnection(0,0);
@@ -380,36 +668,23 @@ void vtkStreamingUpdateSuppressor::PrintPipe(vtkAlgorithm *alg)
       this->PrintPipe(algptr);
       }
     cerr << "->";
-    }   
+    }
   cerr << alg->GetClassName();
 }
 
 //----------------------------------------------------------------------------
-void vtkStreamingUpdateSuppressor::MergePriorities()
+void vtkStreamingUpdateSuppressor::GatherPriorities()
 {
-  //each processor (client and all nodes of the server) have to agree on 
-  //piece list. No processor can skip a pipeline update in ForceUpdate 
-  //(either because of 0.0 priority or because of reuse of cached results) 
-  //unless all of the processors do. Otherwise 1 sided communication across 
-  //processors will cause ParaView to hang.
   if (!this->PieceList)
     {
     //will someone ever not have a piecelist?
     return;
     }
 
-  vtkMultiProcessController *controller =
-    vtkMultiProcessController::GetGlobalController();
   int procid = 0;
   int numProcs = 1;
-
-  //serialize locally computed priorities
-  int np = this->PieceList->GetNumberOfPieces();
-  double *mine = new double[np];
-  for (int i = 0; i < np; i++)
-    {
-    mine[i] = this->PieceList->GetPiece(i)->GetPriority(); 
-    }
+  vtkMultiProcessController *controller =
+    vtkMultiProcessController::GetGlobalController();
   if (controller)
     {
     procid = controller->GetLocalProcessId();
@@ -419,51 +694,297 @@ void vtkStreamingUpdateSuppressor::MergePriorities()
     this->PieceList->Print();
     );
     }
+
+  //serialize locally computed priorities
+  this->PieceList->Serialize();
+  char *buffer;
+  int len;
+  this->PieceList->GetSerializedList(&buffer, &len);
+
   if (procid)
     {
     //send locally computed priorities to root
-    controller->Send(mine, np, 0, PRIORITY_COMMUNICATION_TAG);
-    //receive merged results from root
-    controller->Receive(mine, np, 0, PRIORITY_COMMUNICATION_TAG);
-    for (int i = 0; i < np; i++)
-      {
-      this->PieceList->GetPiece(i)->SetPriority(mine[i]);
-      }
+    controller->Send(&len, 1, 0, PRIORITY_COMMUNICATION_TAG);
+    controller->Send(buffer,
+                     len,
+                     0, PRIORITY_COMMUNICATION_TAG);
     }
-  else if (numProcs > 1)
+  else
     {
-    double *remotes = new double[np];
-    for (int j = 1; j < numProcs; j++)
+    if (this->ParPLs == NULL)
       {
-      controller->Receive(remotes, np, j, PRIORITY_COMMUNICATION_TAG);
-      for (int i = 0; i < np; i++)
+      this->ParPLs = new vtkPieceList*[numProcs];
+      this->NumPLs = numProcs;
+      for (int i = 0; i < numProcs; i++)
         {
-        if (remotes[i] > mine[i])
-          {
-          mine[i] = remotes[i];
-          }
+        this->ParPLs[i] = vtkPieceList::New();
         }
       }
-    delete[] remotes;
+    //Unserialize my own
+    this->ParPLs[0]->UnSerialize(buffer, &len);
+    //Unserialize everyone else's
     for (int j = 1; j < numProcs; j++)
       {
-      controller->Send(mine, np, j, PRIORITY_COMMUNICATION_TAG);
-      }
-    for (int i = 0; i < np; i++)
-      {
-      this->PieceList->GetPiece(i)->SetPriority(mine[i]);
+      int rlen;
+      controller->Receive(&rlen, 1, j, PRIORITY_COMMUNICATION_TAG);
+      char *remotes = new char[rlen];
+      controller->Receive(remotes, rlen, j, PRIORITY_COMMUNICATION_TAG);
+      this->ParPLs[j]->UnSerialize(remotes, &rlen);
+      delete[] remotes;
       }
     }
-  DEBUGPRINT_EXECUTION(
-  cerr << "US(" << this << ") POSTGATHER" << endl;
-  this->PieceList->Print();
-  );
-
-  delete[] mine;
 }
 
 //----------------------------------------------------------------------------
-void vtkStreamingUpdateSuppressor::PrintSelf(ostream& os, vtkIndent indent)
+void vtkStreamingUpdateSuppressor::ScatterPriorities()
 {
-  this->Superclass::PrintSelf(os,indent);
+  int procid = 0;
+  int numProcs = 1;
+  vtkMultiProcessController *controller =
+    vtkMultiProcessController::GetGlobalController();
+  if (controller)
+    {
+    procid = controller->GetLocalProcessId();
+    numProcs = controller->GetNumberOfProcesses();
+    DEBUGPRINT_EXECUTION(
+    cerr << "US(" << this << ") PREGATHER:" << endl;
+    this->PieceList->Print();
+    );
+    }
+
+  char *buffer;
+  int len;
+  if (procid)
+    {
+    controller->Receive(&len, 1, 0, PRIORITY_COMMUNICATION_TAG);
+    controller->Receive(buffer,
+                        len,
+                        0, PRIORITY_COMMUNICATION_TAG);
+
+    if (this->PieceList)
+      {
+      this->PieceList->Delete();
+      }
+    this->PieceList = vtkPieceList::New();
+    this->PieceList->Clear();
+    this->PieceList->UnSerialize(buffer, &len);
+    }
+  else
+    {
+    for (int j = 0; j < numProcs; j++)
+      {
+      int rlen;
+      char *remotes;
+      this->ParPLs[j]->Serialize();
+      this->ParPLs[j]->GetSerializedList(&remotes, &rlen);
+      if (j == 0)
+        {
+        this->PieceList->UnSerialize(remotes, &rlen);
+        }
+      else
+        {
+        controller->Send(&rlen, 1, j, PRIORITY_COMMUNICATION_TAG);
+        controller->Send(remotes, rlen, j, PRIORITY_COMMUNICATION_TAG);
+        }
+      }
+    }
+}
+
+//-----------------------------------------------------------------------------
+void vtkStreamingUpdateSuppressor::SetFrustum(double *frustum)
+{
+  int i;
+  for (i=0; i<32; i++)
+    {
+    if ( frustum[i] != this->Frustum[i] )
+      {
+      break;
+      }
+    }
+  if ( i < 32 )
+    {
+    for (i=0; i<32; i++)
+      {
+      this->Frustum[i] = frustum[i];
+      }
+    DEBUGPRINT_PRIORITY(
+    cerr << "FRUST" << endl;
+    for (i=0; i<8; i++)
+      {
+      cerr << this->Frustum[i*4+0] << "," << this->Frustum[i*4+1] << "," << this->Frustum[i*4+2] << endl;
+      }
+    );
+
+    this->FrustumTester->CreateFrustum(frustum);
+
+    //No! camera changes are low priority, should NOT cause
+    //reexecution of pipeline or invalidate cache filter
+    //this->Modified();
+    }
+}
+
+//-----------------------------------------------------------------------------
+void vtkStreamingUpdateSuppressor::SetCameraState(double *cameraState)
+{
+  int i;
+  for (i=0; i<9; i++)
+    {
+    if ( cameraState[i] != this->CameraState[i] )
+      {
+      break;
+      }
+    }
+  if ( i < 9 )
+    {
+    for (i=0; i<9; i++)
+      {
+      this->CameraState[i] = cameraState[i];
+      }
+    DEBUGPRINT_PRIORITY(
+    cerr << "EYE" << this->CameraState[0] << "," << this->CameraState[1] << "," << this->CameraState[2] << endl;
+                        );
+    }
+}
+
+//------------------------------------------------------------------------------
+double vtkStreamingUpdateSuppressor::ComputeViewPriority(double *pbbox)
+{
+  if (!pbbox)
+    {
+    return 1.0;
+    }
+
+  double outPriority = 1.0;
+
+  if (pbbox[0] <= pbbox[1] &&
+      pbbox[2] <= pbbox[3] &&
+      pbbox[4] <= pbbox[5])
+    {
+    // use the frustum extraction filter to reject pieces that do not intersect the view frustum
+    if (!this->FrustumTester->OverallBoundsTest(pbbox))
+      {
+      outPriority = 0.0;
+      }
+    else
+      {
+      //for those that are not rejected, compute a priority from the bounds such that pieces
+      //nearest to camera eye have highest priority 1 and those furthest away have lowest 0.
+      //Must do this using only information about current piece.
+      vtkBoundingBox box(pbbox);
+      double center[3];
+      box.GetCenter(center);
+
+      double dbox=sqrt(vtkMath::Distance2BetweenPoints(&this->CameraState[0], center));
+      const double *farlowerleftcorner = &this->Frustum[1*4];
+      double dfar=sqrt(vtkMath::Distance2BetweenPoints(&this->CameraState[0], farlowerleftcorner));
+
+
+      double dist = 1.0-dbox/dfar;
+      if (dist < 0.0)
+        {
+        DEBUGPRINT_PRIORITY(cerr << "VS(" << this << ") reject too far" << endl;);
+        dist = 0.0;
+        }
+      if (dist > 1.0)
+        {
+        DEBUGPRINT_PRIORITY(cerr << "VS(" << this << ") reject too near" << endl;);
+        dist = 0.0;
+        }
+      outPriority = dist;
+      }
+    }
+
+  return outPriority;
+}
+
+
+//-----------------------------------------------------------------------------
+void vtkStreamingUpdateSuppressor::AddPieceList(vtkPieceList *newPL)
+{
+  //This method is for testing. It makes it possible to manually add
+  //piecelists with known content. That can later be inspected.
+  cerr << "SUS(" << this << ") AddPieceList " << newPL << endl;
+  if (!newPL)
+    {
+    return;
+    }
+  vtkPieceList **newPLs = new vtkPieceList*[this->NumPLs+1];
+  for (int i = 0; i < this->NumPLs; i++)
+    {
+    newPLs[i] = this->ParPLs[i];
+    }
+  newPLs[this->NumPLs] = newPL;
+  if (this->ParPLs)
+    {
+    delete[] this->ParPLs;
+    }
+  this->ParPLs = newPLs;
+  this->NumPLs++;
+}
+
+//-----------------------------------------------------------------------------
+void vtkStreamingUpdateSuppressor::PrintPieceLists()
+{
+  //This method is for testing. It makes it possible to
+  //inspected piecelists for veracity.
+  LOG("SUS(" << this << ") PrintPieceLists " << endl;)
+
+  int procid = 0;
+  int numProcs = 1;
+  vtkMultiProcessController *controller =
+    vtkMultiProcessController::GetGlobalController();
+  if (controller)
+    {
+    procid = controller->GetLocalProcessId();
+    numProcs = controller->GetNumberOfProcesses();
+    }
+
+  if(this->PieceList)
+    {
+    this->PieceList->Print();
+    }
+  else
+    {
+    LOG("NO LOCAL PL" << endl;);
+    }
+  LOG("NPLS = " << this->NumPLs << endl;)
+  for (int i = 0; i < this->NumPLs; i++)
+    {
+    LOG("Printing " << i << " " << this->ParPLs[i] << endl;)
+    this->ParPLs[i]->Print();
+    }
+  LOG("DONE" << endl;)
+}
+
+//------------------------------------------------------------------------------
+void vtkStreamingUpdateSuppressor::CopyBuddy(vtkStreamingUpdateSuppressor *buddy)
+{
+  //This method is for testing. It makes it possible to simulate
+  //piecelist copying across the network so test serialization.
+  cerr << "SUS(" << this << ") CopyBuddy " << buddy << endl;
+  if (!buddy)
+    {
+    return;
+    }
+  buddy->SerializeLists();
+
+  char *buffer;
+  int len;
+  buffer = buddy->GetSerializedLists();
+  len = strlen(buffer);
+  cerr << "LEN = " << len << endl;
+  cerr << buffer << endl;
+
+  this->UnSerializeLists(buffer);
+  this->PrintPieceLists();
+}
+
+//------------------------------------------------------------------------------
+void vtkStreamingUpdateSuppressor::PrintSerializedLists()
+{
+  LOG("SUS(" << this << ") PrintSerialized" << endl;)
+  char *buffer;
+  buffer = this->GetSerializedLists();
+  LOG("LEN = " << strlen(buffer) << endl;);
+  LOG(cerr << buffer << endl;)
 }

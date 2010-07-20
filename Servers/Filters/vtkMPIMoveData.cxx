@@ -363,7 +363,15 @@ int vtkMPIMoveData::RequestData(vtkInformation*,
       }
     if (this->Server == vtkMPIMoveData::CLIENT)
       {
+      if (!output)
+        {
+        vtkDataObject* doOut = outInfo->Get(vtkDataObject::DATA_OBJECT());
+        this->ClientReceiveFromDataServer(doOut);
+        }
+      else
+        {
       this->ClientReceiveFromDataServer(output);
+        }
       return 1;
       }
     }
@@ -385,7 +393,15 @@ int vtkMPIMoveData::RequestData(vtkInformation*,
       }
     if (this->Server == vtkMPIMoveData::CLIENT)
       {
+      if (!output)
+        {
+        vtkDataObject* doOut = outInfo->Get(vtkDataObject::DATA_OBJECT());
+        this->ClientReceiveFromDataServer(doOut);
+        }
+      else
+        {
       this->ClientReceiveFromDataServer(output);
+        }
       return 1;
       }
     if (this->Server == vtkMPIMoveData::RENDER_SERVER)
@@ -408,7 +424,15 @@ int vtkMPIMoveData::RequestData(vtkInformation*,
       }
     if (this->Server == vtkMPIMoveData::CLIENT)
       {
-      this->ClientReceiveFromDataServer(output);
+      if (!output)
+        {
+        vtkDataObject* doOut = outInfo->Get(vtkDataObject::DATA_OBJECT());
+        this->ClientReceiveFromDataServer(doOut);
+        }
+      else
+        {
+        this->ClientReceiveFromDataServer(output);
+        }
       return 1;
       }
     // Render server does nothing
@@ -430,7 +454,15 @@ int vtkMPIMoveData::RequestData(vtkInformation*,
         }
       if (this->Server == vtkMPIMoveData::CLIENT)
         {
+        if (!output)
+          {
+          vtkDataObject* doOut = outInfo->Get(vtkDataObject::DATA_OBJECT());
+          this->ClientReceiveFromDataServer(doOut);
+          }
+        else
+          {
         this->ClientReceiveFromDataServer(output);
+          }
         return 1;
         }
       }
@@ -458,7 +490,15 @@ int vtkMPIMoveData::RequestData(vtkInformation*,
         }
       if (this->Server == vtkMPIMoveData::CLIENT)
         {
+        if (!output)
+          {
+          vtkDataObject* doOut = outInfo->Get(vtkDataObject::DATA_OBJECT());
+          this->ClientReceiveFromDataServer(doOut);
+          }
+        else
+          {
         this->ClientReceiveFromDataServer(output);
+          }
         return 1;
         }
       }
@@ -1288,3 +1328,23 @@ void vtkMPIMoveData::PrintSelf(ostream& os, vtkIndent indent)
   //os << indent << "MToN
 }
 
+void vtkMPIMoveData::PrintMe()
+{
+  cerr << "MPIMD(" << this << ")" << endl;
+  this->PrintSelf(cerr, vtkIndent(0));
+  cerr << "MY OUTPUT ------------------------" << endl;
+  if (this->GetOutput())
+    {
+    cerr << this->GetOutput()->GetClassName() << endl;
+    vtkDataSet*ds = vtkDataSet::SafeDownCast(this->GetOutput());
+    if (ds)
+      {
+      cerr << ds->GetNumberOfPoints() << endl;
+      }
+    //this->GetOutput()->PrintSelf(cerr, vtkIndent(3));
+    }
+  else
+    {
+    cerr << "NONE" << endl;
+    }
+}

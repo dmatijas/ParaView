@@ -4,19 +4,21 @@ INCLUDE_DIRECTORIES(
 )
 
 SET(STREAMING_SS_SOURCES
-  vtkPiece.cxx 
-  vtkPieceCacheFilter.cxx
+  vtkParallelPieceCacheExecutive.cxx
+  vtkParallelPieceCacheFilter.cxx
   vtkPieceCacheExecutive.cxx
+  vtkPieceCacheFilter.cxx
   vtkPieceList.cxx
   vtkPVSGeometryInformation.cxx
   vtkRawStridedReader.cxx
   vtkSMStreamingOptionsProxy.cxx
   vtkSMStreamingOutputPort.cxx
-  vtkSMStreamingRepresentation.cxx 
+  vtkSMStreamingRepresentation.cxx
   vtkSMStreamingParallelStrategy.cxx
-  vtkSMStreamingSerialStrategy.cxx 
+  vtkSMStreamingSerialStrategy.cxx
   vtkSMStreamingViewHelper.cxx
   vtkSMStreamingViewProxy.cxx
+  vtkStreamingMoveData.cxx
   vtkStreamingFactory.cxx
   vtkStreamingOptions.cxx
   vtkStreamingUpdateSuppressor.cxx
@@ -25,16 +27,17 @@ SET(STREAMING_SS_SOURCES
 
 # arguments for the server side pieces of the plugin
 SET(SERVER_ARGS
-  SERVER_MANAGER_XML StreamingServerWrapping.xml 
+  SERVER_MANAGER_XML StreamingServerWrapping.xml
   SERVER_MANAGER_SOURCES ${STREAMING_SS_SOURCES}
+  SERVER_SOURCES vtkPiece.cxx
   )
-  
+
 IF(PARAVIEW_BUILD_QT_GUI)
   FIND_PACKAGE(Qt4)
   IF(QT4_FOUND)
-    
+
     INCLUDE(${QT_USE_FILE})
-    
+
     INCLUDE_DIRECTORIES(
       ${VTK_INCLUDE_DIR}
       ${PARAVIEW_INCLUDE_DIRS}
@@ -50,29 +53,29 @@ IF(PARAVIEW_BUILD_QT_GUI)
       ${QtPython_SOURCE_DIR}
       ${QtPython_BINARY_DIR}
       )
-    
+
     # moc the Qt based .h files
     QT4_WRAP_CPP(MOC_SRCS
       pqStreamingRenderView.h
       pqGlobalStreamingViewOptions.h
       pqStreamingDisplayDecorator.h
       )
-    
+
     QT4_WRAP_UI(UI_BUILT_SOURCES
       pqGlobalStreamingViewOptions.ui
       pqStreamingDisplayDecorator.ui
       )
-    
+
     SET(STREAMING_CS_SOURCES
       pqStreamingRenderView.cxx
       pqGlobalStreamingViewOptions.cxx
       pqStreamingDisplayDecorator.cxx
       )
-    
+
     # invoke macro to create the streaming view.
     ADD_PARAVIEW_VIEW_MODULE(
-      IFACES  
-      IFACE_SRCS 
+      IFACES
+      IFACE_SRCS
       VIEW_TYPE pqStreamingRenderView
       VIEW_NAME StreamingView
       VIEW_XML_GROUP views
@@ -80,7 +83,7 @@ IF(PARAVIEW_BUILD_QT_GUI)
       DISPLAY_XML
       DISLAY_PANEL
       )
-    
+
     # invoke macro to create the options dialog
     ADD_PARAVIEW_VIEW_OPTIONS(
       OPTIONS_IFACE
@@ -88,30 +91,30 @@ IF(PARAVIEW_BUILD_QT_GUI)
       VIEW_TYPE pqStreamingRenderView
       GLOBAL_VIEW_OPTIONS pqGlobalStreamingViewOptions
       )
-    
+
     # invoke macro that adds the show piece bounds checkbox to the display tab
     ADD_PARAVIEW_DISPLAY_PANEL_DECORATOR(
-      PANEL_IFACE PANEL_IFACE_SRCS 
+      PANEL_IFACE PANEL_IFACE_SRCS
       CLASS_NAME pqStreamingDisplayDecorator
       PANEL_TYPES pqDisplayProxyEditor)
-    
+
     # arguments to create the client side pieces of the plugin
     SET(CLIENT_ARGS
-      GUI_INTERFACES 
+      GUI_INTERFACES
       ${IFACES} ${OPTIONS_IFACE} ${PANEL_IFACE}
-      GUI_SOURCES 
+      GUI_SOURCES
       ${STREAMING_CS_SOURCES}
-      ${MOC_SRCS} 
+      ${MOC_SRCS}
       ${IFACE_SRCS} ${OPTIONS_IFACE_SRCS} ${PANEL_IFACE_SRCS}
       ${UI_BUILT_SOURCES})
-    
+
   ENDIF(QT4_FOUND)
-  
+
 ENDIF(PARAVIEW_BUILD_QT_GUI)
 
 #combine the server and client sides together into a single plugin
 #paraview is smart enough to only load the pieces that make sense
-ADD_PARAVIEW_PLUGIN ( StreamingPlugin "1.0" 
+ADD_PARAVIEW_PLUGIN ( StreamingPlugin "1.0"
   ${SERVER_ARGS}
   ${CLIENT_ARGS}
   )
@@ -119,13 +122,14 @@ ADD_PARAVIEW_PLUGIN ( StreamingPlugin "1.0"
 #if python is enabled, wrap the plugin so that it can be used from within python code
 IF (PARAVIEW_ENABLE_PYTHON)
   SET(DONT_WRAP_LIST
+    vtkStreamingMoveData.cxx
     vtkStreamingUpdateSuppressor.cxx
     vtkPVSGeometryInformation.cxx
     vtkSMStreamingViewHelper.cxx
+    vtkPiece.cxx
     )
   WRAP_PLUGIN_FOR_PYTHON(StreamingPlugin "${STREAMING_SS_SOURCES}" "${DONT_WRAP_LIST}")
 ENDIF (PARAVIEW_ENABLE_PYTHON)
 
 #configure regression tests
 ADD_SUBDIRECTORY(Testing)
-
