@@ -148,8 +148,8 @@ protected:
   vtkIdType  BufferTotalLength;
 
   void ClearBuffer();
-  void MarshalDataToBuffer(vtkDataObject* data);
-  void ReconstructDataFromBuffer(vtkDataObject* data);
+  virtual void MarshalDataToBuffer(vtkDataObject* data);
+  virtual void ReconstructDataFromBuffer(vtkDataObject* data);
 
   int MoveMode;
   int Server;

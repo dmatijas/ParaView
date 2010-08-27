@@ -54,6 +54,7 @@ public:
 vtkPieceList::vtkPieceList()
 {
   this->Internals = new vtkInternals;
+  cerr << "PL(" <<this<< ") create" << endl;
 }
 
 //----------------------------------------------------------------------------
@@ -61,6 +62,7 @@ vtkPieceList::~vtkPieceList()
 {
   this->Clear();
   delete this->Internals;
+  cerr << "PL(" <<this<< ") delete" << endl;
 }
 
 //----------------------------------------------------------------------------
@@ -193,15 +195,15 @@ void vtkPieceList::Serialize()
          << mine.Piece << " "
          << mine.NumPieces << " "
          << mine.Resolution << " "
-         << mine.PipelinePriority << " "
-         << mine.ViewPriority << " "
-         << mine.CachedPriority << " "
          << mine.Bounds[0] << " "
          << mine.Bounds[1] << " "
          << mine.Bounds[2] << " "
          << mine.Bounds[3] << " "
          << mine.Bounds[4] << " "
-         << mine.Bounds[5] << " ";
+         << mine.Bounds[5] << " "
+         << mine.PipelinePriority << " "
+         << mine.ViewPriority << " "
+         << mine.CachedPriority << " ";
     }
   int len = strlen(temp.str().c_str());
   this->Internals->SerializeBuffer = new char[len+10];
@@ -242,15 +244,15 @@ void vtkPieceList::UnSerialize(char *buffer, int *bytes)
     temp >> mine.Piece;
     temp >> mine.NumPieces;
     temp >> mine.Resolution;
-    temp >> mine.PipelinePriority;
-    temp >> mine.ViewPriority;
-    temp >> mine.CachedPriority;
     temp >> mine.Bounds[0];
     temp >> mine.Bounds[1];
     temp >> mine.Bounds[2];
     temp >> mine.Bounds[3];
     temp >> mine.Bounds[4];
-    temp >> mine.Bounds[5];;
+    temp >> mine.Bounds[5];
+    temp >> mine.PipelinePriority;
+    temp >> mine.ViewPriority;
+    temp >> mine.CachedPriority;
     this->AddPiece(mine);
     }
   int end = temp.tellg();
@@ -338,9 +340,9 @@ void vtkPieceList::CopyBuddy(vtkPieceList *buddy)
   char *buffer;
   int len;
   buddy->GetSerializedList(&buffer, &len);
-  cerr << "LEN = " << len << endl;
-  cerr << buffer << endl;
+  //cerr << "LEN = " << len << endl;
+  //cerr << buffer << endl;
 
   this->UnSerialize(buffer, &len);
-  this->Print();
+  //this->Print();
 }

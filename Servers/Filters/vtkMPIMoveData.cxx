@@ -1331,7 +1331,7 @@ void vtkMPIMoveData::PrintSelf(ostream& os, vtkIndent indent)
 void vtkMPIMoveData::PrintMe()
 {
   cerr << "MPIMD(" << this << ")" << endl;
-  this->PrintSelf(cerr, vtkIndent(0));
+  //this->PrintSelf(cerr, vtkIndent(0));
   cerr << "MY OUTPUT ------------------------" << endl;
   if (this->GetOutput())
     {

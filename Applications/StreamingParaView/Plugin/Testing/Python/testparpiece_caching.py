@@ -1,4 +1,8 @@
-#This test is used to verify that the client can cache and reuse lots of pieces out of the parallel piece cache filter.
+print "This test is used to verify that the parallel piece cache filter has "
+print "control over pipeline executions, can cache individual pieces that are "
+print "given to it, and that it appends the various inputs together into a single "
+print "polydata"
+print "To run: run pvpython and execfile(\"this script\")"
 
 from paraview import servermanager
 from paraview import vtk
@@ -6,13 +10,13 @@ from paraview import vtk
 if servermanager.ActiveConnection == None:
     connection = servermanager.Connect()
 
-#fname = "C:/Documents and Settings/demarle/Desktop/Builds/ParaView/gitDevel/CSStreaming/bin/Debug/StreamingPlugin.dll"
-fname = "/Builds/ParaView/CSStreaming/buildAll/bin/libStreamingPlugin.dylib"
+fname = "/Builds/ParaView/devel/streaming_clientside_cache/bin/libStreamingPlugin.dylib"
 servermanager.LoadPlugin(fname)
 
 pxm = servermanager.ProxyManager()
 
-#a programmable source that produces pieces of synthetic polydata in a multiblock dataset
+print "Make a programmable source that produces pieces of synthetic polydata in a"
+print "multiblock dataset"
 pys = pxm.NewProxy("sources", "ProgrammableSource")
 pys.GetProperty("OutputDataSetType").SetElement(0,25)
 pys.UpdateProperty("OutputDataSetType",1)
@@ -75,38 +79,67 @@ pd.GetInformation().Set(infokey, 4)
 mpds.SetPiece(1, pd)
 """)
 pys.UpdateProperty("Script",1)
+print "Each time the python filter executes it produces a two piece multipiece"
+print "data set. Both are polydata, flagged as being piece 0/4 on their respective"
+print "processor."
+print "Both pieces have exactly one VTK_VERTEX cell, which sits at -1,0,? for the"
+print "first and print 1,0,? for the second."
+print "The filter changes ?, the z coordinate every time it runs and that number "
+print "is also found in the point centered array called execcount"
 
 pys.UpdatePipeline()
 lpys = pys.GetClientSideObject()
-#print(lpys)
+print "OUTPUT OF Programmable filter is"
+print lpys.GetOutput().GetClassName()
+print(lpys.GetOutput())
+print "The above should have two datasets with one vert, the first at"
+print "-1,0,0 and the other at 1,0,0."
 
-#print(lpys.GetOutput())
-
-#the parallel piece cache filter that I am trying to test
+print "Create the parallel piece cache filter that I am trying to test"
 ppc = pxm.NewProxy("filters", "ParallelPieceCache")
 lppc = ppc.GetClientSideObject()
 ppc.AddInput(0, pys, 0, "SetInputConnection")
 ppc.UpdatePipeline()
-#lppc.SetInputConnection(lpys.GetOutputPort(0))
 lppc.Update()
 
+print "print its output"
+print "OUTPUT OF PPCF IS"
+print lppc.GetOutput().GetClassName()
+print lppc.GetOutput()
 print("BOUNDS ARE")
 print(lppc.GetOutput().GetBounds())
 pdaout = lppc.GetOutput().GetPointData().GetArray("execcount")
 print ("execcount is " + str(pdaout.GetValue(0)) + " " + str(pdaout.GetValue(1)))
+print "This should be a single (merged) polydata consisting of two VTK_VERTEX cells"
+print "and have bounds of -1..1,0,0"
+
+lppc.Update()
+print "OUTPUT OF PPCF IS"
+print lppc.GetOutput().GetClassName()
+print("BOUNDS ARE")
+print(lppc.GetOutput().GetBounds())
+pdaout = lppc.GetOutput().GetPointData().GetArray("execcount")
+print ("execcount is " + str(pdaout.GetValue(0)) + " " + str(pdaout.GetValue(1)))
+print "Since the source was NOT modified, the PPCF should return exactly what it"
+print "did before"
 
 lpys.Modified()
 lppc.Update()
+print "OUTPUT OF PPCF IS"
+print lppc.GetOutput().GetClassName()
 print("BOUNDS ARE")
 print(lppc.GetOutput().GetBounds())
 pdaout = lppc.GetOutput().GetPointData().GetArray("execcount")
 print ("execcount is " + str(pdaout.GetValue(0)) + " " + str(pdaout.GetValue(1)))
+print "Since the source WAS modified, the PPCF should discard what is in the case"
+print "and return a new data set like the one above, but incremented in z and value"
 
 print("SET PIECES TO REQUEST");
 ppc.GetProperty("MakeDummyList")
 prop.Modified()
 ppc.UpdateProperty("MakeDummyList",1)
-#lppc.MakeDummyList()
+print "The PPC will now look for pieces {proc=0,pn=0,np=4} and {proc=1,pn=0,np=4}"
+print "which is exactly what we produced."
 
 print("CHECKING IF IT HAS CONTENTS OF DUMMY LIST")
 prop = ppc.GetProperty("HasRequestedPieces")
@@ -116,17 +149,19 @@ if ret:
     print("It HAS REQUESTED PIECES")
 else:
     print("It DOES NOT HAVE PIECES")
+print "It should have the requested pieces"
 
 lpys.Modified()
+lpys.Update()
+print "OUTPUT OF Programmable filter is"
+print lpys.GetOutput().GetClassName()
+print(lpys.GetOutput())
+print "The third execution of the source should move it to -1..1,0,2"
+
 lppc.Update()
-print("BOUNDS ARE")
+print("BOUNDS OF PPCF ARE")
 print(lppc.GetOutput().GetBounds())
 pdaout = lppc.GetOutput().GetPointData().GetArray("execcount")
 print ("execcount is " + str(pdaout.GetValue(0)) + " " + str(pdaout.GetValue(1)))
-
-lpys.Modified()
-lppc.Update()
-print("BOUNDS ARE")
-print(lppc.GetOutput().GetBounds())
-pdaout = lppc.GetOutput().GetPointData().GetArray("execcount")
-print ("execcount is " + str(pdaout.GetValue(0)) + " " + str(pdaout.GetValue(1)))
+print "Even thought he source was modified, since we are asking for specific pieces"
+print "from the cache it should return the same thing again (bounds -1..1,0,1)"

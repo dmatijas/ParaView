@@ -50,12 +50,12 @@ protected:
                            vtkInformationVector* outputVector);
 
 
-  virtual void DataServerGatherToZero(vtkDataSet* input, vtkDataSet* output);
-  virtual void DataServerSendToClient(vtkDataSet* output);
+  virtual void DataServerGatherToZero(vtkDataObject* input, vtkDataObject* output);
+  virtual void DataServerSendToClient(vtkDataObject* output);
   virtual void ClientReceiveFromDataServer(vtkDataObject* output);
 
-  virtual void MarshalDataToBuffer(vtkDataSet* data);
-  virtual void ReconstructDataFromBuffer(vtkDataSet* data);
+  virtual void MarshalDataToBuffer(vtkDataObject* data);
+  virtual void ReconstructDataFromBuffer(vtkDataObject* data);
   virtual void ClientReconstructDataFromBuffer(vtkDataObject* data);
 
   // Create a default executive.

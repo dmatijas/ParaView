@@ -107,9 +107,14 @@ vtkStreamingUpdateSuppressor::~vtkStreamingUpdateSuppressor()
     }
   if (this->ParPLs)
     {
-    for (int i = 0; i < NumPLs; i++)
+    for (int i = 0; i < this->NumPLs; i++)
       {
-      this->ParPLs[i]->Delete();
+      if (this->ParPLs[i])
+        {
+        cerr << "SUS(" << this << ") delete PL " << this->ParPLs[i] << endl;
+        this->ParPLs[i]->Delete();
+        this->ParPLs[i] = NULL;
+        }
       }
     delete[] this->ParPLs;
     }
@@ -199,7 +204,7 @@ void vtkStreamingUpdateSuppressor::ForceUpdate()
   int gPieces = this->UpdateNumberOfPieces*this->NumberOfPasses;
 
   //DEBUGPRINT_EXECUTION(
-  LOG("US(" << this << ") ForceUpdate " << this->Pass << "/" << this->NumberOfPasses << "->" << gPiece << "/" << gPieces << endl;)
+  LOG("SUS(" << this << ") ForceUpdate " << this->Pass << "/" << this->NumberOfPasses << "->" << gPiece << "/" << gPieces << endl;)
   //                     );
 
   // Make sure that output type matches input type
@@ -258,7 +263,7 @@ void vtkStreamingUpdateSuppressor::ForceUpdate()
     }
 
   DEBUGPRINT_EXECUTION(
-  cerr << "US(" << this << ") Update " << this->Pass << "->" << gPiece << endl;
+  cerr << "SUS(" << this << ") Update " << this->Pass << "->" << gPiece << endl;
   );
 
   input->Update();
@@ -362,7 +367,7 @@ void vtkStreamingUpdateSuppressor::MarkMoveDataModified()
 void vtkStreamingUpdateSuppressor::SetPassNumber(int pass, int NPasses)
 {
   DEBUGPRINT_EXECUTION(
-  cerr << "US(" << this << ") SetPassNumber " << Pass << "/" << NPasses << endl;
+  cerr << "SUS(" << this << ") SetPassNumber " << Pass << "/" << NPasses << endl;
                        );
   this->SetPass(pass);
   this->SetNumberOfPasses(NPasses);
@@ -378,7 +383,7 @@ void vtkStreamingUpdateSuppressor::SetPassNumber(int pass, int NPasses)
 void vtkStreamingUpdateSuppressor::SetPieceList(vtkPieceList *other)
 {
   DEBUGPRINT_EXECUTION(
-  cerr << "US(" << this << ") SET PIECE LIST" << endl;
+  cerr << "SUS(" << this << ") SET PIECE LIST" << endl;
   );
   if (this->PieceList)
     {
@@ -446,7 +451,9 @@ void vtkStreamingUpdateSuppressor::UnSerializeLists(char *buffer)
     {
     for (int i = 0; i < this->NumPLs; i++)
       {
+      cerr << "SUS(" << this << ") delete PL " << this->ParPLs[i] << endl;
       this->ParPLs[i]->Delete();
+      this->ParPLs[i] = NULL;
       }
     delete[] this->ParPLs;
 
@@ -455,6 +462,7 @@ void vtkStreamingUpdateSuppressor::UnSerializeLists(char *buffer)
     for (int i = 0; i < numProcs; i++)
       {
       this->ParPLs[i] = vtkPieceList::New();
+      cerr << "SUS(" << this << ") create PL " << this->ParPLs[i] << endl;
       }
     }
 
@@ -466,7 +474,8 @@ void vtkStreamingUpdateSuppressor::UnSerializeLists(char *buffer)
     this->ParPLs[i]->UnSerialize(buffer+pos, &len);
     if (i == this->UpdatePiece)
       {
-      //copy mine to where I will use it for future updates
+      //When you unserialize, copy the remotes version of what you have into the
+      //local piece list
       if (!this->PieceList)
         {
         this->PieceList = vtkPieceList::New();
@@ -481,9 +490,9 @@ void vtkStreamingUpdateSuppressor::UnSerializeLists(char *buffer)
 //-----------------------------------------------------------------------------
 void vtkStreamingUpdateSuppressor::ClearPriorities()
 {
-  DEBUGPRINT_EXECUTION(
-  cerr << "US(" << this << ") CLEAR PRIORITIES" << endl;
-  );
+  //DEBUGPRINT_EXECUTION(
+  cerr << "SUS(" << this << ") CLEAR PRIORITIES" << endl;
+  //);
 
   if (this->PieceList)
     {
@@ -495,7 +504,9 @@ void vtkStreamingUpdateSuppressor::ClearPriorities()
     {
     for (int i = 0; i < this->NumPLs; i++)
       {
+      cerr << "SUS(" << this << ") delete PL " << this->ParPLs[i] << endl;
       this->ParPLs[i]->Delete();
+      this->ParPLs[i] = NULL;
       }
     delete[] this->ParPLs;
     }
@@ -505,11 +516,11 @@ void vtkStreamingUpdateSuppressor::ClearPriorities()
 //-----------------------------------------------------------------------------
 void vtkStreamingUpdateSuppressor::ComputeLocalPipelinePriorities()
 {
-  DEBUGPRINT_EXECUTION(
-  cerr << "US(" << this << ") COMPUTE PRIORITIES ";
-  this->PrintPipe(this);
+  //DEBUGPRINT_EXECUTION(
+  cerr << "SUS(" << this << ") COMPUTE LOCAL PRIORITIES ";
+  //this->PrintPipe(this);
   cerr << endl;
-  );
+  //);
   vtkDataObject *input = this->GetInput();
   if (input == 0)
     {
@@ -537,15 +548,15 @@ void vtkStreamingUpdateSuppressor::ComputeLocalPipelinePriorities()
       double pBounds[6] = {0,-1,0,-1,0,-1};
       if (vtkStreamingOptions::GetUsePrioritization())
         {
-        DEBUGPRINT_EXECUTION(
-        cerr << "US(" << this << ") COMPUTE PRIORITY ON " << gPiece << endl;
-        );
+        //DEBUGPRINT_EXECUTION(
+        cerr << "SUS(" << this << ") COMPUTE PRIORITY ON " << gPiece << endl;
+        //);
         sddp->SetUpdateExtent(info, gPiece, gPieces, 0);
         priority = sddp->ComputePriority();
         sddp->GetPieceBoundingBox(0, pBounds);
-        DEBUGPRINT_EXECUTION(
-        cerr << "US(" << this << ") result was " << priority << endl;
-        );
+        //DEBUGPRINT_EXECUTION(
+        cerr << "SUS(" << this << ") result was " << priority << endl;
+        //);
         }
       piece.SetPiece(i);
       piece.SetNumPieces(this->NumberOfPasses);
@@ -554,13 +565,13 @@ void vtkStreamingUpdateSuppressor::ComputeLocalPipelinePriorities()
       this->PieceList->AddPiece(piece);
       }
     }
-  DEBUGPRINT_EXECUTION(
-  cerr << "US(" << this << ") PRESORT:" << endl;
-  this->PieceList->Print();
-  );
 
   //sorts pieces from priority 1.0 down to 0.0
   this->PieceList->SortPriorities();
+  //DEBUGPRINT_EXECUTION(
+  cerr << "SUS(" << this << ") Post comp Sort:" << endl;
+  this->PieceList->Print();
+  //);
 
   //Send piecelists to root node where client can get it
   this->GatherPriorities();
@@ -572,6 +583,8 @@ void vtkStreamingUpdateSuppressor::ComputeLocalViewPriorities()
   LOG("COMPUTING VIEW PRIORITIES" << endl;)
   this->ComputeViewPriorities(this->PieceList);
   this->PieceList->SortPriorities();
+  cerr << "SUS(" << this << ") post view Sort:" << endl;
+  this->PieceList->Print();
 }
 
 //-----------------------------------------------------------------------------
@@ -689,10 +702,10 @@ void vtkStreamingUpdateSuppressor::GatherPriorities()
     {
     procid = controller->GetLocalProcessId();
     numProcs = controller->GetNumberOfProcesses();
-    DEBUGPRINT_EXECUTION(
-    cerr << "US(" << this << ") PREGATHER:" << endl;
+    //DEBUGPRINT_EXECUTION(
+    cerr << "SUS(" << this << ") PREGATHER:" << endl;
     this->PieceList->Print();
-    );
+    //);
     }
 
   //serialize locally computed priorities
@@ -718,6 +731,7 @@ void vtkStreamingUpdateSuppressor::GatherPriorities()
       for (int i = 0; i < numProcs; i++)
         {
         this->ParPLs[i] = vtkPieceList::New();
+        cerr << "SUS(" << this << ") create PL " << this->ParPLs[i] << endl;
         }
       }
     //Unserialize my own
@@ -747,7 +761,7 @@ void vtkStreamingUpdateSuppressor::ScatterPriorities()
     procid = controller->GetLocalProcessId();
     numProcs = controller->GetNumberOfProcesses();
     DEBUGPRINT_EXECUTION(
-    cerr << "US(" << this << ") PREGATHER:" << endl;
+    cerr << "SUS(" << this << ") PREGATHER:" << endl;
     this->PieceList->Print();
     );
     }
@@ -902,17 +916,18 @@ double vtkStreamingUpdateSuppressor::ComputeViewPriority(double *pbbox)
 void vtkStreamingUpdateSuppressor::AddPieceList(vtkPieceList *newPL)
 {
   //This method is for testing. It makes it possible to manually add
-  //piecelists with known content. That can later be inspected.
-  cerr << "SUS(" << this << ") AddPieceList " << newPL << endl;
+  //piecelists with known content.
   if (!newPL)
     {
     return;
     }
+  cerr << "SUS(" << this << ") AddPieceList " << newPL << endl;
   vtkPieceList **newPLs = new vtkPieceList*[this->NumPLs+1];
   for (int i = 0; i < this->NumPLs; i++)
     {
     newPLs[i] = this->ParPLs[i];
     }
+  newPL->Register(this);
   newPLs[this->NumPLs] = newPL;
   if (this->ParPLs)
     {
@@ -972,17 +987,17 @@ void vtkStreamingUpdateSuppressor::CopyBuddy(vtkStreamingUpdateSuppressor *buddy
   int len;
   buffer = buddy->GetSerializedLists();
   len = strlen(buffer);
-  cerr << "LEN = " << len << endl;
-  cerr << buffer << endl;
+  //cerr << "LEN = " << len << endl;
+  //cerr << buffer << endl;
 
   this->UnSerializeLists(buffer);
-  this->PrintPieceLists();
+  //this->PrintPieceLists();
 }
 
 //------------------------------------------------------------------------------
 void vtkStreamingUpdateSuppressor::PrintSerializedLists()
 {
-  LOG("SUS(" << this << ") PrintSerialized" << endl;)
+  LOG("SUS(" << this << ") PrintSerialized " << endl;)
   char *buffer;
   buffer = this->GetSerializedLists();
   LOG("LEN = " << strlen(buffer) << endl;);

@@ -1,33 +1,59 @@
-#exercises the expected flow of data in built in streaming
-
+print "This test exercises the flow of data in built in streaming."
+print "It sets up the same set of filters that paraview does to render data"
+print "in builtin mode, and then sends some test data through that"
+print "to run:"
+print "first make some data via"
+print """
+pvpython
+import paraview
+import paraview.vtk
+import paraview.vtk.imaging
+import paraview.vtk.io
+from paraview.vtk.imaging import *
+from paraview.vtk.io import *
+#source = vtkImageMandelbrotSource()
+#source.SetWholeExtent(0,100,0,100,0,100)
+source = vtkRTAnalyticSource()
+writer = vtkXMLImageDataWriter()
+writer.SetInputConnection(source.GetOutputPort())
+writer.SetNumberOfPieces(8)
+writer.SetFileName("/Users/demarle/tmp/wavelet.8.vti")
+writer.Write()
+then pvpython execfile(\"this script\")
+"""
 from paraview.simple import *
 
-
-plugin_fname = "/Builds/ParaView/CSStreaming/buildAll/bin/libStreamingPlugin.dylib"
+plugin_fname = "/Builds/ParaView/devel/streaming_clientside_cache/bin/libStreamingPlugin.dylib"
 servermanager.LoadPlugin(plugin_fname)
 
 pxm = servermanager.ProxyManager()
 
-#make a simple pipeline that mirrors what streaming app makes
+print "making a pipeline that mirrors what streaming app makes"
 
+print ""
 
-#the data processing portion
+print "make the data processing portion of the pipeline"
+
+print "make the reader and update it"
 reader = XMLImageDataReader()
-reader.FileName = "/Users/demarle/tmp/wavelet_8.vti"
+reader.FileName = "/Users/demarle/tmp/wavelet.8.vti"
 realReader = reader.SMProxy.GetClientSideObject()
 realReader.Update()
 #print realReader.GetOutput()
 
+print "make the geometry filter"
 geomfilter = GeometryFilter()
 gproxy = geomfilter.SMProxy
 
-#the display portion
-#PCF
+print ""
+
+print "make the display portion of the pipeline"
+print "PCF"
 pcf = pxm.NewProxy("filters", "PieceCache")
 pcftoplevel = servermanager._getPyProxy(pcf) #so can access it as if in .simple
 pcf.AddInput(0, gproxy, 0, "SetInputConnection")
 
-#SUS
+print "SUS"
 sus = pxm.NewProxy("filters", "StreamingUpdateSuppressor")
 sustoplevel = servermanager._getPyProxy(sus)
 sus.AddInput(0, pcf, 0, "SetInputConnection")
@@ -40,12 +66,13 @@ printprop.SetCommand("PrintMe")
 sus.AddProperty("printme", printprop)
 
 #make up a property and use it to set the number of passes
+print "set number of passes"
 newprop = servermanager.vtkSMProperty()
 prop = sus.GetProperty("SetNumberOfPasses")
 prop.SetElement(0,8)
 sus.UpdateProperty("SetNumberOfPasses")
 
-#Set up an initial viewpoint
+print "set up an initial viewpoint"
 #camera located at 50,50,1000
 cprop = sus.GetProperty("SetCamera")
 cprop.SetElement(0,50)
@@ -67,35 +94,44 @@ for x in range(0,31):
   cprop.SetElement(x,frust[x])
 sus.UpdateProperty("SetFrustum",1)
 
-#Now that pipeline is setup, exercise it
-#compute the pipeline priorities and inspect
+print ""
+
+print "Now exercise the pipeline"
+
+print ""
+print "compute the pipeline priorities and inspect"
 newprop = servermanager.vtkSMProperty()
 newprop.SetCommand("ComputeLocalPipelinePriorities")
 sus.AddProperty("compute", newprop)
 sus.UpdateProperty("compute",1)
-printprop.Modified()
-sus.UpdateProperty("printme",1)
+#printprop.Modified()
+#sus.UpdateProperty("printme",1)
+print "Should see cache misses and then see a list of 8 pieces with proper "
+print "bounding boxes, all with priority of (1 1 1) since nothing to reject"
 
-#compute the view dependent priorities and inspect
+print "compute the view dependent priorities and inspect"
 newprop = servermanager.vtkSMProperty()
 newprop.SetCommand("ComputeLocalViewPriorities")
 sus.AddProperty("computeView", newprop)
 sus.UpdateProperty("computeView",1)
-printprop.Modified()
-sus.UpdateProperty("printme",1)
+#printprop.Modified()
+#sus.UpdateProperty("printme",1)
+print "should see two pieces (7/8 and 3/8) that lie in the frustum, the rest culled"
 
-#now run it through a few passes
+print "now run it through two passes"
 sustoplevel.PassNumber = [0,8]
 sus.ForceUpdate()
 print realsus.GetOutput().GetNumberOfPoints()
 print realsus.GetOutput().GetBounds()
+print "should see piece 7/8 with 726 polys pupdated and put in the cache"
 
 sustoplevel.PassNumber = [1,8]
 sus.ForceUpdate()
 print realsus.GetOutput().GetNumberOfPoints()
 print realsus.GetOutput().GetBounds()
+print "should see piece 3/8 with 726 polys pupdated and put in the cache"
 
-#test if append works
+print "test if append works"
 newprop = servermanager.vtkSMProperty()
 newprop.SetCommand("AppendPieces")
 pcf.AddProperty("Append", newprop)
@@ -109,3 +145,4 @@ sus.UpdateProperty("UseAppend",1)
 sus.ForceUpdate()
 print realsus.GetOutput().GetNumberOfPoints()
 print realsus.GetOutput().GetBounds()
+print "should get one piece with 1452 verts"

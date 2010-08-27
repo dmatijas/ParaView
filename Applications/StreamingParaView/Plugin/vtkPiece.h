@@ -129,11 +129,11 @@ protected:
   int NumPieces;
   double Resolution;
 
+  double Bounds[6];
+
   double PipelinePriority;
   double ViewPriority;
   double CachedPriority;
-
-  double Bounds[6];
 
   friend class vtkPieceList;
 

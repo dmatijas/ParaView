@@ -295,7 +295,7 @@ void vtkParallelPieceCacheFilter::AppendPieces()
 //------------------------------------------------------------------------------
 int vtkParallelPieceCacheFilter::HasRequestedPieces()
 {
-  if (this->RequestedPieces == 0)
+  if (this->RequestedPieces == NULL)
     {
     cerr << "NO PIECE LIST" << endl;
     }
