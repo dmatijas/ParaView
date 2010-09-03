@@ -480,22 +480,50 @@
       </IntVectorProperty>
 
       <Property name="ClearPriorities" command="ClearPriorities" />
+
       <Property name="ComputeLocalPipelinePriorities"
                 command="ComputeLocalPipelinePriorities" />
       <Property name="ComputeLocalViewPriorities"
                 command="ComputeLocalViewPriorities" />
+      <Property name="ComputeLocalCachePriorities"
+                command="ComputeLocalCachePriorities" />
       <Property name="ComputeGlobalPipelinePriorities"
                 command="ComputeGlobalPipelinePriorities" />
       <Property name="ComputeGlobalViewPriorities"
                 command="ComputeGlobalViewPriorities" />
+      <Property name="ComputeGlobalCachePriorities"
+                command="ComputeGlobalCachePriorities" />
+
+      <Property name="PrepareFirstPass" command="PrepareFirstPass" />
+      <Property name="PrepareAnotherPass" command="PrepareAnotherPass" />
+      <Property name="ChooseNextPiece" command="ChooseNextPiece" />
+
       <Property name="MarkMoveDataModified" command="MarkMoveDataModified" />
 
       <IntVectorProperty
-        name="GetMaxPass"
-        command="GetMaxPass"
-        information_only="1">
+        name="GetStateInfo"
+        command="GetStateInfo"
+        number_of_elements="6"
+        information_only="1"
+        default_values="1 1 1 0 0 0">
         <SimpleIntInformationHelper/>
       </IntVectorProperty>
+
+      <DoubleVectorProperty
+        name="SetPieceInfo"
+        command="SetPieceInfo"
+        number_of_elements="6"
+        default_values="0.0 1.0 0.0 1.0 0.0 0.0">
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty
+        name="GetPieceInfo"
+        command="GetPieceInfo"
+        number_of_elements="6"
+        information_only="1"
+        default_values="0.0 1.0 0.0 1.0 0.0 0.0">
+        <SimpleDoubleInformationHelper/>
+      </DoubleVectorProperty>
 
       <ProxyProperty name="PieceCacheFilter" command="SetPieceCacheFilter">
         <ProxyGroupDomain name="groups">

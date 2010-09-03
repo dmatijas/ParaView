@@ -49,11 +49,6 @@ public:
   vtkGetMacro(NumberOfPasses, int);
   void SetPassNumber(int Pass, int NPasses);
 
-  //Description:
-  //Tells the next forceupdate to try the append slot of the cache
-  vtkSetMacro(UseAppend, int);
-  vtkGetMacro(UseAppend, int);
-
   //PRIORITY COMPUTATION -----------------------------------------------
   //Description:
   //Camera and screen parameters needed for View Prioritization
@@ -65,6 +60,15 @@ public:
   //Description:
   //Reset the piece ordering.
   void ClearPriorities();
+
+  //Description:
+  void PrepareFirstPass();
+
+  //Description:
+  void PrepareAnotherPass();
+
+  //Description:
+  void ChooseNextPiece();
 
   //Description:
   //Computes a priority for every piece by filter characteristics
@@ -132,6 +136,15 @@ public:
   //are locally cached yet
   bool HasSliceCached(int pass);
 
+  //Description:
+  //This holds the state of the adaptive resoution changing state machine
+  vtkGetVector6Macro(StateInfo,int);
+
+  //Description:
+  //This holds information about the current piece to be processed
+  vtkSetVector6Macro(PieceInfo,double);
+  vtkGetVector6Macro(PieceInfo,double);
+
   // DEBUGGING AIDS-------------------------------------------------------
   //Description:
   //For debugging
@@ -188,6 +201,12 @@ protected:
 
   double *CameraState;
   double *Frustum;
+
+  //returned information about what piece is being processed
+  double PieceInfo[6]; //P,NP,RES,PRI,HIT, reserved
+
+  //returned information about progress
+  int StateInfo[6]; //ALLDONE, WENDDONE, reserved...
 
   //Description::
   //Internal method used to compute view priority for each piece

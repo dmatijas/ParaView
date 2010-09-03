@@ -40,6 +40,17 @@
 #include <sstream>
 #include <iostream>
 
+#define PIECE this->PieceInfo[0]
+#define NUMPIECES this->PieceInfo[1]
+#define RESOLUTION this->PieceInfo[2]
+#define PRIORITY this->PieceInfo[3]
+#define HIT this->PieceInfo[4]
+#define FROMAPPEND this->PieceInfo[5]
+
+#define ALLDONE this->StateInfo[0]
+#define WENDDONE this->StateInfo[1]
+#define NEXTAPPEND this->StateInfo[2]
+
 vtkCxxRevisionMacro(vtkStreamingUpdateSuppressor, "$Revision$");
 vtkStandardNewMacro(vtkStreamingUpdateSuppressor);
 
@@ -96,6 +107,19 @@ vtkStreamingUpdateSuppressor::vtkStreamingUpdateSuppressor()
   this->FrustumTester = vtkExtractSelectedFrustum::New();
 
   this->UseAppend = 0;
+
+  ///
+  PIECE = 0.0;
+  NUMPIECES = 1.0;
+  RESOLUTION = 0.0;
+  PRIORITY = 1.0;
+  HIT = 0.0;
+  FROMAPPEND = 0.0;
+
+  ///
+  ALLDONE = 1;
+  WENDDONE = 1;
+  NEXTAPPEND = 1;
 }
 
 //----------------------------------------------------------------------------
@@ -367,16 +391,11 @@ void vtkStreamingUpdateSuppressor::MarkMoveDataModified()
 void vtkStreamingUpdateSuppressor::SetPassNumber(int pass, int NPasses)
 {
   DEBUGPRINT_EXECUTION(
-  cerr << "SUS(" << this << ") SetPassNumber " << Pass << "/" << NPasses << endl;
+  cerr << "US(" << this << ") SetPassNumber " << Pass << "/" << NPasses << endl;
                        );
   this->SetPass(pass);
   this->SetNumberOfPasses(NPasses);
-  //Calling this to check if we client can go alone
-  this->GetPiece();
-  if (!this->ParallelPieceCacheFilter || !this->ParallelPieceCacheFilter->HasPieceList())
-    {
-    this->MarkMoveDataModified();
-    }
+  this->MarkMoveDataModified();
 }
 
 //-----------------------------------------------------------------------------
@@ -511,6 +530,116 @@ void vtkStreamingUpdateSuppressor::ClearPriorities()
     delete[] this->ParPLs;
     }
   this->NumPLs = 0;
+}
+
+//----------------------------------------------------------------------------
+void vtkStreamingUpdateSuppressor::PrepareFirstPass()
+{
+  DEBUGPRINT_EXECUTION(
+  cerr << "SUS(" << this << ") PrepareFirstPass " << endl;
+  );
+
+  this->Pass = 0;
+  this->NumberOfPasses = vtkStreamingOptions::GetStreamedPasses();
+
+  PIECE = (double)this->Pass;
+  NUMPIECES = (double)this->NumberOfPasses;
+  RESOLUTION = 1.0;
+  PRIORITY = 1.0;
+  HIT = 0.0;
+  FROMAPPEND = 0.0;
+
+  ALLDONE = WENDDONE = 0;
+  NEXTAPPEND = 1;
+}
+
+//----------------------------------------------------------------------------
+void vtkStreamingUpdateSuppressor::PrepareAnotherPass()
+{
+  DEBUGPRINT_EXECUTION(cerr << "SUS(" << this << ") PrepareAnotherPass " << endl;);
+
+  this->Pass++;
+
+  PIECE = (double)this->Pass;
+  NUMPIECES = (double)this->NumberOfPasses;
+  RESOLUTION = 1.0;
+  PRIORITY = 1.0;
+  HIT = 0.0;
+  FROMAPPEND = 0.0;
+
+  ALLDONE = WENDDONE = 0;
+}
+
+//----------------------------------------------------------------------------
+void vtkStreamingUpdateSuppressor::ChooseNextPiece()
+{
+  //choose appended results first
+  if (NEXTAPPEND && this->PieceCacheFilter->GetAppendedData())
+    {
+
+    cerr << "SUS(" << this << ") Choose append content" << endl;
+
+    PIECE = 0.0;
+    NUMPIECES = 1.0;
+    RESOLUTION = 1.0;
+    PRIORITY = 1.0;
+    FROMAPPEND = 1.0;
+    HIT = 1.0;
+
+    ALLDONE = 0;
+    WENDDONE = 0;
+
+    this->UseAppend = 1;
+    this->ForceUpdate();
+
+    NEXTAPPEND = 0.0;
+    return;
+    }
+
+  cerr << "SUS(" << this << ") Choose a normal piece" << endl;
+  bool found = false;
+  for (int i = this->Pass; i < this->NumberOfPasses && found == false; i++)
+    {
+    vtkPiece piece = this->PieceList->GetPiece(i);
+
+    int p = piece.GetPiece();
+    int np = piece.GetNumPieces();
+    double res = piece.GetResolution();
+    double priority = piece.GetPriority();
+    int gPiece = this->UpdatePiece*np + p;
+    int gPieces = this->UpdateNumberOfPieces*np;
+
+    bool fromAppend = this->PieceCacheFilter->InAppend(gPiece, gPieces, res);
+    if (fromAppend)
+      {
+      cerr << "SUS(" << this << ") skip appended "
+           << gPiece << "/" << gPieces << "@" << res << endl;
+      continue;
+      }
+
+    bool fromCache = this->PieceCacheFilter->InCache(gPiece, gPieces, res);
+    if (fromCache)
+      {
+      cerr << "SUS(" << this << ") "
+           << gPiece << "/" << gPieces << "@" << res << " was cached" << endl;
+      }
+
+    PIECE = (double)gPiece;
+    NUMPIECES = (double)gPieces;
+    RESOLUTION = res;
+    PRIORITY = priority;
+    HIT = (fromCache?1.0:0.0);
+
+    if (priority > 0.0)
+      {
+      this->Pass = i;
+      found = true;
+      this->ForceUpdate();
+      }
+    }
+
+  ALLDONE = (found?0:1);
+  WENDDONE = ALLDONE;
 }
 
 //-----------------------------------------------------------------------------

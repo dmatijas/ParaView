@@ -77,15 +77,15 @@ vtkSMStreamingViewProxy::vtkSMStreamingViewProxy()
 {
   this->Internals = new vtkInternals();
 
+  this->Pass = 0;
   this->DisplayDone = 1;
-  this->MaxPass = -1;
+
   this->PixelArray = NULL;
 
   this->RenderViewHelper = vtkSMStreamingViewHelper::New();
   this->RenderViewHelper->SetStreamingView(this); //not reference counted.
 
   this->IsSerial = true;
-  this->Pass = 0;
 
   // Make sure the helper proxy exists
   this->GetStreamingOptionsProxy();
@@ -391,6 +391,23 @@ vtkSMRepresentationStrategy* vtkSMStreamingViewProxy::NewStrategyInternal(
   return strategy;
 }
 
+#define ForEveryStreamingRep(command)\
+{\
+vtkSmartPointer<vtkCollectionIterator> iter;\
+iter.TakeReference(this->GetRootView()->Representations->NewIterator());\
+for (iter->InitTraversal();\
+     !iter->IsDoneWithTraversal();\
+     iter->GoToNextItem())\
+  {\
+  vtkSMStreamingRepresentation* srep =\
+    vtkSMStreamingRepresentation::SafeDownCast(iter->GetCurrentObject());\
+  if (srep && srep->GetVisibility())\
+    {\
+    command;\
+    }\
+  }\
+}\
+
 //STUFF THAT ACTUALLY MATTERS FOR MULTIPASS RENDERING
 //----------------------------------------------------------------------------
 void vtkSMStreamingViewProxy::PrepareRenderPass()
@@ -407,146 +424,64 @@ void vtkSMStreamingViewProxy::PrepareRenderPass()
     this->Pass = 0;
     }
 
-  //prepare for incremental rendering
   if (this->Pass == 0)
     {
-    //cls
-    if (firstpass) //workaround a crash that shows up on some mac's
+    //prepare for incremental rendering
+
+    if (firstpass)
       {
-      vtkSMRenderViewProxy *RVP = this->GetRootView();
-      vtkSMProxy *RWProxy = RVP->GetRenderWindowProxy();
-      vtkClientServerStream stream;
-      stream << vtkClientServerStream::Invoke
-             << RWProxy->GetID()
-             << "Render"
-             << vtkClientServerStream::End;
-      vtkProcessModule::GetProcessModule()->SendStream(
-                                                       this->ConnectionID,
-                                                       vtkProcessModule::CLIENT,
-                                                       stream);
+      //force a render, just to make sure we have a graphics context
+      renWin->Render();
       firstpass = false;
+
+      //Setup to for multi pass render process
+      //don't cls automatically whenever renderwindow->render() starts
+      renWin->EraseOff();
+      ren->EraseOff();
+      //don't swap back to front automatically whenever renderwindow->render() finishes
+      renWin->SwapBuffersOff();
       }
+
     ren->Clear();
-    //don't cls on following render passes
-    renWin->EraseOff();
-    ren->EraseOff();
-    //render into back buffer and do not swap, so we can keep it intact
-    //and add to each each pass
-    renWin->SwapBuffersOff();
 
     if (!forCam)
       {
       cerr << "COMPUTE PIPELINE PRIORITIES" << endl;
       //compute pipeline priorities
-      vtkSmartPointer<vtkCollectionIterator> iter;
-      iter.TakeReference(this->GetRootView()->Representations->NewIterator());
-      for (iter->InitTraversal();
-           !iter->IsDoneWithTraversal();
-           iter->GoToNextItem())
-        {
-        vtkSMStreamingRepresentation* srep =
-          vtkSMStreamingRepresentation::SafeDownCast(iter->GetCurrentObject());
-        if (srep && srep->GetVisibility())
-          {
-          srep->ComputePipelinePriorities();
-          srep->ClearStreamCache();
-          }
-        }
+      ForEveryStreamingRep(
+                           srep->ComputePipelinePriorities();
+                           srep->ClearStreamCache();
+                           );
       }
 
     if (CamChanged)
       {
       cerr << "COMPUTE VIEW PRIORITIES" << endl;
-
-      vtkSmartPointer<vtkCollectionIterator> iter;
-      iter.TakeReference(this->GetRootView()->Representations->NewIterator());
-      for (iter->InitTraversal();
-           !iter->IsDoneWithTraversal();
-           iter->GoToNextItem())
-        {
-        vtkSMStreamingRepresentation* srep =
-          vtkSMStreamingRepresentation::SafeDownCast(iter->GetCurrentObject());
-        if (srep && srep->GetVisibility())
-          {
-          srep->SetViewState(this->Internals->CamState, this->Internals->Frustum);
-          srep->ComputeViewPriorities();
-          }
-        }
+      ForEveryStreamingRep(
+                           srep->SetViewState(this->Internals->CamState, this->Internals->Frustum);
+                           srep->ComputeViewPriorities();
+                           );
       }
 
-    //figure out how many passes are needed
-    this->MaxPass = -1;
-    cerr << "COMPUTE MAXPASS" << endl;
-    vtkSmartPointer<vtkCollectionIterator> iter;
-    iter.TakeReference(this->GetRootView()->Representations->NewIterator());
-    for (iter->InitTraversal();
-         !iter->IsDoneWithTraversal();
-         iter->GoToNextItem())
-      {
-      vtkSMStreamingRepresentation* srep =
-        vtkSMStreamingRepresentation::SafeDownCast(iter->GetCurrentObject());
-      if (srep && srep->GetVisibility())
-        {
-        int repsmax = srep->GetNumberNonZeroPriority();
-        cerr << "GOT " << repsmax << endl;
-        if (repsmax > this->MaxPass)
-          {
-          this->MaxPass = repsmax;
-          }
-        }
-      }
-    cerr << "MAXPASS = " << this->MaxPass << endl;
-    }
-}
+    cerr << "COMPUTE CACHE PRIORITIES" << endl;
+    ForEveryStreamingRep(
+                         srep->SetViewState(this->Internals->CamState, this->Internals->Frustum);
+                         srep->ComputeCachePriorities();
+                         );
 
-//----------------------------------------------------------------------------
-void vtkSMStreamingViewProxy::FinalizeRenderPass()
-{
-  vtkRenderWindow *renWin = this->GetRootView()->GetRenderWindow();
-  vtkRenderer *ren = this->GetRootView()->GetRenderer();
-
-  if (this->DisplayDone)
-    {
-    renWin->SwapBuffersOn();
-    renWin->Frame();
-    //reset to normal cls before each render behavior
-    renWin->EraseOn();
-    ren->EraseOn();
+    ForEveryStreamingRep(
+                         srep->PrepareFirstPass();
+                         );
     }
   else
     {
-    //take all that we've drawn into back buffer and show it
-    this->CopyBackBufferToFrontBuffer();
+    //continue incremental rendering
+    ForEveryStreamingRep(
+                         srep->PrepareAnotherPass();
+                         );
     }
 
-//  cerr << "---------------------<any key>----------------------" << endl;
-//  s t d::string s;
-//  cin >> s;
-}
-
-//-----------------------------------------------------------------------------
-void vtkSMStreamingViewProxy::CopyBackBufferToFrontBuffer()
-{
-  vtkRenderWindow *renWin = this->GetRootView()->GetRenderWindow();
-
-  //allocate pixel storage
-  int *size = renWin->GetSize();
-  if (!this->PixelArray)
-    {
-    this->PixelArray = vtkUnsignedCharArray::New();
-    }
-  this->PixelArray->Initialize();
-  this->PixelArray->SetNumberOfComponents(4);
-  this->PixelArray->SetNumberOfTuples(size[0]*size[1]);
-
-  //capture back buffer
-  renWin->GetRGBACharPixelData(0, 0, size[0]-1, size[1]-1, 0, this->PixelArray);
-
-  //copy into the front buffer
-  renWin->SetRGBACharPixelData(0, 0, size[0]-1, size[1]-1, this->PixelArray, 1);
-
-  //hack, this call is just here to reset glDrawBuffer(BACK)
-  renWin->SetRGBACharPixelData(0, 0, size[0]-1, size[1]-1, this->PixelArray, 0);
+  this->DisplayDone = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -576,9 +511,31 @@ void vtkSMStreamingViewProxy::UpdateAllRepresentations()
       continue;
       }
 
-    if (this->Pass == 0)
+    if (!enable_progress && repr->UpdateRequired())
       {
-      repr->Update(RVP);
+      // If a representation required an update, than it implies that the
+      // update will result in progress events. We don't want to ignore
+      // those progress events, hence we enable progress handling.
+      pm->SendPrepareProgress(this->ConnectionID,
+        vtkProcessModule::CLIENT | vtkProcessModule::DATA_SERVER);
+      enable_progress = true;
+      }
+
+    vtkSMStreamingRepresentation* srep =
+      vtkSMStreamingRepresentation::SafeDownCast(repr);
+    if (srep)
+      {
+      if (!srep->GetAllDone())
+        {
+        srep->ChooseNextPiece();
+        }
+      }
+    else
+      {
+      if (this->Pass == 0)
+        {
+        repr->Update(RVP);
+        }
       }
     }
 
@@ -596,82 +553,12 @@ void vtkSMStreamingViewProxy::PerformRender()
     );
 
   vtkSMRenderViewProxy *RVP = this->GetRootView();
-
-  this->DisplayDone = 1;
-  //data is split into this many pieces so render at most that
-  int nPasses = vtkStreamingOptions::GetStreamedPasses();
-
-  //user may want to terminate before all have rendered
-  int lastPass = vtkStreamingOptions::GetPieceRenderCutoff();
-  if (lastPass > -1 && lastPass < nPasses)
-    {
-    nPasses = lastPass;
-    }
-
-  //because of culling (and caching) we may need to render fewer passes
-  if (this->MaxPass == -1) //meaning everything cached
-    {
-    nPasses = 1;
-    }
-  if (this->MaxPass > -1 && this->MaxPass < nPasses)
-    {
-    nPasses = this->MaxPass;
-    }
-
-  vtkSmartPointer<vtkCollectionIterator> iter;
-  iter.TakeReference(RVP->Representations->NewIterator());
-  for (iter->InitTraversal();
-       !iter->IsDoneWithTraversal();
-       iter->GoToNextItem())
-    {
-    vtkSMRepresentationProxy* repr =
-      vtkSMRepresentationProxy::SafeDownCast(iter->GetCurrentObject());
-    if (!repr->GetVisibility())
-      {
-      // Invisible representations are not updated.
-      continue;
-      }
-    vtkSMStreamingRepresentation *drepr =
-      vtkSMStreamingRepresentation::SafeDownCast(repr);
-    if (drepr)
-      {
-      //if representation supports pieces, choose most important one to render in this pass
-      if (this->Pass < nPasses)
-        {
-        DEBUGPRINT_VIEW(
-          cerr << "SV(" << this << ") Update Pass " << this->Pass << endl;
-                        );
-        drepr->SetPassNumber(this->Pass, 1);
-        //update pipeline to get the geometry for that piece
-        drepr->Update(this); //get geometry for next stripe
-        }
-      }
-    }
-
-  if (this->Pass+1 < nPasses)
-    {
-    DEBUGPRINT_VIEW(
-      cerr << "SV(" << this << ") Need more passes " << endl;
-                    );
-    this->DisplayDone = 0;
-    }
-  else
-    {
-    DEBUGPRINT_VIEW(
-      cerr << "SV(" << this << ") All passes finished " << endl;
-                    );
-    }
-
   if ( RVP->GetMeasurePolygonsPerSecond() )
     {
     this->RenderTimer->StartTimer();
     }
 
-  //vtkRenderWindow *renWin = RVP->GetRenderWindow();
-  //RVP->RenderMe();
-
   vtkSMProxy *RWProxy = RVP->GetRenderWindowProxy();
-  DEBUGPRINT_VIEW(cerr << "SV(" << this << ") CallRender " << endl;);
   vtkClientServerStream stream;
   stream << vtkClientServerStream::Invoke
          << RWProxy->GetID()
@@ -681,15 +568,6 @@ void vtkSMStreamingViewProxy::PerformRender()
     this->ConnectionID,
     vtkProcessModule::CLIENT,
     stream);
-
-  if (this->DisplayDone)
-    {
-    this->Pass = 0;
-    }
-  else
-    {
-    this->Pass++;
-    }
 
   if ( RVP->GetMeasurePolygonsPerSecond() )
     {
@@ -702,6 +580,79 @@ void vtkSMStreamingViewProxy::PerformRender()
 int vtkSMStreamingViewProxy::GetDisplayDone()
 {
   return this->DisplayDone;
+}
+
+//-----------------------------------------------------------------------------
+void vtkSMStreamingViewProxy::CopyBackBufferToFrontBuffer()
+{
+  vtkRenderWindow *renWin = this->GetRootView()->GetRenderWindow();
+
+  //allocate pixel storage
+  int *size = renWin->GetSize();
+  if (!this->PixelArray)
+    {
+    this->PixelArray = vtkUnsignedCharArray::New();
+    }
+  this->PixelArray->Initialize();
+  this->PixelArray->SetNumberOfComponents(4);
+  this->PixelArray->SetNumberOfTuples(size[0]*size[1]);
+
+  //capture back buffer
+  renWin->GetRGBACharPixelData(0, 0, size[0]-1, size[1]-1, 0, this->PixelArray);
+
+  //copy into the front buffer
+  renWin->SetRGBACharPixelData(0, 0, size[0]-1, size[1]-1, this->PixelArray, 1);
+}
+
+//----------------------------------------------------------------------------
+void vtkSMStreamingViewProxy::FinalizeRenderPass()
+{
+  DEBUGPRINT_VIEW(
+                   cerr << "SV(" << this << ") FinalizeRenderPass" << endl;
+                   cerr << "VADONE = " << this->DisplayDone << endl;
+                   );
+
+  //we are done if every representation is done
+  int alldone = 1;
+  ForEveryStreamingRep(
+                       int rAllDone = srep->GetAllDone();
+                       alldone &= rAllDone;
+                       );
+  if (alldone)
+    {
+    this->DisplayDone = 1;
+    }
+
+  //or if we are at the maximum pass count
+  int lastPass = vtkStreamingOptions::GetPieceRenderCutoff();
+  if (lastPass > -1 && lastPass < this->Pass)
+    {
+    this->DisplayDone = 1;
+    }
+
+  //once done, get reset for the next wend
+  if (this->DisplayDone)
+    {
+    this->Pass = 0;
+    }
+  else
+    {
+    this->Pass++;
+    }
+
+  DEBUGPRINT_VIEW(cerr << "VADONE = " << this->DisplayDone << endl;);
+
+  vtkRenderWindow *renWin = this->GetRootView()->GetRenderWindow();
+  DEBUGPRINT_VIEW(cerr << "SV(" << this << ") Update Front Buffer" << endl;);
+
+  this->CopyBackBufferToFrontBuffer();
+  renWin->SwapBuffersOn();
+  renWin->Frame();
+  renWin->SwapBuffersOff();
+
+//  cerr << "---------------------<any key>----------------------" << endl;
+//  vtkstd::string s;
+//  cin >> s;
 }
 
 //-----------------------------------------------------------------------------

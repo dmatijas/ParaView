@@ -34,23 +34,32 @@ public:
   {}
 
   // Description:
-  // Tells server side to work with a particular piece until further notice.
-  virtual void SetPassNumber(int Pass, int force);
-  // Description:
   // Orders the pieces from most to least important.
   virtual int ComputePipelinePriorities();
   virtual int ComputeViewPriorities();
+  virtual int ComputeCachePriorities();
   // Description:
   // Clears the data object cache in the streaming display pipeline.
   virtual void ClearStreamCache();
 
+  virtual void PrepareFirstPass();
+  virtual void PrepareAnotherPass();
+
+  virtual void ChooseNextPiece();
+
+//BTX
+  // Description:
+  // Asks server what piece it is going to show next.
+  virtual void GetPieceInfo(int *P, int *NP, double *R, double *PRIORITY, bool *HIT, bool *APPEND);
+
+  // Description:
+  // Asks server what piece it is going to show next.
+  virtual void GetStateInfo(bool *ALLDONE, bool *WENDDONE);
+//ETX
+
   // Description:
   // Tells the strategy where the camera is so that pieces can be sorted and rejected
   virtual void SetViewState(double *camera, double *frustum);
-
-  // Description:
-  // gets number of pieces that have to be processed
-  virtual int GetNumberNonZeroPriority();
 
 //BTX
 protected:

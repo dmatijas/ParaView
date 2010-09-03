@@ -60,6 +60,16 @@ void vtkSMStreamingSerialStrategy::CreatePipeline(vtkSMSourceProxy* input, int o
   this->Connect(input, this->PieceCache, "Input", outputport);
   this->Superclass::CreatePipeline(this->PieceCache, 0);
   //input->PieceCache->US
+
+  vtkProcessModule *pm = vtkProcessModule::GetProcessModule();
+  vtkClientServerStream stream;
+  stream  << vtkClientServerStream::Invoke
+          << this->UpdateSuppressor->GetID()
+          << "SetPieceCacheFilter"
+          << this->PieceCache->GetID()
+          << vtkClientServerStream::End;
+  pm->SendStream(this->ConnectionID, vtkProcessModule::CLIENT, stream);
+
 }
 
 //----------------------------------------------------------------------------
@@ -118,29 +128,6 @@ void vtkSMStreamingSerialStrategy::InvalidatePipeline()
   // enabled.
   this->UpdateSuppressor->InvokeCommand("ClearPriorities");
   this->Superclass::InvalidatePipeline();
-}
-
-//----------------------------------------------------------------------------
-void vtkSMStreamingSerialStrategy::SetPassNumber(int val, int force)
-{
-  int nPasses = vtkStreamingOptions::GetStreamedPasses();
-  vtkSMIntVectorProperty* ivp;
-  DEBUGPRINT_STRATEGY(
-    cerr << "SSS(" << this << ") SetPassNumber(" << val << "/" << nPasses << (force?"FORCE":"LAZY") << ")" << endl;
-                      );
-
-  ivp = vtkSMIntVectorProperty::SafeDownCast(
-    this->UpdateSuppressor->GetProperty("PassNumber"));
-  ivp->SetElement(0, val);
-  ivp->SetElement(1, nPasses);
-  if (force)
-    {
-    ivp->Modified();
-    this->UpdateSuppressor->UpdateVTKObjects();
-    vtkSMProperty *p = this->UpdateSuppressor->GetProperty("ForceUpdate");
-    p->Modified();
-    this->UpdateSuppressor->UpdateVTKObjects();
-    }
 }
 
 //----------------------------------------------------------------------------
@@ -212,6 +199,40 @@ int vtkSMStreamingSerialStrategy::ComputeViewPriorities()
 }
 
 //----------------------------------------------------------------------------
+int vtkSMStreamingSerialStrategy::ComputeCachePriorities()
+{
+  int nPasses = vtkStreamingOptions::GetStreamedPasses();
+  vtkSMIntVectorProperty* ivp;
+
+  //put diagnostic settings transfer here in case info not gathered yet
+  int cacheLimit = vtkStreamingOptions::GetPieceCacheLimit();
+
+  DEBUGPRINT_STRATEGY(
+    cerr << "SSS(" << this << ") ComputeCachePriorities" << endl;
+                      )
+  ivp = vtkSMIntVectorProperty::SafeDownCast(
+      this->PieceCache->GetProperty("SetCacheSize"));
+  ivp->SetElement(0, cacheLimit);
+  this->PieceCache->UpdateVTKObjects();
+
+  //let US know NumberOfPasses for CP
+  ivp = vtkSMIntVectorProperty::SafeDownCast(
+      this->UpdateSuppressor->GetProperty("SetNumberOfPasses"));
+  ivp->SetElement(0, nPasses);
+
+  this->UpdateSuppressor->UpdateVTKObjects();
+
+  //ask it to compute the priorities
+  vtkSMProperty* cp = this->UpdateSuppressor->GetProperty
+    ("ComputeLocalCachePriorities");
+  cp->Modified();
+  this->UpdateSuppressor->UpdateVTKObjects();
+
+
+  return -1;
+}
+
+//----------------------------------------------------------------------------
 void vtkSMStreamingSerialStrategy::ClearStreamCache()
 {
   vtkSMProperty *cc = this->PieceCache->GetProperty("EmptyCache");
@@ -265,11 +286,71 @@ void vtkSMStreamingSerialStrategy::SetViewState(double *camera, double *frustum)
 }
 
 //----------------------------------------------------------------------------
-int vtkSMStreamingSerialStrategy::GetNumberNonZeroPriority()
+void vtkSMStreamingSerialStrategy::PrepareFirstPass()
 {
-  vtkSMIntVectorProperty *ivp;
-  ivp = vtkSMIntVectorProperty::SafeDownCast
-    (this->UpdateSuppressor->GetProperty("GetNumberNonZeroPriority"));
+  DEBUGPRINT_STRATEGY(
+    cerr << "SSS("<<this<<")::PrepareFirstPass" << endl;
+    );
+  int cacheLimit = vtkStreamingOptions::GetPieceCacheLimit();
+  vtkSMIntVectorProperty* ivp;
+  ivp = vtkSMIntVectorProperty::SafeDownCast(
+    this->PieceCache->GetProperty("SetCacheSize"));
+  ivp->SetElement(0, cacheLimit);
+  this->PieceCache->UpdateVTKObjects();
+
+  vtkSMProperty* cp = this->UpdateSuppressor->GetProperty("PrepareFirstPass");
+  cp->Modified();
+  this->UpdateSuppressor->UpdateVTKObjects();
+}
+
+//----------------------------------------------------------------------------
+void vtkSMStreamingSerialStrategy::PrepareAnotherPass()
+{
+  DEBUGPRINT_STRATEGY(
+    cerr << "SSS("<<this<<")::PrepareAnotherPass" << endl;
+    );
+
+  vtkSMProperty* cp = this->UpdateSuppressor->GetProperty("PrepareAnotherPass");
+  cp->Modified();
+  this->UpdateSuppressor->UpdateVTKObjects();
+}
+
+//----------------------------------------------------------------------------
+void vtkSMStreamingSerialStrategy::ChooseNextPiece()
+{
+  DEBUGPRINT_STRATEGY(
+    cerr << "SSS("<<this<<")::ChooseNextPiece" << endl;
+    );
+  vtkSMProperty* cp = this->UpdateSuppressor->GetProperty("ChooseNextPiece");
+  cp->Modified();
+  this->UpdateSuppressor->UpdateVTKObjects();
+}
+
+//----------------------------------------------------------------------------
+void vtkSMStreamingSerialStrategy::GetPieceInfo(
+  int *P, int *NP, double *R, double *PRIORITY, bool *HIT, bool *APPEND)
+{
+  vtkSMDoubleVectorProperty* dp = vtkSMDoubleVectorProperty::SafeDownCast(
+    this->UpdateSuppressor->GetProperty("GetPieceInfo"));
+  //get the result
+  this->UpdateSuppressor->UpdatePropertyInformation(dp);
+
+  *P = (int)dp->GetElement(0);
+  *NP = (int)dp->GetElement(1);
+  *R = dp->GetElement(2);
+  *PRIORITY = dp->GetElement(3);
+  *HIT = dp->GetElement(4)!=0.0;
+  *APPEND = dp->GetElement(5)!=0.0;
+}
+
+//----------------------------------------------------------------------------
+void vtkSMStreamingSerialStrategy::GetStateInfo(
+  bool *ALLDONE, bool *WENDDONE)
+{
+  vtkSMIntVectorProperty* ivp = vtkSMIntVectorProperty::SafeDownCast(
+    this->UpdateSuppressor->GetProperty("GetStateInfo"));
+  //get the result
   this->UpdateSuppressor->UpdatePropertyInformation(ivp);
-  return ivp->GetElement(0);
+  *ALLDONE = (ivp->GetElement(0)!=0);
+  *WENDDONE = (ivp->GetElement(1)!=0);
 }

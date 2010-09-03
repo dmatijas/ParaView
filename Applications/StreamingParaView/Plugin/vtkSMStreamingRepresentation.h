@@ -34,18 +34,6 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // Tells server side to work with a particular piece until further notice.
-  virtual void SetPassNumber()
-  { 
-    this->SetPassNumber(0,0); 
-  }
-  virtual void SetPassNumber(int val)
-  { 
-    this->SetPassNumber(val,0); 
-  }
-  virtual void SetPassNumber(int val, int force);
-
-  // Description:
   // Orders the pieces from most to least important based on the data
   // processing pipeline.
   virtual int ComputePipelinePriorities();
@@ -54,6 +42,10 @@ public:
   // Orders the pieces from most to least important based on the
   // rendering pipeline.
   virtual int ComputeViewPriorities();
+
+  // Description:
+  // Allows skipping of pieces that are already rendered in the cache
+  virtual int ComputeCachePriorities();
 
   // Description:
   // Clears the data object cache in the streaming display pipeline.
@@ -67,7 +59,22 @@ public:
   void SetPieceBoundsVisibility(int);
   vtkGetMacro(PieceBoundsVisibility, int);
 
-  virtual int GetNumberNonZeroPriority();
+  // Description:
+  // This tells the display pipeline that a new wend is starting.
+  virtual void PrepareFirstPass();
+
+  // Description:
+  // This tells the display pipeline that the next piece is starting
+  virtual void PrepareAnotherPass();
+
+  // Description:
+  // This tells the display pipeline to choose the next most important piece to render.
+  virtual void ChooseNextPiece();
+
+  // Description:
+  // Obtain state flags that server computes about multipass render progress.
+  vtkGetMacro(AllDone, int);
+  vtkSetMacro(AllDone, int);
 
 //BTX
   virtual bool UpdateRequired();
@@ -90,7 +97,9 @@ protected:
   vtkSMDataRepresentationProxy* PieceBoundsRepresentation;
   int PieceBoundsVisibility;
 
-  int InternalComputePriorities(bool forView);
+  int InternalComputePriorities(int type);
+
+  int AllDone;
 
 private:
   vtkSMStreamingRepresentation(const vtkSMStreamingRepresentation&); // Not implemented

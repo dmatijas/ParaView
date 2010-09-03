@@ -58,11 +58,34 @@ vtkSMStreamingRepresentation::vtkSMStreamingRepresentation()
 {
   this->PieceBoundsRepresentation = 0;
   this->PieceBoundsVisibility = 0;
+  this->AllDone = 1;
 }
 
 //----------------------------------------------------------------------------
 vtkSMStreamingRepresentation::~vtkSMStreamingRepresentation()
 {
+}
+
+//----------------------------------------------------------------------------
+bool vtkSMStreamingRepresentation::EndCreateVTKObjects()
+{
+  this->PieceBoundsRepresentation =
+    vtkSMDataRepresentationProxy::SafeDownCast(
+      this->GetSubProxy("PieceBoundsRepresentation"));
+
+  vtkSMProxy* inputProxy = this->GetInputProxy();
+
+  this->Connect(inputProxy, this->PieceBoundsRepresentation,
+                "Input", this->OutputPort);
+
+  vtkSMStreamingRepresentationSetInt(this->PieceBoundsRepresentation,
+                                     "Visibility", 0);
+  vtkSMStreamingRepresentationSetInt(this->PieceBoundsRepresentation,
+                                     "MakeOutlineOfInput", 1);
+  vtkSMStreamingRepresentationSetInt(this->PieceBoundsRepresentation,
+                                     "UseOutline", 1);
+
+  return this->Superclass::EndCreateVTKObjects();
 }
 
 //----------------------------------------------------------------------------
@@ -77,25 +100,25 @@ void vtkSMStreamingRepresentation::SetViewInformation(vtkInformation* info)
 }
 
 //----------------------------------------------------------------------------
-bool vtkSMStreamingRepresentation::EndCreateVTKObjects()
+bool vtkSMStreamingRepresentation::AddToView(vtkSMViewProxy* view)
 {
-  this->PieceBoundsRepresentation = 
-    vtkSMDataRepresentationProxy::SafeDownCast(
-      this->GetSubProxy("PieceBoundsRepresentation"));
+  vtkSMStreamingViewProxy* streamView = vtkSMStreamingViewProxy::SafeDownCast(view);
+  if (!streamView)
+    {
+    vtkErrorMacro("View must be a vtkSMStreamingView.");
+    return false;
+    }
 
-  vtkSMProxy* inputProxy = this->GetInputProxy();
 
-  this->Connect(inputProxy, this->PieceBoundsRepresentation,
-                "Input", this->OutputPort);
+  //this tells renderview to let view create strategy
+  vtkSMRenderViewProxy* renderView = streamView->GetRootView();
+  renderView->SetNewStrategyHelper(view);
 
-  vtkSMStreamingRepresentationSetInt(this->PieceBoundsRepresentation, 
-                                     "Visibility", 0);
-  vtkSMStreamingRepresentationSetInt(this->PieceBoundsRepresentation, 
-                                     "MakeOutlineOfInput", 1);
-  vtkSMStreamingRepresentationSetInt(this->PieceBoundsRepresentation, 
-                                     "UseOutline", 1);
-  
-  return this->Superclass::EndCreateVTKObjects();
+  //Disabled for now, I need to be able to tell it what piece is current.
+  //this->PieceBoundsRepresentation->AddToView(renderView);
+
+  //but still add this to renderView
+  return this->Superclass::AddToView(renderView);
 }
 
 //----------------------------------------------------------------------------
@@ -113,11 +136,11 @@ void vtkSMStreamingRepresentation::SetVisibility(int visible)
     this->ClearStreamCache();
     }
 
-  vtkSMStreamingRepresentationSetInt(this->PieceBoundsRepresentation, 
+  vtkSMStreamingRepresentationSetInt(this->PieceBoundsRepresentation,
                                      "Visibility",
                                      visible && this->PieceBoundsVisibility);
   this->PieceBoundsRepresentation->UpdateVTKObjects();
-     
+
   this->Superclass::SetVisibility(visible);
 }
 
@@ -125,7 +148,7 @@ void vtkSMStreamingRepresentation::SetVisibility(int visible)
 void vtkSMStreamingRepresentation::SetPieceBoundsVisibility(int visible)
 {
   this->PieceBoundsVisibility = visible;
-  vtkSMStreamingRepresentationSetInt(this->PieceBoundsRepresentation, 
+  vtkSMStreamingRepresentationSetInt(this->PieceBoundsRepresentation,
                                      "Visibility",
                                      visible && this->GetVisibility());
   this->PieceBoundsRepresentation->UpdateVTKObjects();
@@ -175,51 +198,23 @@ void vtkSMStreamingRepresentation::PrintSelf(ostream& os, vtkIndent indent)
   this->Superclass::PrintSelf(os, indent);
 }
 
-#define TrySetPassNumber(type) \
-{ \
-  type *ptr = type::SafeDownCast(iter->GetPointer());\
-  if (ptr)\
-    {\
-    ptr->SetPassNumber(val, force);\
-    }\
-}
-
-//----------------------------------------------------------------------------
-void vtkSMStreamingRepresentation::SetPassNumber(int val, int force)
-{
-  int nPasses = vtkStreamingOptions::GetStreamedPasses();
-  if (val<nPasses //should always be less than
-      && 
-      val>=0)
-    {
-    //pass the render pass number down to my strategies
-    vtkSMRepresentationStrategyVector strats;
-    this->GetActiveStrategies(strats);
-    vtkSMRepresentationStrategyVector::iterator iter;
-    for (iter = strats.begin(); iter != strats.end(); ++iter)
-      {
-      //multiple inheritance would be nice about now
-      TrySetPassNumber(vtkSMStreamingSerialStrategy);
-      TrySetPassNumber(vtkSMStreamingParallelStrategy);
-      }
-    this->Modified();
-    //this->PieceBoundsRepresentation->SetPassNumber(val, 1);
-    }
-}
-
-#define TryComputePriorities(type, forView)             \
+#define TryComputePriorities(type, stage)             \
 { \
   type *ptr = type::SafeDownCast(iter->GetPointer());\
   if (ptr)\
     {\
     int maxpass;\
-    if (!forView)\
+    if (stage == 0)\
       {\
       maxpass = ptr->ComputePipelinePriorities();\
       }\
-    else\
+    if (stage == 1)\
       {\
       maxpass = ptr->ComputeViewPriorities();\
+      }\
+    if (stage == 2)\
+      {\
+      maxpass = ptr->ComputeCachePriorities();\
       }\
     if (maxpass > maxPass)\
       {\
@@ -229,16 +224,16 @@ void vtkSMStreamingRepresentation::SetPassNumber(int val, int force)
 }
 
 //----------------------------------------------------------------------------
-int vtkSMStreamingRepresentation::InternalComputePriorities(bool forView)
+int vtkSMStreamingRepresentation::InternalComputePriorities(int stage)
 {
   int maxPass = -1;
   vtkSMRepresentationStrategyVector strats;
   this->GetActiveStrategies(strats);
-  vtkSMRepresentationStrategyVector::iterator iter; 
+  vtkSMRepresentationStrategyVector::iterator iter;
   for (iter = strats.begin(); iter != strats.end(); ++iter)
     {
-    TryComputePriorities(vtkSMStreamingSerialStrategy, forView);
-//    TryComputePriorities(vtkSMStreamingParallelStrategy, forView);
+    TryComputePriorities(vtkSMStreamingSerialStrategy, stage);
+//    TryComputePriorities(vtkSMStreamingParallelStrategy, stage);
     }
   return maxPass;
 }
@@ -249,7 +244,7 @@ int vtkSMStreamingRepresentation::ComputePipelinePriorities()
   DEBUGPRINT_REPRESENTATION(
   cerr << "SR(" << this << ") ComputePipelinePriorities" << endl;
                             );
-  return this->InternalComputePriorities(false);
+  return this->InternalComputePriorities(0);
 }
 
 //----------------------------------------------------------------------------
@@ -258,7 +253,17 @@ int vtkSMStreamingRepresentation::ComputeViewPriorities()
   DEBUGPRINT_REPRESENTATION(
   cerr << "SR(" << this << ") ComputeViewPriorities" << endl;
                             );
-  return this->InternalComputePriorities(true);
+  return this->InternalComputePriorities(1);
+}
+
+//----------------------------------------------------------------------------
+int vtkSMStreamingRepresentation::ComputeCachePriorities()
+{
+  DEBUGPRINT_REPRESENTATION(
+  cerr << "SR(" << this << ") ComputeCachePriorities" << endl;
+                            );
+
+  return this->InternalComputePriorities(2);
 }
 
 //----------------------------------------------------------------------------
@@ -276,7 +281,7 @@ void vtkSMStreamingRepresentation::ClearStreamCache()
 {
   vtkSMRepresentationStrategyVector strats;
   this->GetActiveStrategies(strats);
-  vtkSMRepresentationStrategyVector::iterator iter; 
+  vtkSMRepresentationStrategyVector::iterator iter;
   for (iter = strats.begin(); iter != strats.end(); ++iter)
     {
     TryMethod(vtkSMStreamingSerialStrategy, ClearStreamCache());
@@ -284,26 +289,77 @@ void vtkSMStreamingRepresentation::ClearStreamCache()
     }
 }
 
+
 //----------------------------------------------------------------------------
-bool vtkSMStreamingRepresentation::AddToView(vtkSMViewProxy* view)
+void vtkSMStreamingRepresentation::PrepareFirstPass()
 {
-  vtkSMStreamingViewProxy* streamView = vtkSMStreamingViewProxy::SafeDownCast(view);
-  if (!streamView)
+  DEBUGPRINT_REPRESENTATION(
+    cerr << "SREP("<<this<<")::PrepareFirstPass" << endl;
+  );
+  vtkSMRepresentationStrategyVector strats;
+  this->GetActiveStrategies(strats);
+  vtkSMRepresentationStrategyVector::iterator iter;
+  for (iter = strats.begin(); iter != strats.end(); ++iter)
     {
-    vtkErrorMacro("View must be a vtkSMStreamingView.");
-    return false;
+    TryMethod(vtkSMStreamingSerialStrategy, PrepareFirstPass());
     }
+  this->AllDone = 0;
+}
 
+//----------------------------------------------------------------------------
+void vtkSMStreamingRepresentation::PrepareAnotherPass()
+{
+  DEBUGPRINT_REPRESENTATION(
+    cerr << "SREP("<<this<<")::PrepareAnotherPass" << endl;
+  );
+  vtkSMRepresentationStrategyVector strats;
+  this->GetActiveStrategies(strats);
+  vtkSMRepresentationStrategyVector::iterator iter;
+  for (iter = strats.begin(); iter != strats.end(); ++iter)
+    {
+    TryMethod(vtkSMStreamingSerialStrategy, PrepareAnotherPass());
+    }
+}
 
-  //this tells renderview to let view create strategy
-  vtkSMRenderViewProxy* renderView = streamView->GetRootView();
-  renderView->SetNewStrategyHelper(view);
+//---------------------------------------------------------------------------
+#define TryChooseNextPiece(type) \
+{ \
+  type *ptr = type::SafeDownCast(iter->GetPointer());\
+  if (ptr)\
+    {\
+    ptr->ChooseNextPiece();\
+    ptr->GetPieceInfo(&P, &NP, &R, &PRIORITY, &HIT, &APPEND);   \
+    ptr->GetStateInfo(&ALLDONE, &WENDDONE);\
+    }\
+  }
 
-  //Disabled for now, I need to be able to tell it what piece is current.
-  //this->PieceBoundsRepresentation->AddToView(renderView);
+//---------------------------------------------------------------------------
+void vtkSMStreamingRepresentation::ChooseNextPiece()
+{
+  DEBUGPRINT_REPRESENTATION(
+  cerr << "SREP("<<this<<")::ChooseNextPiece" << endl;
+  );
+  int P, NP;
+  double R, PRIORITY;
+  bool HIT;
+  bool APPEND;
 
-  //but still add this to renderView
-  return this->Superclass::AddToView(renderView);
+  bool ALLDONE;
+  bool WENDDONE;
+
+  vtkSMRepresentationStrategyVector strats;
+  this->GetActiveStrategies(strats);
+  vtkSMRepresentationStrategyVector::iterator iter;
+  for (iter = strats.begin(); iter != strats.end(); ++iter)
+    {
+    TryChooseNextPiece(vtkSMStreamingSerialStrategy);
+    }
+  DEBUGPRINT_REPRESENTATION(
+  cerr << "STRAT(" << this << ") CHOSE " << P << "/" << NP << "@" << R << endl;
+  );
+
+  //this->PieceBoundsRepresentation->SetNextPiece(P, NP, R, PRIORITY, HIT, APPEND);
+  this->AllDone = ALLDONE;
 }
 
 //---------------------------------------------------------------------------
@@ -311,37 +367,10 @@ void vtkSMStreamingRepresentation::SetViewState(double *camera, double *frustum)
 {
   vtkSMRepresentationStrategyVector strats;
   this->GetActiveStrategies(strats);
-  vtkSMRepresentationStrategyVector::iterator iter; 
+  vtkSMRepresentationStrategyVector::iterator iter;
   for (iter = strats.begin(); iter != strats.end(); ++iter)
     {
     TryMethod(vtkSMStreamingSerialStrategy, SetViewState(camera, frustum));
     TryMethod(vtkSMStreamingParallelStrategy, SetViewState(camera, frustum));
     }
-}
-
-#define TryGetNumberNonZeroPriority(type)             \
-{ \
-  type *ptr = type::SafeDownCast(iter->GetPointer());\
-  if (ptr)\
-    {\
-    int maxpass = ptr->GetNumberNonZeroPriority(); \
-    if (maxpass > maxPass)\
-      {\
-      maxPass = maxpass;\
-      }\
-    }\
-}
-
-//----------------------------------------------------------------------------
-int vtkSMStreamingRepresentation::GetNumberNonZeroPriority()
-{
-  int maxPass = -1;
-  vtkSMRepresentationStrategyVector strats;
-  this->GetActiveStrategies(strats);
-  vtkSMRepresentationStrategyVector::iterator iter;
-  for (iter = strats.begin(); iter != strats.end(); ++iter)
-    {
-    TryGetNumberNonZeroPriority(vtkSMStreamingSerialStrategy);
-    }
-  return maxPass;
 }
