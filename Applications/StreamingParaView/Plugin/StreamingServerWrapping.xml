@@ -280,11 +280,6 @@
       base_proxyname="PolyDataStrategy">
 
       <SubProxy>
-        <Proxy name="ViewSorter"
-          proxygroup="filters" proxyname="ViewSorter" />
-      </SubProxy>
-
-      <SubProxy>
         <Proxy name="PieceCache"
           proxygroup="filters" proxyname="PieceCache" />
       </SubProxy>
@@ -409,7 +404,7 @@
         name="WholeExtent"
         command="SetWholeExtent"
         number_of_elements="6"
-        default_values="0 359 0 239 0 4" >
+        default_values="0 100 0 100 0 100" >
        <IntRangeDomain name="range"/>
        <Documentation>
          This property specifies the minimum and maximum index values of the data in each dimension (xmin, xmax, ymin, ymax, zmin, zmax).
@@ -485,7 +480,14 @@
       </IntVectorProperty>
 
       <Property name="ClearPriorities" command="ClearPriorities" />
-      <Property name="ComputePriorities" command="ComputePriorities" />
+      <Property name="ComputeLocalPipelinePriorities"
+                command="ComputeLocalPipelinePriorities" />
+      <Property name="ComputeLocalViewPriorities"
+                command="ComputeLocalViewPriorities" />
+      <Property name="ComputeGlobalPipelinePriorities"
+                command="ComputeGlobalPipelinePriorities" />
+      <Property name="ComputeGlobalViewPriorities"
+                command="ComputeGlobalViewPriorities" />
       <Property name="MarkMoveDataModified" command="MarkMoveDataModified" />
 
       <IntVectorProperty
@@ -559,6 +561,13 @@
           <Group name="helpers"/>
         </ProxyGroupDomain>
       </ProxyProperty>
+
+      <IntVectorProperty
+        name="GetNumberNonZeroPriority"
+        command="GetNumberNonZeroPriority"
+        information_only="1">
+        <SimpleIntInformationHelper/>
+      </IntVectorProperty>
 
       <!-- End StreamingUpdateSuppressor -->
     </UpdateSuppressorProxy>

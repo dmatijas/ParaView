@@ -38,7 +38,8 @@ public:
   virtual void SetPassNumber(int Pass, int force);
   // Description:
   // Orders the pieces from most to least important.
-  virtual int ComputePriorities();
+  virtual int ComputePipelinePriorities();
+  virtual int ComputeViewPriorities();
   // Description:
   // Clears the data object cache in the streaming display pipeline.
   virtual void ClearStreamCache();
@@ -46,6 +47,10 @@ public:
   // Description:
   // Tells the strategy where the camera is so that pieces can be sorted and rejected
   virtual void SetViewState(double *camera, double *frustum);
+
+  // Description:
+  // gets number of pieces that have to be processed
+  virtual int GetNumberNonZeroPriority();
 
 //BTX
 protected:
@@ -77,7 +82,6 @@ protected:
   virtual void InvalidatePipeline();
 
   vtkSMSourceProxy* PieceCache;
-  vtkSMSourceProxy* ViewSorter;
 
 private:
   vtkSMStreamingSerialStrategy(const vtkSMStreamingSerialStrategy&); // Not implemented

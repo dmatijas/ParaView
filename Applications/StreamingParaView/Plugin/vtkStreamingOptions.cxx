@@ -27,7 +27,7 @@ class vtkStreamingOptionsInternal {
 public:
   vtkStreamingOptionsInternal() {
     this->EnableStreamMessages = false;
-    this->StreamedPasses = 1;
+    this->StreamedPasses = 16;
     this->UsePrioritization = true;
     this->UseViewOrdering = true;
     this->PieceCacheLimit = 16;

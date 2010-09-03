@@ -85,8 +85,7 @@ public:
 
   //Description:
   //Returns the number of pieces with non zero priorities in PieceList
-  //TODO: This does not take into account view or cache priority
-  //vtkGetMacro(MaxPass, int);
+  int GetNumberNonZeroPriority();
 
   //PIECE LIST TRANSFERS-------------------------------------------------
   //Description:

@@ -1003,3 +1003,9 @@ void vtkStreamingUpdateSuppressor::PrintSerializedLists()
   LOG("LEN = " << strlen(buffer) << endl;);
   LOG(cerr << buffer << endl;)
 }
+
+//------------------------------------------------------------------------------
+int vtkStreamingUpdateSuppressor::GetNumberNonZeroPriority()
+{
+  return this->PieceList->GetNumberNonZeroPriority();
+}

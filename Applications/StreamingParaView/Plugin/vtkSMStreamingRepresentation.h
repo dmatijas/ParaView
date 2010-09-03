@@ -46,8 +46,14 @@ public:
   virtual void SetPassNumber(int val, int force);
 
   // Description:
-  // Orders the pieces from most to least important.
-  virtual int ComputePriorities();
+  // Orders the pieces from most to least important based on the data
+  // processing pipeline.
+  virtual int ComputePipelinePriorities();
+
+  // Description:
+  // Orders the pieces from most to least important based on the
+  // rendering pipeline.
+  virtual int ComputeViewPriorities();
 
   // Description:
   // Clears the data object cache in the streaming display pipeline.
@@ -60,6 +66,8 @@ public:
   // this->GetVisibility() == true, otherwise, cube axes is not shown.
   void SetPieceBoundsVisibility(int);
   vtkGetMacro(PieceBoundsVisibility, int);
+
+  virtual int GetNumberNonZeroPriority();
 
 //BTX
   virtual bool UpdateRequired();
@@ -81,6 +89,8 @@ protected:
 
   vtkSMDataRepresentationProxy* PieceBoundsRepresentation;
   int PieceBoundsVisibility;
+
+  int InternalComputePriorities(bool forView);
 
 private:
   vtkSMStreamingRepresentation(const vtkSMStreamingRepresentation&); // Not implemented

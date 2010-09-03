@@ -52,20 +52,14 @@ void vtkSMStreamingSerialStrategy::BeginCreateVTKObjects()
   //Get hold of the caching filter proxy
   this->PieceCache =
     vtkSMSourceProxy::SafeDownCast(this->GetSubProxy("PieceCache"));
-
-  //Get hold of the filter that does view dependent prioritization
-  this->ViewSorter =
-    vtkSMSourceProxy::SafeDownCast(this->GetSubProxy("ViewSorter"));
-  this->ViewSorter->SetServers(vtkProcessModule::CLIENT_AND_SERVERS);
 }
 
 //----------------------------------------------------------------------------
 void vtkSMStreamingSerialStrategy::CreatePipeline(vtkSMSourceProxy* input, int outputport)
 {
-  this->Connect(input, this->ViewSorter, "Input", outputport);
-  this->Connect(this->ViewSorter, this->PieceCache);
+  this->Connect(input, this->PieceCache, "Input", outputport);
   this->Superclass::CreatePipeline(this->PieceCache, 0);
-  //input->ViewSorter->PieceCache->US
+  //input->PieceCache->US
 }
 
 //----------------------------------------------------------------------------
@@ -90,7 +84,8 @@ void vtkSMStreamingSerialStrategy::GatherInformation(vtkPVInformation* info)
   ivp->SetElement(0, nPasses);
 
   this->UpdateSuppressor->UpdateVTKObjects();
-  vtkSMProperty *p = this->UpdateSuppressor->GetProperty("ComputePriorities");
+  vtkSMProperty *p = this->UpdateSuppressor->GetProperty
+    ("ComputeLocalPipelinePriorities");
   p->Modified();
   this->UpdateSuppressor->UpdateVTKObjects();
   for (int i = 0; i < 1; i++)
@@ -149,10 +144,9 @@ void vtkSMStreamingSerialStrategy::SetPassNumber(int val, int force)
 }
 
 //----------------------------------------------------------------------------
-int vtkSMStreamingSerialStrategy::ComputePriorities()
+int vtkSMStreamingSerialStrategy::ComputePipelinePriorities()
 {
   int nPasses = vtkStreamingOptions::GetStreamedPasses();
-  int ret = nPasses;
 
   vtkSMIntVectorProperty* ivp;
 
@@ -160,7 +154,7 @@ int vtkSMStreamingSerialStrategy::ComputePriorities()
   int cacheLimit = vtkStreamingOptions::GetPieceCacheLimit();
 
   DEBUGPRINT_STRATEGY(
-    cerr << "SSS(" << this << ") ComputePriorities" << endl;
+    cerr << "SSS(" << this << ") ComputePipelinePriorities" << endl;
                       )
   ivp = vtkSMIntVectorProperty::SafeDownCast(
       this->PieceCache->GetProperty("SetCacheSize"));
@@ -175,16 +169,46 @@ int vtkSMStreamingSerialStrategy::ComputePriorities()
   this->UpdateSuppressor->UpdateVTKObjects();
 
   //ask it to compute the priorities
-  vtkSMProperty* cp = this->UpdateSuppressor->GetProperty("ComputePriorities");
-  vtkSMIntVectorProperty* rp = vtkSMIntVectorProperty::SafeDownCast(
-    this->UpdateSuppressor->GetProperty("GetMaxPass"));
+  vtkSMProperty* cp = this->UpdateSuppressor->GetProperty
+    ("ComputeLocalPipelinePriorities");
   cp->Modified();
   this->UpdateSuppressor->UpdateVTKObjects();
-  //get the result
-  this->UpdateSuppressor->UpdatePropertyInformation(rp);
-  ret = rp->GetElement(0);
 
-  return ret;
+  return -1;
+}
+
+//----------------------------------------------------------------------------
+int vtkSMStreamingSerialStrategy::ComputeViewPriorities()
+{
+  int nPasses = vtkStreamingOptions::GetStreamedPasses();
+  vtkSMIntVectorProperty* ivp;
+
+  //put diagnostic settings transfer here in case info not gathered yet
+  int cacheLimit = vtkStreamingOptions::GetPieceCacheLimit();
+
+  DEBUGPRINT_STRATEGY(
+    cerr << "SSS(" << this << ") ComputeViewPriorities" << endl;
+                      )
+  ivp = vtkSMIntVectorProperty::SafeDownCast(
+      this->PieceCache->GetProperty("SetCacheSize"));
+  ivp->SetElement(0, cacheLimit);
+  this->PieceCache->UpdateVTKObjects();
+
+  //let US know NumberOfPasses for CP
+  ivp = vtkSMIntVectorProperty::SafeDownCast(
+      this->UpdateSuppressor->GetProperty("SetNumberOfPasses"));
+  ivp->SetElement(0, nPasses);
+
+  this->UpdateSuppressor->UpdateVTKObjects();
+
+  //ask it to compute the priorities
+  vtkSMProperty* cp = this->UpdateSuppressor->GetProperty
+    ("ComputeLocalViewPriorities");
+  cp->Modified();
+  this->UpdateSuppressor->UpdateVTKObjects();
+
+
+  return -1;
 }
 
 //----------------------------------------------------------------------------
@@ -229,12 +253,23 @@ void vtkSMStreamingSerialStrategy::SetViewState(double *camera, double *frustum)
     return;
     }
 
+  //only
   vtkSMDoubleVectorProperty* dvp;
   dvp = vtkSMDoubleVectorProperty::SafeDownCast(
-    this->ViewSorter->GetProperty("SetCamera"));
+    this->UpdateSuppressor->GetProperty("SetCamera"));
   dvp->SetElements(camera);
   dvp = vtkSMDoubleVectorProperty::SafeDownCast(
-    this->ViewSorter->GetProperty("SetFrustum"));
+    this->UpdateSuppressor->GetProperty("SetFrustum"));
   dvp->SetElements(frustum);
-  this->ViewSorter->UpdateVTKObjects();
+  this->UpdateSuppressor->UpdateVTKObjects();
+}
+
+//----------------------------------------------------------------------------
+int vtkSMStreamingSerialStrategy::GetNumberNonZeroPriority()
+{
+  vtkSMIntVectorProperty *ivp;
+  ivp = vtkSMIntVectorProperty::SafeDownCast
+    (this->UpdateSuppressor->GetProperty("GetNumberNonZeroPriority"));
+  this->UpdateSuppressor->UpdatePropertyInformation(ivp);
+  return ivp->GetElement(0);
 }

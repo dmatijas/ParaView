@@ -400,10 +400,13 @@ void vtkSMStreamingViewProxy::PrepareRenderPass()
   vtkRenderer *ren = this->GetRootView()->GetRenderer();
 
   bool CamChanged = this->CameraChanged();
+  bool forCam = false;
   if (CamChanged)
     {
+    forCam = true;
     this->Pass = 0;
     }
+
   //prepare for incremental rendering
   if (this->Pass == 0)
     {
@@ -431,8 +434,30 @@ void vtkSMStreamingViewProxy::PrepareRenderPass()
     //and add to each each pass
     renWin->SwapBuffersOff();
 
+    if (!forCam)
+      {
+      cerr << "COMPUTE PIPELINE PRIORITIES" << endl;
+      //compute pipeline priorities
+      vtkSmartPointer<vtkCollectionIterator> iter;
+      iter.TakeReference(this->GetRootView()->Representations->NewIterator());
+      for (iter->InitTraversal();
+           !iter->IsDoneWithTraversal();
+           iter->GoToNextItem())
+        {
+        vtkSMStreamingRepresentation* srep =
+          vtkSMStreamingRepresentation::SafeDownCast(iter->GetCurrentObject());
+        if (srep && srep->GetVisibility())
+          {
+          srep->ComputePipelinePriorities();
+          srep->ClearStreamCache();
+          }
+        }
+      }
+
     if (CamChanged)
       {
+      cerr << "COMPUTE VIEW PRIORITIES" << endl;
+
       vtkSmartPointer<vtkCollectionIterator> iter;
       iter.TakeReference(this->GetRootView()->Representations->NewIterator());
       for (iter->InitTraversal();
@@ -444,9 +469,33 @@ void vtkSMStreamingViewProxy::PrepareRenderPass()
         if (srep && srep->GetVisibility())
           {
           srep->SetViewState(this->Internals->CamState, this->Internals->Frustum);
+          srep->ComputeViewPriorities();
           }
         }
       }
+
+    //figure out how many passes are needed
+    this->MaxPass = -1;
+    cerr << "COMPUTE MAXPASS" << endl;
+    vtkSmartPointer<vtkCollectionIterator> iter;
+    iter.TakeReference(this->GetRootView()->Representations->NewIterator());
+    for (iter->InitTraversal();
+         !iter->IsDoneWithTraversal();
+         iter->GoToNextItem())
+      {
+      vtkSMStreamingRepresentation* srep =
+        vtkSMStreamingRepresentation::SafeDownCast(iter->GetCurrentObject());
+      if (srep && srep->GetVisibility())
+        {
+        int repsmax = srep->GetNumberNonZeroPriority();
+        cerr << "GOT " << repsmax << endl;
+        if (repsmax > this->MaxPass)
+          {
+          this->MaxPass = repsmax;
+          }
+        }
+      }
+    cerr << "MAXPASS = " << this->MaxPass << endl;
     }
 }
 
@@ -503,11 +552,6 @@ void vtkSMStreamingViewProxy::CopyBackBufferToFrontBuffer()
 //----------------------------------------------------------------------------
 void vtkSMStreamingViewProxy::UpdateAllRepresentations()
 {
-  if (this->Pass == 0)
-    {
-    this->MaxPass = -1;
-    }
-
   vtkSMRenderViewProxy *RVP = this->GetRootView();
   vtkProcessModule* pm = vtkProcessModule::GetProcessModule();
 
@@ -515,7 +559,6 @@ void vtkSMStreamingViewProxy::UpdateAllRepresentations()
     cerr << "SV(" << this << ")::UpdateAllRepresentations" << endl;
     );
 
-  int nPasses = vtkStreamingOptions::GetStreamedPasses();
   //Update pipeline for each representation.
   //For representations that allow streaming, compute a piece priority order
   vtkSmartPointer<vtkCollectionIterator> iter;
@@ -533,40 +576,6 @@ void vtkSMStreamingViewProxy::UpdateAllRepresentations()
       continue;
       }
 
-    if (!enable_progress && repr->UpdateRequired())
-      {
-      // If a representation required an update, than it implies that the
-      // update will result in progress events. We don't to ignore those
-      // progress events, hence we enable progress handling.
-      pm->SendPrepareProgress(this->ConnectionID,
-        vtkProcessModule::CLIENT | vtkProcessModule::DATA_SERVER);
-      enable_progress = true;
-      }
-
-    vtkSMStreamingRepresentation *drepr =
-      vtkSMStreamingRepresentation::SafeDownCast(repr);
-    if (drepr && nPasses > 1)
-      {
-      if (this->Pass == 0)
-        {
-        DEBUGPRINT_VIEW(
-          cerr << "SV(" << this << ") Compute priorities on DREP " << drepr << endl;
-                        );
-        int maxpass = drepr->ComputePriorities();
-        if (maxpass > this->MaxPass)
-          {
-          DEBUGPRINT_VIEW(
-            cerr << "SV(" << this << ") MaxPass is now " << maxpass << endl;
-                          );
-          this->MaxPass = maxpass;
-          }
-        }
-
-      }
-    else
-      {
-      //cerr << "GOT " << repr->GetClassName() << endl;
-      }
     if (this->Pass == 0)
       {
       repr->Update(RVP);

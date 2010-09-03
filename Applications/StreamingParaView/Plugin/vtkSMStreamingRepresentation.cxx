@@ -207,12 +207,20 @@ void vtkSMStreamingRepresentation::SetPassNumber(int val, int force)
     }
 }
 
-#define TryComputePriorities(type) \
+#define TryComputePriorities(type, forView)             \
 { \
   type *ptr = type::SafeDownCast(iter->GetPointer());\
   if (ptr)\
     {\
-    int maxpass = ptr->ComputePriorities();\
+    int maxpass;\
+    if (!forView)\
+      {\
+      maxpass = ptr->ComputePipelinePriorities();\
+      }\
+    else\
+      {\
+      maxpass = ptr->ComputeViewPriorities();\
+      }\
     if (maxpass > maxPass)\
       {\
       maxPass = maxpass;\
@@ -221,23 +229,39 @@ void vtkSMStreamingRepresentation::SetPassNumber(int val, int force)
 }
 
 //----------------------------------------------------------------------------
-int vtkSMStreamingRepresentation::ComputePriorities()
+int vtkSMStreamingRepresentation::InternalComputePriorities(bool forView)
 {
-  DEBUGPRINT_REPRESENTATION(
-  cerr << "SR(" << this << ") ComputePriorities" << endl;
-                            );
   int maxPass = -1;
   vtkSMRepresentationStrategyVector strats;
   this->GetActiveStrategies(strats);
   vtkSMRepresentationStrategyVector::iterator iter; 
   for (iter = strats.begin(); iter != strats.end(); ++iter)
     {
-    TryComputePriorities(vtkSMStreamingSerialStrategy);
-    TryComputePriorities(vtkSMStreamingParallelStrategy);
+    TryComputePriorities(vtkSMStreamingSerialStrategy, forView);
+//    TryComputePriorities(vtkSMStreamingParallelStrategy, forView);
     }
   return maxPass;
 }
 
+//----------------------------------------------------------------------------
+int vtkSMStreamingRepresentation::ComputePipelinePriorities()
+{
+  DEBUGPRINT_REPRESENTATION(
+  cerr << "SR(" << this << ") ComputePipelinePriorities" << endl;
+                            );
+  return this->InternalComputePriorities(false);
+}
+
+//----------------------------------------------------------------------------
+int vtkSMStreamingRepresentation::ComputeViewPriorities()
+{
+  DEBUGPRINT_REPRESENTATION(
+  cerr << "SR(" << this << ") ComputeViewPriorities" << endl;
+                            );
+  return this->InternalComputePriorities(true);
+}
+
+//----------------------------------------------------------------------------
 #define TryMethod(type,method)                        \
 { \
   type *ptr = type::SafeDownCast(iter->GetPointer());\
@@ -293,4 +317,31 @@ void vtkSMStreamingRepresentation::SetViewState(double *camera, double *frustum)
     TryMethod(vtkSMStreamingSerialStrategy, SetViewState(camera, frustum));
     TryMethod(vtkSMStreamingParallelStrategy, SetViewState(camera, frustum));
     }
+}
+
+#define TryGetNumberNonZeroPriority(type)             \
+{ \
+  type *ptr = type::SafeDownCast(iter->GetPointer());\
+  if (ptr)\
+    {\
+    int maxpass = ptr->GetNumberNonZeroPriority(); \
+    if (maxpass > maxPass)\
+      {\
+      maxPass = maxpass;\
+      }\
+    }\
+}
+
+//----------------------------------------------------------------------------
+int vtkSMStreamingRepresentation::GetNumberNonZeroPriority()
+{
+  int maxPass = -1;
+  vtkSMRepresentationStrategyVector strats;
+  this->GetActiveStrategies(strats);
+  vtkSMRepresentationStrategyVector::iterator iter;
+  for (iter = strats.begin(); iter != strats.end(); ++iter)
+    {
+    TryGetNumberNonZeroPriority(vtkSMStreamingSerialStrategy);
+    }
+  return maxPass;
 }
