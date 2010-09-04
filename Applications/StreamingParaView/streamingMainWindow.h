@@ -7,8 +7,8 @@
    All rights reserved.
 
    ParaView is a free software; you can redistribute it and/or modify it
-   under the terms of the ParaView license version 1.2. 
-   
+   under the terms of the ParaView license version 1.2.
+
    See License_v1.2.txt for the full ParaView license.
    A copy of this license can be obtained by contacting
    Kitware Inc.
@@ -29,7 +29,7 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ========================================================================*/
-#ifndef __streamingMainWindow_h 
+#ifndef __streamingMainWindow_h
 #define __streamingMainWindow_h
 
 #include <QMainWindow>
@@ -51,10 +51,11 @@ protected slots:
   /// Called when the active view in the pqActiveView singleton changes.
   virtual void onActiveViewChanged(pqView* view);
 
-  // Every render has a chance to schedule additional renders if multipass is 
+  // Every render has a chance to schedule additional renders if multipass is
   // needed
   void scheduleNextPass();
   void stopStreaming();
+  void allowStreaming();
 
 protected:
 
@@ -69,5 +70,3 @@ private:
 };
 
 #endif
-
-

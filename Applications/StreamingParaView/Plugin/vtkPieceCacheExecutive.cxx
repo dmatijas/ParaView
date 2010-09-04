@@ -30,6 +30,8 @@ vtkStandardNewMacro(vtkPieceCacheExecutive);
 #include <sstream>
 #include <iostream>
 #define LOG(arg)\
+  {};
+/*
   {\
   std::ostringstream stream;\
   stream << arg;\
@@ -42,6 +44,11 @@ vtkStandardNewMacro(vtkPieceCacheExecutive);
     {\
       arg;\
     }
+*/
+
+#define DEBUGPRINT_CACHING(arg) {};
+
+extern double vtkPCF_GetResolution(vtkInformation *info);
 
 //----------------------------------------------------------------------------
 vtkPieceCacheExecutive
@@ -116,8 +123,8 @@ int vtkPieceCacheExecutive
         dataInfo->Get(vtkDataObject::DATA_NUMBER_OF_PIECES());
       int dataGhostLevel =
         dataInfo->Get(vtkDataObject::DATA_NUMBER_OF_GHOST_LEVELS());
-      double dataResolution =
-        dataInfo->Get(vtkDataObject::DATA_RESOLUTION());
+      double dataResolution = vtkPCF_GetResolution(dataInfo);
+
       if (dataInfo->Get(vtkDataObject::DATA_EXTENT_TYPE()) ==
           VTK_PIECES_EXTENT && dataPiece == updatePiece &&
           dataNumberOfPieces == updateNumberOfPieces &&

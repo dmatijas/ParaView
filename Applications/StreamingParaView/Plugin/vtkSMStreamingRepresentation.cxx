@@ -36,10 +36,12 @@
 vtkStandardNewMacro(vtkSMStreamingRepresentation);
 
 #define DEBUGPRINT_REPRESENTATION(arg)\
-  if (vtkStreamingOptions::GetEnableStreamMessages()) \
-    { \
-      arg;\
-    }
+  {}
+
+//  if (vtkStreamingOptions::GetEnableStreamMessages()) \
+//    {                                                 \
+//      arg;                                            \
+//    }
 
 inline void vtkSMStreamingRepresentationSetInt(
   vtkSMProxy* proxy, const char* pname, int val)

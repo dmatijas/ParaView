@@ -7,7 +7,7 @@
    All rights reserved.
 
    ParaView is a free software; you can redistribute it and/or modify it
-   under the terms of the ParaView license version 1.2. 
+   under the terms of the ParaView license version 1.2.
 
    See License_v1.2.txt for the full ParaView license.
    A copy of this license can be obtained by contacting
@@ -129,7 +129,7 @@ streamingMainWindow::streamingMainWindow()
       //vtkWarningMacro("Tried and failed to create a streaming module. "
       //                << "Make sure the streaming plugin can be found by ParaView.");
       }
-    }  
+    }
 
 /*
   //remove surface selection buttons
@@ -167,6 +167,9 @@ streamingMainWindow::streamingMainWindow()
   QObject::connect(this->Internals->proxyTabWidget->getObjectInspector(),
                    SIGNAL(canAccept()),
                    this, SLOT(stopStreaming()));
+  QObject::connect(this->Internals->proxyTabWidget->getObjectInspector(),
+                   SIGNAL(preaccept()),
+                   this, SLOT(allowStreaming()));
 
   //add way to for user to manually stop streaming
   QShortcut *pauseKey = new QShortcut(Qt::Key_Space, this);
@@ -211,7 +214,7 @@ void streamingMainWindow::scheduleNextPass()
     {
     return;
     }
-  
+
   int doPrint = 0;
   vtkSMProxyManager* pxm = vtkSMProxyManager::GetProxyManager();
   vtkSMProxy * helper = vtkSMProxy::SafeDownCast(
@@ -228,13 +231,13 @@ void streamingMainWindow::scheduleNextPass()
     if (doPrint)
       {
       cerr << "MWC Schedule next render" << endl;
-      }    
+      }
     //this->statusBar->setMessage("Next Render", 10000);
     //schedule next render pass
     QTimer *t = new QTimer(this);
     t->setSingleShot(true);
     QObject::connect(t, SIGNAL(timeout()), view, SLOT(render()), Qt::QueuedConnection);
-    t->start();    
+    t->start();
     }
   else
     {
@@ -252,6 +255,13 @@ void streamingMainWindow::stopStreaming()
 {
   //This will stop multipass streaming rendering from continuing.
   this->StopStreaming = true;
+}
+
+//-----------------------------------------------------------------------------
+void streamingMainWindow::allowStreaming()
+{
+  //This will allow multipass streaming rendering to start
+  this->StopStreaming = false;
 }
 
 /*
@@ -317,7 +327,7 @@ void streamingMainWindow::onRemovingSource(pqPipelineSource *source)
   QList<pqView*> views = source->getViews();
 
   pqPipelineFilter* filter = qobject_cast<pqPipelineFilter*>(source);
-  
+
   if (!pqApplicationCore::instance()->getDisplayPolicy()->getHideByDefault() &&
       filter)
     {

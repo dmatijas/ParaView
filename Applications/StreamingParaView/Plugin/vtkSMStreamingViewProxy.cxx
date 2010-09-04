@@ -47,12 +47,13 @@
 //-----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkSMStreamingViewProxy);
 
-#define DEBUGPRINT_VIEW(arg)\
+#define DEBUGPRINT_VIEW(arg) arg;
+/*
   if (vtkStreamingOptions::GetEnableStreamMessages()) \
     { \
       arg;\
     }
-
+*/
 //-----------------------------------------------------------------------------
 class vtkSMStreamingViewProxy::vtkInternals
 {
@@ -417,10 +418,8 @@ void vtkSMStreamingViewProxy::PrepareRenderPass()
   vtkRenderer *ren = this->GetRootView()->GetRenderer();
 
   bool CamChanged = this->CameraChanged();
-  bool forCam = false;
   if (CamChanged)
     {
-    forCam = true;
     this->Pass = 0;
     }
 
@@ -444,31 +443,28 @@ void vtkSMStreamingViewProxy::PrepareRenderPass()
 
     ren->Clear();
 
-    if (!forCam)
-      {
-      cerr << "COMPUTE PIPELINE PRIORITIES" << endl;
-      //compute pipeline priorities
-      ForEveryStreamingRep(
-                           srep->ComputePipelinePriorities();
-                           srep->ClearStreamCache();
-                           );
-      }
-
     if (CamChanged)
       {
-      cerr << "COMPUTE VIEW PRIORITIES" << endl;
+      DEBUGPRINT_VIEW(
+      cerr << "SV(" << this << ") compute VIEW priority" << endl;
+                      )
       ForEveryStreamingRep(
                            srep->SetViewState(this->Internals->CamState, this->Internals->Frustum);
                            srep->ComputeViewPriorities();
                            );
       }
 
-    cerr << "COMPUTE CACHE PRIORITIES" << endl;
+    DEBUGPRINT_VIEW(
+    cerr << "SV(" << this << ") compute CACHE priority" << endl;
+                    )
     ForEveryStreamingRep(
                          srep->SetViewState(this->Internals->CamState, this->Internals->Frustum);
                          srep->ComputeCachePriorities();
                          );
 
+    DEBUGPRINT_VIEW(
+    cerr << "SV(" << this << ") Prepare first pass" << endl;
+                    )
     ForEveryStreamingRep(
                          srep->PrepareFirstPass();
                          );
@@ -476,6 +472,11 @@ void vtkSMStreamingViewProxy::PrepareRenderPass()
   else
     {
     //continue incremental rendering
+
+    DEBUGPRINT_VIEW(
+    cerr << "SV(" << this << ") Prepare next pass" << endl;
+                    )
+
     ForEveryStreamingRep(
                          srep->PrepareAnotherPass();
                          );
@@ -609,17 +610,24 @@ void vtkSMStreamingViewProxy::FinalizeRenderPass()
 {
   DEBUGPRINT_VIEW(
                    cerr << "SV(" << this << ") FinalizeRenderPass" << endl;
-                   cerr << "VADONE = " << this->DisplayDone << endl;
                    );
 
   //we are done if every representation is done
   int alldone = 1;
   ForEveryStreamingRep(
                        int rAllDone = srep->GetAllDone();
+                       DEBUGPRINT_VIEW(
+                       if (!rAllDone)
+                         {
+                         cerr << "SV(" << this << ") got NOT done " << endl;
+                         }
+                                       );
                        alldone &= rAllDone;
                        );
+
   if (alldone)
     {
+    DEBUGPRINT_VIEW(cerr<<"SV("<<this<<") everone DONE" << endl;);
     this->DisplayDone = 1;
     }
 
@@ -627,6 +635,9 @@ void vtkSMStreamingViewProxy::FinalizeRenderPass()
   int lastPass = vtkStreamingOptions::GetPieceRenderCutoff();
   if (lastPass > -1 && lastPass < this->Pass)
     {
+    DEBUGPRINT_VIEW(
+    cerr << "SV(" << this << ") early exit" << endl;
+                    );
     this->DisplayDone = 1;
     }
 
@@ -640,10 +651,7 @@ void vtkSMStreamingViewProxy::FinalizeRenderPass()
     this->Pass++;
     }
 
-  DEBUGPRINT_VIEW(cerr << "VADONE = " << this->DisplayDone << endl;);
-
   vtkRenderWindow *renWin = this->GetRootView()->GetRenderWindow();
-  DEBUGPRINT_VIEW(cerr << "SV(" << this << ") Update Front Buffer" << endl;);
 
   this->CopyBackBufferToFrontBuffer();
   renWin->SwapBuffersOn();

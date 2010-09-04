@@ -61,18 +61,20 @@ vtkStandardNewMacro(vtkStreamingUpdateSuppressor);
   vtkStreamingOptions::Log(stream.str().c_str());\
   }
 
-#define DEBUGPRINT_EXECUTION(arg)\
+#define DEBUGPRINT_EXECUTION(arg) arg;
+/*
   if (vtkStreamingOptions::GetEnableStreamMessages()) \
     { \
       arg;\
     }
-
-#define DEBUGPRINT_PRIORITY(arg)\
+*/
+#define DEBUGPRINT_PRIORITY(arg) arg;
+/*
   if (vtkStreamingOptions::GetEnableStreamMessages())\
     { \
       arg;\
     }
-
+*/
 //----------------------------------------------------------------------------
 vtkStreamingUpdateSuppressor::vtkStreamingUpdateSuppressor()
 {
@@ -135,7 +137,7 @@ vtkStreamingUpdateSuppressor::~vtkStreamingUpdateSuppressor()
       {
       if (this->ParPLs[i])
         {
-        cerr << "SUS(" << this << ") delete PL " << this->ParPLs[i] << endl;
+        //cerr << "SUS(" << this << ") delete PL " << this->ParPLs[i] << endl;
         this->ParPLs[i]->Delete();
         this->ParPLs[i] = NULL;
         }
@@ -193,17 +195,18 @@ void vtkStreamingUpdateSuppressor::PrintSelf(ostream& os, vtkIndent indent)
 //----------------------------------------------------------------------------
 void vtkStreamingUpdateSuppressor::ForceUpdate()
 {
-  cerr << "SUS(" << this << ") FU!" << endl;
   if (this->UseAppend)
     {
-    cerr << "TRYING APPEND" << endl;
+    DEBUGPRINT_EXECUTION(
+                         cerr << "SUS("<<this<<" TRYING APPEND" << endl;
+                         )
     this->UseAppend = 0;
     if (this->ParallelPieceCacheFilter)
       {
-      cerr << "TRYING PPCF" << endl;
+      //cerr << "TRYING PPCF" << endl;
       if (this->ParallelPieceCacheFilter->GetAppendedData())
         {
-        cerr << "GOT SOMETHING" << endl;
+        //cerr << "GOT SOMETHING" << endl;
         vtkPolyData *output = vtkPolyData::SafeDownCast(this->GetOutput());
         output->ShallowCopy(this->ParallelPieceCacheFilter->GetAppendedData());
         this->PipelineUpdateTime.Modified();
@@ -212,10 +215,12 @@ void vtkStreamingUpdateSuppressor::ForceUpdate()
       }
     if (this->PieceCacheFilter)
       {
-      LOG("TRYING PCF" << endl;)
+      DEBUGPRINT_EXECUTION(cerr << "SUS("<<this
+                           <<") TRYING PCF" << endl;)
       if (this->PieceCacheFilter->GetAppendedData())
         {
-        LOG("GOT SOMETHING" << endl;)
+        DEBUGPRINT_EXECUTION(cerr << "SUS("<<this
+                             <<") GOT SOMETHING" << endl;)
         vtkDataObject *output = this->GetOutput();
         output->ShallowCopy(this->PieceCacheFilter->GetAppendedData());
         this->PipelineUpdateTime.Modified();
@@ -227,9 +232,8 @@ void vtkStreamingUpdateSuppressor::ForceUpdate()
   int gPiece = this->UpdatePiece*this->NumberOfPasses + this->GetPiece();
   int gPieces = this->UpdateNumberOfPieces*this->NumberOfPasses;
 
-  //DEBUGPRINT_EXECUTION(
-  LOG("SUS(" << this << ") ForceUpdate " << this->Pass << "/" << this->NumberOfPasses << "->" << gPiece << "/" << gPieces << endl;)
-  //                     );
+  DEBUGPRINT_EXECUTION(
+                       cerr <<"SUS(" << this << ") ForceUpdate " << this->Pass << "/" << this->NumberOfPasses << "->" << gPiece << "/" << gPieces << endl;)
 
   // Make sure that output type matches input type
   this->UpdateInformation();
@@ -299,12 +303,14 @@ void vtkStreamingUpdateSuppressor::ForceUpdate()
     cachedPiece.SetBounds(ds->GetBounds());
     double bds[6];
     cachedPiece.GetBounds(bds);
+/*
     LOG("SUS(" << this << ") UPDATE PRODUCED"
         << ds->GetClassName() << " "
         << ds->GetNumberOfPoints() << " "
         << bds[0] << ".." << bds[1] << ","
         << bds[2] << ".." << bds[3] << ","
         << bds[4] << ".." << bds[5] << endl;)
+*/
     }
   this->PipelineUpdateTime.Modified();
 }
@@ -337,7 +343,7 @@ int vtkStreamingUpdateSuppressor::GetPiece(int p)
     else
       {
       piece = pStruct.GetPiece();
-      LOG("LOOKUP FOUND " << piece << "@" << pStruct.GetPriority() << endl;)
+      //LOG("LOOKUP FOUND " << piece << "@" << pStruct.GetPriority() << endl;)
       }
     }
   return piece;
@@ -470,7 +476,6 @@ void vtkStreamingUpdateSuppressor::UnSerializeLists(char *buffer)
     {
     for (int i = 0; i < this->NumPLs; i++)
       {
-      cerr << "SUS(" << this << ") delete PL " << this->ParPLs[i] << endl;
       this->ParPLs[i]->Delete();
       this->ParPLs[i] = NULL;
       }
@@ -481,7 +486,6 @@ void vtkStreamingUpdateSuppressor::UnSerializeLists(char *buffer)
     for (int i = 0; i < numProcs; i++)
       {
       this->ParPLs[i] = vtkPieceList::New();
-      cerr << "SUS(" << this << ") create PL " << this->ParPLs[i] << endl;
       }
     }
 
@@ -509,9 +513,9 @@ void vtkStreamingUpdateSuppressor::UnSerializeLists(char *buffer)
 //-----------------------------------------------------------------------------
 void vtkStreamingUpdateSuppressor::ClearPriorities()
 {
-  //DEBUGPRINT_EXECUTION(
+  DEBUGPRINT_EXECUTION(
   cerr << "SUS(" << this << ") CLEAR PRIORITIES" << endl;
-  //);
+  );
 
   if (this->PieceList)
     {
@@ -528,6 +532,7 @@ void vtkStreamingUpdateSuppressor::ClearPriorities()
       this->ParPLs[i] = NULL;
       }
     delete[] this->ParPLs;
+    this->ParPLs = NULL;
     }
   this->NumPLs = 0;
 }
@@ -542,9 +547,11 @@ void vtkStreamingUpdateSuppressor::PrepareFirstPass()
   this->Pass = 0;
   this->NumberOfPasses = vtkStreamingOptions::GetStreamedPasses();
 
+  this->PieceCacheFilter->AppendPieces();
+
   PIECE = (double)this->Pass;
   NUMPIECES = (double)this->NumberOfPasses;
-  RESOLUTION = 1.0;
+  RESOLUTION = 0.0;
   PRIORITY = 1.0;
   HIT = 0.0;
   FROMAPPEND = 0.0;
@@ -562,7 +569,7 @@ void vtkStreamingUpdateSuppressor::PrepareAnotherPass()
 
   PIECE = (double)this->Pass;
   NUMPIECES = (double)this->NumberOfPasses;
-  RESOLUTION = 1.0;
+  RESOLUTION = 0.0;
   PRIORITY = 1.0;
   HIT = 0.0;
   FROMAPPEND = 0.0;
@@ -576,12 +583,12 @@ void vtkStreamingUpdateSuppressor::ChooseNextPiece()
   //choose appended results first
   if (NEXTAPPEND && this->PieceCacheFilter->GetAppendedData())
     {
-
-    cerr << "SUS(" << this << ") Choose append content" << endl;
-
+    DEBUGPRINT_EXECUTION(
+                         cerr << "SUS(" << this << ") Choose append content " << endl;
+                         );
     PIECE = 0.0;
     NUMPIECES = 1.0;
-    RESOLUTION = 1.0;
+    RESOLUTION = 0.0;
     PRIORITY = 1.0;
     FROMAPPEND = 1.0;
     HIT = 1.0;
@@ -589,6 +596,7 @@ void vtkStreamingUpdateSuppressor::ChooseNextPiece()
     ALLDONE = 0;
     WENDDONE = 0;
 
+    this->Pass=-1;
     this->UseAppend = 1;
     this->ForceUpdate();
 
@@ -596,7 +604,7 @@ void vtkStreamingUpdateSuppressor::ChooseNextPiece()
     return;
     }
 
-  cerr << "SUS(" << this << ") Choose a normal piece" << endl;
+  DEBUGPRINT_EXECUTION(cerr << "SUS(" << this << ") Choose a normal piece" << endl;)
   bool found = false;
   for (int i = this->Pass; i < this->NumberOfPasses && found == false; i++)
     {
@@ -612,16 +620,20 @@ void vtkStreamingUpdateSuppressor::ChooseNextPiece()
     bool fromAppend = this->PieceCacheFilter->InAppend(gPiece, gPieces, res);
     if (fromAppend)
       {
+      DEBUGPRINT_EXECUTION(
       cerr << "SUS(" << this << ") skip appended "
            << gPiece << "/" << gPieces << "@" << res << endl;
+                           )
       continue;
       }
 
     bool fromCache = this->PieceCacheFilter->InCache(gPiece, gPieces, res);
     if (fromCache)
       {
+      DEBUGPRINT_EXECUTION(
       cerr << "SUS(" << this << ") "
            << gPiece << "/" << gPieces << "@" << res << " was cached" << endl;
+                           )
       }
 
     PIECE = (double)gPiece;
@@ -645,11 +657,11 @@ void vtkStreamingUpdateSuppressor::ChooseNextPiece()
 //-----------------------------------------------------------------------------
 void vtkStreamingUpdateSuppressor::ComputeLocalPipelinePriorities()
 {
-  //DEBUGPRINT_EXECUTION(
+  DEBUGPRINT_EXECUTION(
   cerr << "SUS(" << this << ") COMPUTE LOCAL PRIORITIES ";
   //this->PrintPipe(this);
   cerr << endl;
-  //);
+  );
   vtkDataObject *input = this->GetInput();
   if (input == 0)
     {
@@ -677,15 +689,19 @@ void vtkStreamingUpdateSuppressor::ComputeLocalPipelinePriorities()
       double pBounds[6] = {0,-1,0,-1,0,-1};
       if (vtkStreamingOptions::GetUsePrioritization())
         {
-        //DEBUGPRINT_EXECUTION(
+        /*
+        DEBUGPRINT_EXECUTION(
         cerr << "SUS(" << this << ") COMPUTE PRIORITY ON " << gPiece << endl;
-        //);
+        );
+        */
         sddp->SetUpdateExtent(info, gPiece, gPieces, 0);
         priority = sddp->ComputePriority();
         sddp->GetPieceBoundingBox(0, pBounds);
-        //DEBUGPRINT_EXECUTION(
+        /*
+        DEBUGPRINT_EXECUTION(
         cerr << "SUS(" << this << ") result was " << priority << endl;
-        //);
+        );
+        */
         }
       piece.SetPiece(i);
       piece.SetNumPieces(this->NumberOfPasses);
@@ -697,10 +713,10 @@ void vtkStreamingUpdateSuppressor::ComputeLocalPipelinePriorities()
 
   //sorts pieces from priority 1.0 down to 0.0
   this->PieceList->SortPriorities();
-  //DEBUGPRINT_EXECUTION(
+  DEBUGPRINT_EXECUTION(
   cerr << "SUS(" << this << ") Post comp Sort:" << endl;
   this->PieceList->Print();
-  //);
+  );
 
   //Send piecelists to root node where client can get it
   this->GatherPriorities();
@@ -709,11 +725,13 @@ void vtkStreamingUpdateSuppressor::ComputeLocalPipelinePriorities()
 //-----------------------------------------------------------------------------
 void vtkStreamingUpdateSuppressor::ComputeLocalViewPriorities()
 {
-  LOG("COMPUTING VIEW PRIORITIES" << endl;)
+  DEBUGPRINT_EXECUTION(
+  cerr << "SUS("<<this<<") COMPUTING VIEW PRIORITIES" << endl;)
   this->ComputeViewPriorities(this->PieceList);
   this->PieceList->SortPriorities();
-  cerr << "SUS(" << this << ") post view Sort:" << endl;
+  DEBUGPRINT_EXECUTION(cerr << "SUS(" << this << ") post view Sort:" << endl;
   this->PieceList->Print();
+                       )
 }
 
 //-----------------------------------------------------------------------------
@@ -746,6 +764,8 @@ void vtkStreamingUpdateSuppressor::ComputeViewPriorities(vtkPieceList *pl)
 //-----------------------------------------------------------------------------
 void vtkStreamingUpdateSuppressor::ComputeLocalCachePriorities()
 {
+  DEBUGPRINT_EXECUTION(
+  cerr << "SUS("<<this<<") COMPUTING CACHE PRIORITIES" << endl;)
   if (!this->PieceCacheFilter || !this->PieceList)
     {
     return;
@@ -764,6 +784,13 @@ void vtkStreamingUpdateSuppressor::ComputeLocalCachePriorities()
       pl->SetPiece(j, p);
       }
     }
+  this->PieceList->SortPriorities();
+
+  DEBUGPRINT_EXECUTION(
+  cerr << "SUS(" << this << ") Post cache Sort:" << endl;
+  this->PieceList->Print();
+  );
+
 }
 
 //-----------------------------------------------------------------------------
@@ -831,10 +858,10 @@ void vtkStreamingUpdateSuppressor::GatherPriorities()
     {
     procid = controller->GetLocalProcessId();
     numProcs = controller->GetNumberOfProcesses();
-    //DEBUGPRINT_EXECUTION(
+    /*DEBUGPRINT_EXECUTION(
     cerr << "SUS(" << this << ") PREGATHER:" << endl;
     this->PieceList->Print();
-    //);
+    );*/
     }
 
   //serialize locally computed priorities
@@ -860,7 +887,7 @@ void vtkStreamingUpdateSuppressor::GatherPriorities()
       for (int i = 0; i < numProcs; i++)
         {
         this->ParPLs[i] = vtkPieceList::New();
-        cerr << "SUS(" << this << ") create PL " << this->ParPLs[i] << endl;
+        //cerr << "SUS(" << this << ") create PL " << this->ParPLs[i] << endl;
         }
       }
     //Unserialize my own

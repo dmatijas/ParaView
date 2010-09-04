@@ -34,12 +34,28 @@ vtkStandardNewMacro(vtkPieceCacheFilter);
 #include <sstream>
 #include <iostream>
 #define LOG(arg)\
+  {}
+#if 0
   {\
   std::ostringstream stream;\
   stream << arg;\
   vtkStreamingOptions::Log(stream.str().c_str());\
   }
+#endif
 
+#define DEBUGPRINT_CACHING(arg) {};
+#define DEBUGPRINT_APPENDING(arg) {};
+
+double vtkPCF_GetResolution(vtkInformation *info)
+{
+  if (info->Has(vtkDataObject::DATA_RESOLUTION()))
+    {
+    return info->Get(vtkDataObject::DATA_RESOLUTION());
+    }
+  return 1.0;
+}
+
+/*
 #if 1
 
 #define DEBUGPRINT_CACHING(arg) arg;
@@ -59,7 +75,7 @@ vtkStandardNewMacro(vtkPieceCacheFilter);
     }
 
 #endif
-
+*/
 //----------------------------------------------------------------------------
 vtkPieceCacheFilter::vtkPieceCacheFilter()
 {
@@ -155,10 +171,9 @@ void vtkPieceCacheFilter::DeletePiece(int pieceNum )
   CacheType::iterator pos = this->Cache.find(pieceNum);
   if (pos != this->Cache.end())
     {
-                       vtkDataSet* ds = pos->second.second;
-                       vtkInformation* dataInfo = ds->GetInformation();
-                       double dataResolution = dataInfo->Get(
-                          vtkDataObject::DATA_RESOLUTION());
+    vtkDataSet* ds = pos->second.second;
+    vtkInformation* dataInfo = ds->GetInformation();
+    double dataResolution = vtkPCF_GetResolution(dataInfo);
     LOG(
         "@" << dataResolution;
         );
@@ -198,13 +213,13 @@ int vtkPieceCacheFilter::RequestData(
   double updateResolution = outInfo->Get(
     vtkStreamingDemandDrivenPipeline::UPDATE_RESOLUTION());
 
-  LOG(
-  "PCF(" << this << ") Looking for "
+  //LOG(
+  cerr << "PCF(" << this << ") Looking for "
        << updatePiece << "/"
        << updatePieces << "+"
        << updateGhosts << "@"
        << updateResolution << endl;
-                     );
+  //                   );
 
   int index = this->ComputeIndex(updatePiece, updatePieces);
   CacheType::iterator pos = this->Cache.find(index);
@@ -219,8 +234,7 @@ int vtkPieceCacheFilter::RequestData(
       vtkDataObject::DATA_NUMBER_OF_PIECES());
     int dataGhosts = dataInfo->Get(
       vtkDataObject::DATA_NUMBER_OF_GHOST_LEVELS());
-    double dataResolution = dataInfo->Get(
-      vtkDataObject::DATA_RESOLUTION());
+    double dataResolution = vtkPCF_GetResolution(dataInfo);
 
     if (dataPiece == updatePiece &&
         dataPieces == updatePieces &&
@@ -228,19 +242,19 @@ int vtkPieceCacheFilter::RequestData(
         dataResolution >= updateResolution)
       {
       found = true;
-      LOG(
-      "PCF(" << this << ") found match @ " << dataResolution << endl;
-                         );
+      //LOG(
+      cerr << "PCF(" << this << ") found match @ " << dataResolution << endl;
+      //                   );
       }
     else
       {
-      LOG(
-      "PCF(" << this << ") but found "
+      //LOG(
+      cerr << "PCF(" << this << ") but found "
            << dataPiece << "/"
            << dataPieces << "+"
            << dataGhosts << "@"
            << dataResolution << endl;
-                         );
+      //                   );
       }
     }
   else
@@ -325,19 +339,19 @@ bool vtkPieceCacheFilter::InCache(int p, int np, double r)
   if (ds)
     {
     vtkInformation* dataInfo = ds->GetInformation();
-    double dataResolution = dataInfo->Get(vtkDataObject::DATA_RESOLUTION());
-      vtkPolyData *content = vtkPolyData::SafeDownCast(ds);
-    LOG(
-      "PCF(" << this << ") InCache(" << p << "/" << np << "@" << r << "->" << dataResolution << ") " << (dataResolution>=r?"T":"F") << " NPTS=" << (content?content->GetNumberOfPoints():-1)<< endl;
-                         );
+    double dataResolution = vtkPCF_GetResolution(dataInfo);
+    vtkPolyData *content = vtkPolyData::SafeDownCast(ds);
+    //LOG(
+    cerr << "PCF(" << this << ") InCache(" << p << "/" << np << "@" << r << "->" << dataResolution << ") " << (dataResolution>=r?"T":"F") << " NPTS=" << (content?content->GetNumberOfPoints():-1)<< endl;
+//                         );
     if (dataResolution >= r)
       {
       return true;
       }
     }
-  LOG(
-    "PCF(" << this << ") InCache(" << p << "/" << np << "@" << r << ") " << "F" << endl;
-    );
+  //LOG(
+  cerr << "PCF(" << this << ") InCache(" << p << "/" << np << "@" << r << ") " << "F" << endl;
+  // );
 
   return false;
 }
@@ -404,8 +418,7 @@ void vtkPieceCacheFilter::AppendPieces()
         vtkDataObject::DATA_PIECE_NUMBER());
       int dataPieces = dataInfo->Get(
         vtkDataObject::DATA_NUMBER_OF_PIECES());
-      double dataResolution = dataInfo->Get(
-        vtkDataObject::DATA_RESOLUTION());
+      double dataResolution = vtkPCF_GetResolution(dataInfo);
       int index = this->ComputeIndex(dataPiece, dataPieces);
 
       this->AppendTable[index] = dataResolution;
