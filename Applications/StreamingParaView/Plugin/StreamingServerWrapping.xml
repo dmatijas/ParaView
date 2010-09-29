@@ -304,18 +304,6 @@
       </SubProxy>
 
       <SubProxy>
-        <Proxy name="Collect"
-          override="1"
-          proxygroup="filters" proxyname="StreamingMoveData">
-        </Proxy>
-      </SubProxy>
-
-      <SubProxy>
-        <Proxy name="ParallelPieceCache"
-          proxygroup="filters" proxyname="ParallelPieceCache" />
-      </SubProxy>
-
-      <SubProxy>
         <Proxy name="UpdateSuppressor"
           override="1"
           proxygroup="filters" proxyname="StreamingUpdateSuppressor">
@@ -330,14 +318,12 @@
       </SubProxy>
 
       <SubProxy>
-        <Proxy name="PostCollectUpdateSuppressor"
-          override="1"
-          proxygroup="filters" proxyname="StreamingUpdateSuppressor">
-        </Proxy>
+        <Proxy name="ParallelPieceCache"
+          proxygroup="filters" proxyname="ParallelPieceCache" />
       </SubProxy>
 
       <SubProxy>
-        <Proxy name="PostDistributorSuppressor"
+        <Proxy name="PostCollectUpdateSuppressor"
           override="1"
           proxygroup="filters" proxyname="StreamingUpdateSuppressor">
         </Proxy>
@@ -461,7 +447,7 @@
         name="PassNumber"
         command="SetPassNumber"
         number_of_elements="2"
-        default_values="0 16">
+        default_values="0 4">
         <IntRangeDomain name="range" min="0"/>
         <Documentation>
           Choose a particular stream piece to render.
@@ -706,6 +692,8 @@
         <SimpleIntInformationHelper/>
       </IntVectorProperty>
 
+      <Property name="EmptyCache" command="EmptyCache" />
+
       <!-- End of ParallelPieceCacheFilter -->
    </SourceProxy>
 
@@ -726,7 +714,7 @@
         command="SetStreamedPasses"
         immediate_update="1"
         number_of_elements="1"
-        default_values="16">
+        default_values="4">
         <IntRangeDomain name="range" min="-1"/>
         <Documentation>
           The number of pieces that the data will be broken up into.

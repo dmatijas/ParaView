@@ -430,7 +430,7 @@ void vtkSMStreamingViewProxy::PrepareRenderPass()
     if (firstpass)
       {
       //force a render, just to make sure we have a graphics context
-      renWin->Render();
+//      renWin->Render();
       firstpass = false;
 
       //Setup to for multi pass render process
@@ -627,7 +627,7 @@ void vtkSMStreamingViewProxy::FinalizeRenderPass()
 
   if (alldone)
     {
-    DEBUGPRINT_VIEW(cerr<<"SV("<<this<<") everone DONE" << endl;);
+    DEBUGPRINT_VIEW(cerr<<"SV("<<this<<") everyone DONE" << endl;);
     this->DisplayDone = 1;
     }
 

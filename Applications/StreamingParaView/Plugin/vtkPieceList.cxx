@@ -54,7 +54,7 @@ public:
 vtkPieceList::vtkPieceList()
 {
   this->Internals = new vtkInternals;
-  cerr << "PL(" <<this<< ") create" << endl;
+  //cerr << "PL(" <<this<< ") create" << endl;
 }
 
 //----------------------------------------------------------------------------
@@ -62,7 +62,7 @@ vtkPieceList::~vtkPieceList()
 {
   this->Clear();
   delete this->Internals;
-  cerr << "PL(" <<this<< ") delete" << endl;
+  //cerr << "PL(" <<this<< ") delete" << endl;
 }
 
 //----------------------------------------------------------------------------

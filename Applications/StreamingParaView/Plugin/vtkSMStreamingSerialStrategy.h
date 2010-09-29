@@ -44,7 +44,6 @@ public:
 
   virtual void PrepareFirstPass();
   virtual void PrepareAnotherPass();
-
   virtual void ChooseNextPiece();
 
 //BTX

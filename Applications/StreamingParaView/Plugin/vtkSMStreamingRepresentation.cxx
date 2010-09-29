@@ -235,7 +235,7 @@ int vtkSMStreamingRepresentation::InternalComputePriorities(int stage)
   for (iter = strats.begin(); iter != strats.end(); ++iter)
     {
     TryComputePriorities(vtkSMStreamingSerialStrategy, stage);
-//    TryComputePriorities(vtkSMStreamingParallelStrategy, stage);
+    TryComputePriorities(vtkSMStreamingParallelStrategy, stage);
     }
   return maxPass;
 }
@@ -304,6 +304,7 @@ void vtkSMStreamingRepresentation::PrepareFirstPass()
   for (iter = strats.begin(); iter != strats.end(); ++iter)
     {
     TryMethod(vtkSMStreamingSerialStrategy, PrepareFirstPass());
+    TryMethod(vtkSMStreamingParallelStrategy, PrepareFirstPass());
     }
   this->AllDone = 0;
 }
@@ -320,6 +321,7 @@ void vtkSMStreamingRepresentation::PrepareAnotherPass()
   for (iter = strats.begin(); iter != strats.end(); ++iter)
     {
     TryMethod(vtkSMStreamingSerialStrategy, PrepareAnotherPass());
+    TryMethod(vtkSMStreamingParallelStrategy, PrepareAnotherPass());
     }
 }
 
@@ -355,6 +357,7 @@ void vtkSMStreamingRepresentation::ChooseNextPiece()
   for (iter = strats.begin(); iter != strats.end(); ++iter)
     {
     TryChooseNextPiece(vtkSMStreamingSerialStrategy);
+    TryChooseNextPiece(vtkSMStreamingParallelStrategy);
     }
   DEBUGPRINT_REPRESENTATION(
   cerr << "STRAT(" << this << ") CHOSE " << P << "/" << NP << "@" << R << endl;

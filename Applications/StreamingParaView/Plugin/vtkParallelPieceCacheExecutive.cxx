@@ -71,14 +71,14 @@ int vtkParallelPieceCacheExecutive
     return 1;
     }
 
-  cerr << "CHECKING CACHE FOR REQUESTED PIECES" << endl;
+  //cerr << "CHECKING CACHE FOR REQUESTED PIECES" << endl;
   if (myPCF->HasRequestedPieces())
     {
     //pipeline request can terminate now, yeah!
-    cerr << "HAVE THEM ALL, NO NEED TO EXECUTE" << endl;
+    //cerr << "HAVE THEM ALL, NO NEED TO EXECUTE" << endl;
     return 0;
     }
-  cerr << "SOMETHING MISSING" << endl;
+  //cerr << "SOMETHING MISSING" << endl;
 
   // Leave it up to the superclass
   return this->Superclass::NeedToExecuteData(outputPort,

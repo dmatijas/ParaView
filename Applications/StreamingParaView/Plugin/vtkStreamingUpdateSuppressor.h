@@ -68,7 +68,11 @@ public:
   void PrepareAnotherPass();
 
   //Description:
+  //picks from the local list only
   void ChooseNextPiece();
+  //Description:
+  //picks from all the lists in parallel
+  void ChooseNextPieces();
 
   //Description:
   //Computes a priority for every piece by filter characteristics

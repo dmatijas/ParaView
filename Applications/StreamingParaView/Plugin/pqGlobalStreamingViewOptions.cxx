@@ -196,7 +196,7 @@ void pqGlobalStreamingViewOptions::resetChanges()
 
   settings->beginGroup("streamingView");
 
-  QVariant val = settings->value("StreamedPasses", 16);
+  QVariant val = settings->value("StreamedPasses", 4);
   this->Internal->StreamedPasses->setText(val.toString());
 
   val = settings->value("EnableStreamMessages", false);

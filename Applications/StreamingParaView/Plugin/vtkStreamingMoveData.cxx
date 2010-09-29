@@ -69,7 +69,7 @@ int vtkStreamingMoveData::FillOutputPortInformation(int, vtkInformation *info)
     }
   else
     {
-    info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkDataSet");
+    info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkPolyData");
     }
   return 1;
 }
@@ -85,7 +85,7 @@ int vtkStreamingMoveData::RequestDataObject(vtkInformation*,
                                       vtkInformationVector**,
                                       vtkInformationVector* outputVector)
 {
-  cerr << "SMD(" << this << ") RDO" << endl;
+  //cerr << "SMD(" << this << ") RDO" << endl;
   vtkDataObject* output =
     outputVector->GetInformationObject(0)->Get(vtkDataObject::DATA_OBJECT());
 
@@ -146,8 +146,7 @@ int vtkStreamingMoveData::RequestDataObject(vtkInformation*,
 void vtkStreamingMoveData::DataServerGatherToZero(vtkDataObject* input,
                                                   vtkDataObject* output)
 {
-  cerr << "SMD(" << this << ") DataServerGatherToZero" << endl;
-
+  //cerr << "SMD(" << this << ") DataServerGatherToZero" << endl;
   int numProcs= this->Controller->GetNumberOfProcesses();
   if (numProcs == 1)
     {
@@ -163,7 +162,7 @@ void vtkStreamingMoveData::DataServerGatherToZero(vtkDataObject* input,
   vtkTimerLog::MarkStartEvent("Dataserver gathering to 0");
 
 #ifdef VTK_USE_MPI
-  cerr << "USING MPI " << endl;
+//  cerr << "USING MPI " << endl;
   int idx;
   int myId= this->Controller->GetLocalProcessId();
   vtkMPICommunicator* com = vtkMPICommunicator::SafeDownCast(
@@ -201,14 +200,14 @@ void vtkStreamingMoveData::DataServerGatherToZero(vtkDataObject* input,
   this->BufferTotalLength = 0;
   if (myId == 0)
     {
-    cerr << "GOT :";
+    //cerr << "GOT :";
     for (idx = 0; idx < numProcs; ++idx)
       {
-      cerr << this->BufferLengths[idx] << ",";
+      //cerr << this->BufferLengths[idx] << ",";
       this->BufferOffsets[idx] = this->BufferTotalLength;
       this->BufferTotalLength += this->BufferLengths[idx];
       }
-    cerr << endl;
+    //cerr << endl;
     // Gather the marshaled data sets to 0.
     this->Buffers = new char[this->BufferTotalLength];
     }
@@ -239,8 +238,8 @@ void vtkStreamingMoveData::DataServerGatherToZero(vtkDataObject* input,
 //-----------------------------------------------------------------------------
 void vtkStreamingMoveData::DataServerSendToClient(vtkDataObject* output)
 {
-  cerr << "SMD(" << this << ") DataServerSendToClient" << endl;
-  cerr << "TO SEND NUMBUFFS" << this->NumberOfBuffers << endl;
+  //cerr << "SMD(" << this << ") DataServerSendToClient" << endl;
+  //cerr << "TO SEND NUMBUFFS" << this->NumberOfBuffers << endl;
 
   int myId = this->Controller->GetLocalProcessId();
 
@@ -295,7 +294,7 @@ void vtkStreamingMoveData::DataServerSendToClient(vtkDataObject* output)
 //-----------------------------------------------------------------------------
 void vtkStreamingMoveData::ClientReceiveFromDataServer(vtkDataObject* doutput)
 {
-  cerr << "SMD(" << this << ") ClientReceiveFromDataServer" << endl;
+  //cerr << "SMD(" << this << ") ClientReceiveFromDataServer" << endl;
 
   vtkMultiPieceDataSet *output = vtkMultiPieceDataSet::SafeDownCast(doutput);
   if (!output)
@@ -337,7 +336,7 @@ void vtkStreamingMoveData::ClientReceiveFromDataServer(vtkDataObject* doutput)
 //-----------------------------------------------------------------------------
 void vtkStreamingMoveData::MarshalDataToBuffer(vtkDataObject* data)
 {
-  cerr << "SMD(" << this << ") MashalData" << endl;
+  //cerr << "SMD(" << this << ") MashalData" << endl;
 
   vtkDataSet* dataSet = vtkDataSet::SafeDownCast(data);
   vtkImageData* imageData = vtkImageData::SafeDownCast(data);
@@ -351,7 +350,7 @@ void vtkStreamingMoveData::MarshalDataToBuffer(vtkDataObject* data)
   // Copy input to isolate reader from the pipeline.
   if (dataSet)
     {
-    cerr << dataSet->GetNumberOfPoints() << endl;
+    //cerr << dataSet->GetNumberOfPoints() << endl;
     vtkDataSet* d = dataSet->NewInstance();
     d->CopyStructure(dataSet);
     d->GetPointData()->PassData(dataSet->GetPointData());
@@ -366,7 +365,7 @@ void vtkStreamingMoveData::MarshalDataToBuffer(vtkDataObject* data)
     this->NumberOfBuffers = 1;
     this->BufferLengths = new vtkIdType[1];
     this->BufferLengths[0] = writer->GetOutputStringLength();
-    cerr << "INITIAL LENGTH " << this->BufferLengths[0] << endl;
+    //cerr << "INITIAL LENGTH " << this->BufferLengths[0] << endl;
     this->BufferOffsets = new vtkIdType[1];
     this->BufferOffsets[0] = 0;
 
@@ -383,7 +382,7 @@ void vtkStreamingMoveData::MarshalDataToBuffer(vtkDataObject* data)
       //into the stream ahead of the serialized data.
       if (dataInfo->Has(vtkDataObject::DATA_PIECE_NUMBER()))
         {
-        cerr << "HAS PIECE NUMBER" << endl;
+        //cerr << "HAS PIECE NUMBER" << endl;
 
         int myId = this->Controller->GetLocalProcessId();
         int numProcs = this->Controller->GetNumberOfProcesses();
@@ -395,8 +394,9 @@ void vtkStreamingMoveData::MarshalDataToBuffer(vtkDataObject* data)
         vtksys_ios::ostringstream stream;
         stream << "PIECEINFO " << myId << " " << numProcs << " "
                << pnum << " " << np << " " << res;
-        cerr << "SENDING PIECEINFO " << myId << " " << numProcs << " "
-             << pnum << " " << np << " " << res;
+        cerr << "SMD(" << this << ") SENDING PIECEINFO " << myId
+             << " " << numProcs << " "
+             << pnum << " " << np << " " << res << endl;
         char extentHeader[EXTENT_HEADER_SIZE];
         strcpy(extentHeader, stream.str().c_str());
         this->BufferLengths[0] += EXTENT_HEADER_SIZE;
@@ -407,7 +407,7 @@ void vtkStreamingMoveData::MarshalDataToBuffer(vtkDataObject* data)
         }
       else
         {
-        cerr << "NO PIECE NUMBER" << endl;
+        //cerr << "NO PIECE NUMBER" << endl;
         this->Buffers = writer->RegisterAndGetOutputString();
         }
       }
@@ -415,7 +415,7 @@ void vtkStreamingMoveData::MarshalDataToBuffer(vtkDataObject* data)
 
     this->BufferTotalLength = this->BufferLengths[0];
 
-    cerr << this << "SENDING " << this->BufferLengths[0] << endl;
+    //cerr << this << "SENDING " << this->BufferLengths[0] << endl;
     d->Delete();
     d = 0;
     writer->Delete();
@@ -467,14 +467,14 @@ void vtkStreamingMoveData::ReconstructDataFromBuffer(vtkDataObject* data)
       }
     }
 
-  cerr << "NUM BUFFERS" << this->NumberOfBuffers << endl;
+  //cerr << "NUM BUFFERS" << this->NumberOfBuffers << endl;
   for (int idx = 0; idx < this->NumberOfBuffers; ++idx)
     {
     // Setup a reader.
     vtkDataSetReader *reader = vtkDataSetReader::New();
     reader->ReadFromInputStringOn();
 
-    cerr << "BUFF OFFSET " << idx << " is " << this->BufferOffsets[idx] << endl;
+    //cerr << "BUFF OFFSET " << idx << " is " << this->BufferOffsets[idx] << endl;
     char* bufferArray = this->Buffers+this->BufferOffsets[idx];
     vtkIdType bufferLength = this->BufferLengths[idx];
 
@@ -484,7 +484,7 @@ void vtkStreamingMoveData::ReconstructDataFromBuffer(vtkDataObject* data)
     if (bufferLength >= EXTENT_HEADER_SIZE &&
       strncmp(bufferArray, "EXTENT", 6)==0)
       {
-      cerr << "PARSE EXTENT" << endl;
+      //cerr << "PARSE EXTENT" << endl;
       sscanf(bufferArray, "EXTENT %d %d %d %d %d %d ORIGIN %f %f %f", &extent[0], &extent[1],
         &extent[2], &extent[3], &extent[4], &extent[5],
         &origin[0], &origin[1], &origin[2]);
@@ -500,7 +500,7 @@ void vtkStreamingMoveData::ReconstructDataFromBuffer(vtkDataObject* data)
     if (bufferLength >= EXTENT_HEADER_SIZE &&
       strncmp(bufferArray, "PIECEINFO", 9)==0)
       {
-      cerr << this << " " << idx << " LOOKING FOR PIECEINFO" << endl;
+      //cerr << this << " " << idx << " LOOKING FOR PIECEINFO" << endl;
       int pId;
       int nProcs;
       int pNum;
@@ -508,14 +508,16 @@ void vtkStreamingMoveData::ReconstructDataFromBuffer(vtkDataObject* data)
       double res;
       sscanf(bufferArray, "PIECEINFO %d %d %d %d %lf",
              &pId, &nProcs, &pNum, &nPieces, &res);
-      cerr << "GOT " << pId << " " << nProcs << " " << pNum << " " << nPieces << " " << res << endl;
+      cerr << "SMD(" << this << ") GOT "
+           << pId << " " << nProcs << " "
+           << pNum << " " << nPieces << " " << res << endl;
       bufferArray += EXTENT_HEADER_SIZE;
       bufferLength -= EXTENT_HEADER_SIZE;
       }
     else
       {
-      cerr << this << " " << idx << " NOT LOOKING FOR PIECEINFO" << endl;
-      cerr << bufferLength << endl;
+      //cerr << this << " " << idx << " NOT LOOKING FOR PIECEINFO" << endl;
+      //cerr << bufferLength << endl;
       fprintf(stderr, "%.30s\n", bufferArray);
       }
     //--------------------------------------------------------------------------
@@ -602,7 +604,7 @@ void vtkStreamingMoveData::ReconstructDataFromBuffer(vtkDataObject* data)
 //-----------------------------------------------------------------------------
 void vtkStreamingMoveData::ClientReconstructDataFromBuffer(vtkDataObject* dsdata)
 {
-  cerr << "SMD(" << this << ") ClientReconstructDataFromBuffer" << endl;
+  //cerr << "SMD(" << this << ") ClientReconstructDataFromBuffer" << endl;
   //Client takes the N serialied datasets out of the buffer
   //and populates the multipiece data set it produces from them.
   vtkMultiPieceDataSet *data = vtkMultiPieceDataSet::SafeDownCast(dsdata);
@@ -662,14 +664,17 @@ void vtkStreamingMoveData::ClientReconstructDataFromBuffer(vtkDataObject* dsdata
     if (bufferLength >= EXTENT_HEADER_SIZE &&
       strncmp(bufferArray, "PIECEINFO", 9)==0)
       {
-      cerr << "I SEE PIECEINFO" << endl;
+      //cerr << "I SEE PIECEINFO" << endl;
       sscanf(bufferArray, "PIECEINFO %d %d %d %d %lf",
              &pId, &nProcs, &pNum, &nPieces, &res);
-      cerr << idx << " GOT " << pId << " " << nProcs << " " << pNum << " " << nPieces << " " << res << endl;
-      cerr << "convert to local index for later reuse" << endl;
+      cerr << "SMD(" << this << ") " << idx << " GOT "
+           << pId << " " << nProcs << " " << pNum << " "
+           << nPieces << " " << res << endl;
+      //cerr << "convert to local index for later reuse" << endl;
       nPieces = nPieces/nProcs;
       pNum = pNum % nPieces;
-      cerr << idx << " NOW " << pId << " " << nProcs << " " << pNum << " " << nPieces << " " << res << endl;
+      cerr << idx << " NOW " << pId << " "
+           << nProcs << " " << pNum << " " << nPieces << " " << res << endl;
       bufferArray += EXTENT_HEADER_SIZE;
       bufferLength -= EXTENT_HEADER_SIZE;
       }
@@ -694,15 +699,14 @@ void vtkStreamingMoveData::ClientReconstructDataFromBuffer(vtkDataObject* dsdata
 
       data->SetPiece(idx, ds);
 
-      cerr << "RECONSTRUCTING FROM BUFFER " << idx << " " ;
-      cerr << "NPTS = " << reader->GetPolyDataOutput()->GetNumberOfPoints() << " ";
+      //cerr << "RECONSTRUCTING FROM BUFFER " << idx << " " ;
+      //cerr << "NPTS = " << reader->GetPolyDataOutput()->GetNumberOfPoints() << " ";
       double bds[6];
       reader->GetPolyDataOutput()->GetBounds(bds);
-      cerr << "BDS = "
-           << bds[0] << "," << bds[1] << ","
-           << bds[2] << "," << bds[3] << ","
-           << bds[4] << "," << bds[5] << endl;
-
+      //cerr << "BDS = "
+      //     << bds[0] << "," << bds[1] << ","
+      //     << bds[2] << "," << bds[3] << ","
+      //     << bds[4] << "," << bds[5] << endl;
       }
     else if (this->OutputDataType == VTK_UNSTRUCTURED_GRID)
       {

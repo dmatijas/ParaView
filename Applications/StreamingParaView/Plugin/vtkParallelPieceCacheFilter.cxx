@@ -72,7 +72,7 @@ void vtkParallelPieceCacheFilter::PrintSelf(ostream& os, vtkIndent indent)
 //----------------------------------------------------------------------------
 int vtkParallelPieceCacheFilter::FillOutputPortInformation(int, vtkInformation *info)
 {
-  info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkDataSet");
+  info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkPolyData");
   return 1;
 }
 
@@ -97,7 +97,7 @@ void vtkParallelPieceCacheFilter::SetCacheSize(int size)
 //----------------------------------------------------------------------------
 void vtkParallelPieceCacheFilter::EmptyCache()
 {
-  cerr << this << " PPCF : EMPTYCACHE" << endl;
+  //cerr << this << " PPCF : EMPTYCACHE" << endl;
   CacheType::iterator pos;
   for (pos = this->Cache.begin(); pos != this->Cache.end(); )
     {
@@ -139,7 +139,7 @@ int vtkParallelPieceCacheFilter::RequestData(vtkInformation*,
 
   if (this->HasRequestedPieces())
     {
-    cerr << this << "PPCF UPDATE FROM CACHE" << endl;
+    cerr << "PPCF(" << this << ") UPDATE FROM CACHE" << endl;
     int numProcessors = this->RequestedPieces->GetNumberOfPieces();
     this->AppendFilter->SetNumberOfInputs(numProcessors);
 
@@ -160,7 +160,7 @@ int vtkParallelPieceCacheFilter::RequestData(vtkInformation*,
     }
   else
     {
-    cerr << this << " PPCF UPDATE BASED ON WHAT MY INPUT HAS" << endl;
+    cerr << "PPCF(" << this << ") UPDATE FROM INPUT" << endl;
     vtkDataObject* input =
       inputVector[0]->GetInformationObject(0)->Get(vtkDataObject::DATA_OBJECT());
     vtkMultiPieceDataSet *dsIn = vtkMultiPieceDataSet::SafeDownCast(input);
@@ -191,9 +191,38 @@ int vtkParallelPieceCacheFilter::RequestData(vtkInformation*,
       ph.SetPiece(pNum);
       ph.SetNumPieces(nPieces);
       CacheType::iterator pos = this->Cache.find(ph);
+      cerr << "PPCF(" << this << ") looking for ("
+           << ph.GetProcessor() << ":"
+           << ph.GetPiece() << "/"
+           << ph.GetNumPieces() << "@"
+           << ph.GetResolution() << "->["
+           << ph.GetBounds()[0] << "-"
+           << ph.GetBounds()[1] << ","
+           << ph.GetBounds()[2] << "-"
+           << ph.GetBounds()[3] << ","
+           << ph.GetBounds()[4] << "-"
+           << ph.GetBounds()[5] << "]=("
+           << ph.GetPipelinePriority() << " "
+           << ph.GetViewPriority() << " "
+           << ph.GetCachedPriority() << ")" << endl;
       if (pos != this->Cache.end())
         {
         cerr << this << " PPCF UP " << i << ":" << pNum << "/" << nPieces << " HIT" << endl;
+        vtkPiece ph2 = pos->first;
+        cerr << "PPCF(" << this << ") found ("
+             << ph2.GetProcessor() << ":"
+             << ph2.GetPiece() << "/"
+             << ph2.GetNumPieces() << "@"
+             << ph2.GetResolution() << "->["
+             << ph2.GetBounds()[0] << "-"
+             << ph2.GetBounds()[1] << ","
+             << ph2.GetBounds()[2] << "-"
+             << ph2.GetBounds()[3] << ","
+             << ph2.GetBounds()[4] << "-"
+             << ph2.GetBounds()[5] << "]=("
+             << ph2.GetPipelinePriority() << " "
+             << ph2.GetViewPriority() << " "
+             << ph2.GetCachedPriority() << ")" << endl;
         pos->second->Delete();
         }
       else
@@ -237,7 +266,7 @@ bool vtkParallelPieceCacheFilter::HasPiece(vtkPiece *ph)
 //------------------------------------------------------------------------------
 void vtkParallelPieceCacheFilter::MakeDummyList()
 {
-  cerr << "MADE DUMMY LIST" << endl;
+  //cerr << "MADE DUMMY LIST" << endl;
   vtkPieceList *pl = vtkPieceList::New();
   vtkPiece ph;
   ph.SetProcessor(0);
@@ -295,14 +324,15 @@ void vtkParallelPieceCacheFilter::AppendPieces()
 //------------------------------------------------------------------------------
 int vtkParallelPieceCacheFilter::HasRequestedPieces()
 {
+  cerr << "PPCF(" << this << ") HasRequestedPieces?" << endl;
   if (this->RequestedPieces == NULL)
     {
     cerr << "NO PIECE LIST" << endl;
     }
   else
     {
-    cerr << "CHECKING:" << endl;
-    this->RequestedPieces->Print();
+    //cerr << "CHECKING:" << endl;
+    //this->RequestedPieces->Print();
     }
   if (this->RequestedPieces != 0
       && this->RequestedPieces->GetNumberOfPieces() != 0)
@@ -311,16 +341,32 @@ int vtkParallelPieceCacheFilter::HasRequestedPieces()
     for (int i = 0; i < numProcessors; i++)
       {
       vtkPiece ph = this->RequestedPieces->GetPiece(i);
+      cerr << "PPCF(" << this << ") looking for ("
+           << ph.GetProcessor() << ":"
+           << ph.GetPiece() << "/"
+           << ph.GetNumPieces() << "@"
+           << ph.GetResolution() << "->["
+           << ph.GetBounds()[0] << "-"
+           << ph.GetBounds()[1] << ","
+           << ph.GetBounds()[2] << "-"
+           << ph.GetBounds()[3] << ","
+           << ph.GetBounds()[4] << "-"
+           << ph.GetBounds()[5] << "]=("
+           << ph.GetPipelinePriority() << " "
+           << ph.GetViewPriority() << " "
+           << ph.GetCachedPriority() << ")" << endl;
+
       CacheType::iterator pos = this->Cache.find(ph);
       if (pos == this->Cache.end())
         {
-        cerr << "MISSING " << ph.GetProcessor() << ":" << ph.GetPiece() << "/" << ph.GetNumPieces() << endl;
+        cerr << "PPCF(" << this << ")"
+             << " MISSING " << ph.GetProcessor() << ":" << ph.GetPiece() << "/" << ph.GetNumPieces() << endl;
         return 0;
         }
       }
-    cerr << "FOUND EVERYTHING" << endl;
+    cerr << "PPCF(" << this << ") FOUND EVERYTHING" << endl;
     return 1;
     }
-  cerr << "NO PIECES TO REQUEST" << endl;
+  cerr << "PPCF(" << this << ") NO PIECES TO REQUEST" << endl;
   return 0;
 }
