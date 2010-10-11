@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    vtkStreamAlgorithm.cxx
+  Module:    vtkStreamingProgression.cxx
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -12,39 +12,39 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-#include "vtkStreamAlgorithm.h"
+#include "vtkStreamingProgression.h"
 
 #include "vtkObjectFactory.h"
 
-vtkStandardNewMacro(vtkStreamAlgorithm);
+vtkStandardNewMacro(vtkStreamingProgression);
 
 class Internals
 {
 public:
-  Internals(vtkStreamAlgorithm *owner)
+  Internals(vtkStreamingProgression *owner)
   {
     this->Owner = owner;
   }
   ~Internals()
   {
   }
-  vtkStreamAlgorithm *Owner;
+  vtkStreamingProgression *Owner;
 };
 
 //----------------------------------------------------------------------------
-vtkStreamAlgorithm::vtkStreamAlgorithm()
+vtkStreamingProgression::vtkStreamingProgression()
 {
   this->Internal = new Internals(this);
 }
 
 //----------------------------------------------------------------------------
-vtkStreamAlgorithm::~vtkStreamAlgorithm()
+vtkStreamingProgression::~vtkStreamingProgression()
 {
   delete this->Internal;
 }
 
 //----------------------------------------------------------------------------
-void vtkStreamAlgorithm::PrintSelf(ostream& os, vtkIndent indent)
+void vtkStreamingProgression::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 }

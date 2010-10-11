@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-#include "vtkStreamedSource.h"
+#include "vtkStreamedMandelbrot.h"
 
 #include "vtkDataObject.h"
 #include "vtkDataSetAttributes.h"

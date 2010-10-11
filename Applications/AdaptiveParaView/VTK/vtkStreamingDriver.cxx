@@ -15,11 +15,11 @@
 #include "vtkStreamingDriver.h"
 
 #include "vtkCallbackCommand.h"
-#include "vtkMapper.h"
-#include "vtkMapperCollection.h"
+#include "vtkCollection.h"
 #include "vtkObjectFactory.h"
 #include "vtkRenderWindow.h"
-#include "vtkStreamAlgorithm.h"
+#include "vtkStreamingHarness.h"
+#include "vtkStreamingProgression.h"
 
 vtkStandardNewMacro(vtkStreamingDriver);
 
@@ -31,8 +31,8 @@ public:
     this->Owner = owner;
     this->RenderWindow = NULL;
     this->WindowWatcher = NULL;
-    this->StreamAlgorithm = vtkStreamAlgorithm::New();
-    this->MapperCollection = vtkMapperCollection::New();
+    this->Progression = vtkStreamingProgression::New();
+    this->Harnesses = vtkCollection::New();
   }
   ~Internals()
   {
@@ -41,14 +41,14 @@ public:
     {
     this->WindowWatcher->Delete();
     }
-  this->StreamAlgorithm->Delete();
-  this->MapperCollection->Delete();
+  this->Progression->Delete();
+  this->Harnesses->Delete();
   }
   vtkStreamingDriver *Owner;
-  vtkStreamAlgorithm *StreamAlgorithm;
+  vtkStreamingProgression *Progression;
   vtkRenderWindow *RenderWindow;
   vtkCallbackCommand *WindowWatcher;
-  vtkMapperCollection *MapperCollection;
+  vtkCollection *Harnesses;
 };
 
 static void VTKSD_RenderEvent(vtkObject *vtkNotUsed(caller),
@@ -104,42 +104,58 @@ void vtkStreamingDriver::SetRenderWindow(vtkRenderWindow *rw)
   this->Internal->WindowWatcher = cbc;
 }
 
+
+//----------------------------------------------------------------------------
+void vtkStreamingDriver::SetProgression(vtkStreamingProgression *p)
+{
+  if (this->Internal->Progression)
+    {
+    this->Internal->Progression->Delete();
+    }
+  if (!p)
+    {
+    return;
+    }
+  p->Register(this);
+  this->Internal->Progression = p;
+}
+
 //----------------------------------------------------------------------------
 void vtkStreamingDriver::RenderEvent()
 {
   cerr << "RENDER CALLED" << endl;
   //TODO:
-  //for every mapper, set to next piece
+  //for every harness, set to next piece
   //call render again
 }
 
 //----------------------------------------------------------------------------
-void vtkStreamingDriver::AddMapper(vtkMapper *mapper)
+void vtkStreamingDriver::AddHarness(vtkStreamingHarness *harness)
 {
-  if (!mapper)
+  if (!harness)
     {
     return;
     }
-  if (this->Internal->MapperCollection->IsItemPresent(a))
+  if (this->Internal->Harnesses->IsItemPresent(harness))
     {
     return;
     }
-  this->Internal->MapperCollection->AddItem(mapper);
-  //TODO: Initialize mapper to first piece
+  this->Internal->Harnesses->AddItem(harness);
+  //TODO: Initialize harnesses to first piece
 }
 
 //----------------------------------------------------------------------------
-void vtkStreamingDriver::RemoveMapper(vtkMapper *mapper)
+void vtkStreamingDriver::RemoveHarness(vtkStreamingHarness *harness)
 {
-  if (!mapper)
+  if (!harness)
     {
     return;
     }
-  this->Internal->MapperCollection->RemoveItem(mapper);
+  this->Internal->Harnesses->RemoveItem(harness);
 }
 
 //----------------------------------------------------------------------------
-void vtkStreamingDriver::RemoveAllMappers()
+void vtkStreamingDriver::RemoveAllHarnesses()
 {
-  this->Internal->MapperCollection->RemoveAllItems();
+  this->Internal->Harnesses->RemoveAllItems();
 }

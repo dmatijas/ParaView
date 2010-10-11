@@ -15,9 +15,10 @@ SET(SOURCES
   vtkPieceCacheFilter.cxx
   vtkPieceList.cxx
   vtkRawStridedReader1.cxx
-  vtkStreamAlgorithm.cxx
   vtkStreamedMandelbrot.cxx
   vtkStreamingDriver.cxx
+  vtkStreamingHarness.cxx
+  vtkStreamingProgression.cxx
   vtkVisibilityPrioritizer.cxx
 )
 

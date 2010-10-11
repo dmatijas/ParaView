@@ -18,7 +18,6 @@
 #include "vtkActor.h"
 #include "vtkArrayCalculator.h"
 #include "vtkCamera.h"
-#include "vtkClipDataSet.h"
 #include "vtkContourFilter.h"
 #include "vtkDataSetMapper.h"
 #include "vtkIdentityTransform.h"
@@ -35,6 +34,7 @@
 #include "vtkStreamedMandelbrot.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkStreamingDriver.h"
+#include "vtkStreamingHarness.h"
 #include "vtkTesting.h"
 #include "vtkXMLImageDataReader.h"
 #include "vtkXMLImageDataWriter.h"
@@ -92,18 +92,13 @@ int main(int argc, char *argv[])
   contour->SetInput(id);
   contour->SetValue(0,50.0);
 
-  vtkSmartPointer<vtkClipDataSet> clip=
-    vtkSmartPointer<vtkClipDataSet>::New();
-  clip->SetInputConnection(contour->GetOutputPort());
-  vtkSmartPointer<vtkPlane> plane =
-    vtkSmartPointer<vtkPlane>::New();
-  plane->SetNormal(1,0,0);
-  plane->SetOrigin(0,0,0);
-  clip->SetClipFunction(plane);
+  vtkSmartPointer<vtkStreamingHarness> harness=
+    vtkSmartPointer<vtkStreamingHarness>::New();
+  harness->SetInputConnection(contour->GetOutputPort());
 
   vtkSmartPointer<vtkDataSetMapper> map1 =
     vtkSmartPointer<vtkDataSetMapper>::New();
-  map1->SetInputConnection(contour->GetOutputPort());
+  map1->SetInputConnection(harness->GetOutputPort());
 
   vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
   vtkSmartPointer<vtkRenderWindow> renWin =
@@ -125,7 +120,7 @@ int main(int argc, char *argv[])
   vtkSmartPointer<vtkStreamingDriver> sd =
     vtkSmartPointer<vtkStreamingDriver>::New();
   sd->SetRenderWindow(renWin);
-  sd->AddMapper(map1);
+  sd->AddHarness(harness);
 
   renWin->Render();
   iren->Start();

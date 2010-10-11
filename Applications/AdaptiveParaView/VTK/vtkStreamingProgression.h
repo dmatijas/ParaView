@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    vtkStreamAlgorithm.h
+  Module:    vtkStreamingProgression.h
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -12,33 +12,33 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkStreamAlgorithm - calculates progression of streamed pieces
+// .NAME vtkStreamingProgression - calculates progression of streamed pieces
 // .SECTION Description
 
-#ifndef __vtkStreamAlgorithm_h
-#define __vtkStreamAlgorithm_h
+#ifndef __vtkStreamingProgression_h
+#define __vtkStreamingProgression_h
 
 #include "vtkObject.h"
 
 class Internals;
 
-class VTK_EXPORT vtkStreamAlgorithm : public vtkObject
+class VTK_EXPORT vtkStreamingProgression : public vtkObject
 {
 public:
-  vtkTypeMacro(vtkStreamAlgorithm,vtkObject);
+  vtkTypeMacro(vtkStreamingProgression,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
-  static vtkStreamAlgorithm *New();
+  static vtkStreamingProgression *New();
 
 //BTX
 protected:
-  vtkStreamAlgorithm();
-  ~vtkStreamAlgorithm();
+  vtkStreamingProgression();
+  ~vtkStreamingProgression();
 
   Internals *Internal;
 
 private:
-  vtkStreamAlgorithm(const vtkStreamAlgorithm&);  // Not implemented.
-  void operator=(const vtkStreamAlgorithm&);  // Not implemented.
+  vtkStreamingProgression(const vtkStreamingProgression&);  // Not implemented.
+  void operator=(const vtkStreamingProgression&);  // Not implemented.
 
 //ETX
 };

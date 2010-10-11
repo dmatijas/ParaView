@@ -14,6 +14,13 @@
 =========================================================================*/
 // .NAME vtkStreamingDriver - orchestrates progression of streamed pieces
 // .SECTION Description
+// vtkStreamingDriver automates the process of streamed rendering. It tells
+// vtk's rendering classes to setup for streamed rendering, watches the events
+// they fire to start, restart and stop streaming, and cycles through passes
+// until completion.
+// It controls the pipeline with the help of vtkStreamingHarness classes.
+// It delegates the task of deciding what piece to show next to a helper class,
+// namely vtkStreamingProgression, and it's specialized subclasses.
 
 #ifndef __vtkStreamingDriver_h
 #define __vtkStreamingDriver_h
@@ -22,7 +29,8 @@
 
 class vtkRenderWindow;
 class vtkCallbackCommand;
-class vtkMapper;
+class vtkStreamingHarness;
+class vtkStreamingProgression;
 class Internals;
 
 class VTK_EXPORT vtkStreamingDriver : public vtkObject
@@ -37,16 +45,19 @@ public:
   void SetRenderWindow(vtkRenderWindow *);
 
   // Description:
-  // Control over the list of mappers that this renders in streaming fashion.
-  void AddMapper(vtkMapper *);
-  void RemoveMapper(vtkMapper *);
-  void RemoveAllMappers();
+  // Assign the helper that decides on the ordering of pieces
+  void SetProgression(vtkStreamingProgression *);
+
+  // Description:
+  // Control over the list of things that this renders in streaming fashion.
+  void AddHarness(vtkStreamingHarness *);
+  void RemoveHarness(vtkStreamingHarness *);
+  void RemoveAllHarnesses();
 
   // Description:
   // For internal use, window events call back here.
   void RenderEvent();
 
-//BTX
 protected:
   vtkStreamingDriver();
   ~vtkStreamingDriver();
@@ -56,9 +67,6 @@ protected:
 private:
   vtkStreamingDriver(const vtkStreamingDriver&);  // Not implemented.
   void operator=(const vtkStreamingDriver&);  // Not implemented.
-
-
-//ETX
 };
 
 #endif
