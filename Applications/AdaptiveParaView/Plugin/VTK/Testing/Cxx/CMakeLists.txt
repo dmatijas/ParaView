@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 
 INCLUDE_DIRECTORIES(../..)
-ADD_EXECUTABLE(AdaptiveStreaming AdaptiveMain.cxx)
-TARGET_LINK_LIBRARIES(AdaptiveStreaming vtkAdaptive vtkRendering vtkFiltering vtkGraphics vtkCommon vtkImaging)
+ADD_EXECUTABLE(Test_StreamHarness Test_StreamHarness.cxx)
+TARGET_LINK_LIBRARIES(Test_StreamHarness vtkAdaptive vtkRendering vtkFiltering vtkGraphics vtkCommon vtkImaging)
+
+ADD_EXECUTABLE(Test_StreamSource Test_StreamSource.cxx)
+TARGET_LINK_LIBRARIES(Test_StreamSource vtkAdaptive vtkRendering vtkFiltering vtkGraphics vtkCommon vtkImaging)

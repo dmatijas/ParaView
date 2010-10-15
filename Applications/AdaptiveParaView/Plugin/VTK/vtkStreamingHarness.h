@@ -46,7 +46,7 @@ public:
 
   //Description:
   //control over resolution
-  vtkSetMacro(Resolution, double);
+  void SetResolution(double r);
   vtkGetMacro(Resolution, double);
 
   //Description:
@@ -73,11 +73,6 @@ protected:
     vtkInformationVector **,
     vtkInformationVector *);
 
-  virtual int RequestUpdateExtentInformation(
-    vtkInformation *,
-    vtkInformationVector **,
-    vtkInformationVector *);
-
   virtual int RequestUpdateExtent(
     vtkInformation *,
     vtkInformationVector **,
@@ -91,6 +86,7 @@ protected:
   int Piece;
   int NumberOfPieces;
   double Resolution;
+  bool ForOther;
 
 private:
   vtkStreamingHarness(const vtkStreamingHarness&);  // Not implemented.

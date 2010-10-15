@@ -144,7 +144,8 @@ int vtkStreamedMandelbrot::RequestInformation (
     cerr << endl;
     );
 
-    outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), sWholeExtent, 6);
+    outInfo->Set
+      (vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), sWholeExtent, 6);
     outInfo->Set(vtkDataObject::SPACING(), sSpacing, 3);
 
     this->Resolution = aRes;
@@ -290,9 +291,12 @@ int vtkStreamedMandelbrot::RequestData(
   int NP = outInfo->Get
     (vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
 
-  DEBUGPRINT_METAINFORMATION(
-  cerr << "SMS(" << this << ") Calculate range " << range[0] << ".." << range[1] << " for " << P << "/" << NP << endl;
-                             );
+  DEBUGPRINT_METAINFORMATION
+    (
+     cerr << "SMS(" << this << ") Calculate range "
+     << range[0] << ".." << range[1] << " for "
+     << P << "/" << NP << " @ " << this->Resolution << endl;
+     );
   this->RangeKeeper->Insert(P, NP, ext, range, this->Resolution);
 
   return 1;
@@ -317,28 +321,34 @@ int vtkStreamedMandelbrot::ProcessRequest(vtkInformation *request,
 
   if(request->Has(vtkDemandDrivenPipeline::REQUEST_DATA_OBJECT()))
     {
-    DEBUGPRINT(cerr << "SMS(" << this << ") RDO =====================================" << endl;);
+    DEBUGPRINT
+      (cerr << "SMS(" << this << ") RDO ============================" << endl;);
     }
 
   if(request->Has(vtkDemandDrivenPipeline::REQUEST_INFORMATION()))
     {
-    DEBUGPRINT(cerr << "SMS(" << this << ") RI =====================================" << endl;);
+    DEBUGPRINT
+      (cerr << "SMS(" << this << ") RI =============================" << endl;);
     }
 
   if(request->Has(vtkStreamingDemandDrivenPipeline::REQUEST_UPDATE_EXTENT()))
     {
-    DEBUGPRINT(cerr << "SMS(" << this << ") RUE =====================================" << endl;);
+    DEBUGPRINT
+      (cerr << "SMS(" << this << ") RUE ============================" << endl;);
     }
 
-  if(request->Has(vtkStreamingDemandDrivenPipeline::REQUEST_RESOLUTION_PROPAGATE()))
+  if(request->Has
+     (vtkStreamingDemandDrivenPipeline::REQUEST_RESOLUTION_PROPAGATE()))
     {
-    DEBUGPRINT_METAINFORMATION(cerr << "SMS(" << this << ") RRP =====================================" << endl;);
+    DEBUGPRINT_METAINFORMATION
+      (cerr << "SMS(" << this << ") RRP ============================" << endl;);
     }
 
-  if(request->Has(vtkStreamingDemandDrivenPipeline::REQUEST_UPDATE_EXTENT_INFORMATION()))
+  if(request->Has
+     (vtkStreamingDemandDrivenPipeline::REQUEST_UPDATE_EXTENT_INFORMATION()))
     {
     DEBUGPRINT_METAINFORMATION(
-    cerr << "SMS(" << this << ") RUEI =====================================" << endl;
+    cerr << "SMS(" << this << ") RUEI ===============================" << endl;
     );
     //create meta information for this piece
     double *origin;
@@ -359,7 +369,8 @@ int vtkStreamedMandelbrot::ProcessRequest(vtkInformation *request,
     bounds[3] = origin[1] + spacing[1] * ext[3];
     bounds[4] = origin[2] + spacing[2] * ext[4];
     bounds[5] = origin[2] + spacing[2] * ext[5];
-    outInfo->Set(vtkStreamingDemandDrivenPipeline::PIECE_BOUNDING_BOX(), bounds, 6);
+    outInfo->Set
+      (vtkStreamingDemandDrivenPipeline::PIECE_BOUNDING_BOX(), bounds, 6);
 /*
     cerr << P << "/" << NP << "\t";
     {for (int i = 0; i < 3; i++) cerr << spacing[i] << " ";}
@@ -370,16 +381,19 @@ int vtkStreamedMandelbrot::ProcessRequest(vtkInformation *request,
     cerr << endl;
 */
     double range[2];
+    range[0] = 0;
+    range[1] = -1;
     if (this->RangeKeeper->Search(P, NP, ext, range))
       {
-      DEBUGPRINT_METAINFORMATION(
-      cerr << "Range for "
-           << P << "/" << NP << " "
-           << ext[0] << "," << ext[1] << ","
-           << ext[2] << "," << ext[3] << ","
-           << ext[4] << "," << ext[5] << " is "
-           << range[0] << " .. " << range[1] << endl;
-                                 );
+      DEBUGPRINT_METAINFORMATION
+        (
+         cerr << "Range for "
+         << P << "/" << NP << " "
+         << ext[0] << "," << ext[1] << ","
+         << ext[2] << "," << ext[3] << ","
+         << ext[4] << "," << ext[5] << " is "
+         << range[0] << " .. " << range[1] << endl;
+         );
       vtkInformation *fInfo =
         vtkDataObject::GetActiveFieldInformation
         (outInfo, vtkDataObject::FIELD_ASSOCIATION_POINTS,
@@ -397,13 +411,23 @@ int vtkStreamedMandelbrot::ProcessRequest(vtkInformation *request,
            << ext[2] << "," << ext[3] << ","
            << ext[4] << "," << ext[5] << " yet" << endl;
                                  );
+      vtkInformation *fInfo =
+        vtkDataObject::GetActiveFieldInformation
+        (outInfo, vtkDataObject::FIELD_ASSOCIATION_POINTS,
+         vtkDataSetAttributes::SCALARS);
+      if (fInfo)
+        {
+        fInfo->Remove(vtkDataObject::PIECE_FIELD_RANGE());
+        }
+
       }
     }
 
   //This is overridden just to intercept requests for debugging purposes.
   if(request->Has(vtkDemandDrivenPipeline::REQUEST_DATA()))
     {
-    DEBUGPRINT(cerr << "SMS(" << this << ") RD =====================================" << endl;);
+    DEBUGPRINT
+      (cerr << "SMS(" << this << ") RD =============================" << endl;);
 
     vtkInformation* outInfo = outputVector->GetInformationObject(0);
     int updateExtent[6];

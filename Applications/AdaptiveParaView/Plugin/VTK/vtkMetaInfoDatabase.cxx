@@ -19,12 +19,13 @@
 
 #include <vtkstd/vector>
 
-#define DEBUGPRINT_METAINFORMATION(arg)\
+#define DEBUGPRINT_METAINFORMATION(arg) arg;
+/*
   if (vtkAdaptiveOptions::GetEnableStreamMessages()) \
     { \
       arg;\
     }
-
+*/
 vtkStandardNewMacro(vtkMetaInfoDatabase);
 
 struct vtkRangeRecord2
