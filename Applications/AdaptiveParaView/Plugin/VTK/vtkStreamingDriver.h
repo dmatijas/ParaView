@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkStreamingDriver - orchestrates progression of streamed pieces
+// .NAME vtkStreamingDriver - orchestrates progression of streamed rendering
 // .SECTION Description
 // vtkStreamingDriver automates the process of streamed rendering. It tells
 // vtk's rendering classes to setup for streamed rendering, watches the events
@@ -27,11 +27,12 @@
 
 #include "vtkObject.h"
 
-class vtkRenderWindow;
+class Internals;
 class vtkCallbackCommand;
+class vtkRenderer;
+class vtkRenderWindow;
 class vtkStreamingHarness;
 class vtkStreamingProgression;
-class Internals;
 
 class VTK_EXPORT vtkStreamingDriver : public vtkObject
 {
@@ -41,8 +42,17 @@ public:
   static vtkStreamingDriver *New();
 
   // Description:
+  // causes the render window to cycle through renders until all
+  // passes are complete
+  void Render();
+
+  // Description:
   // Assign what window to automate streaming in.
   void SetRenderWindow(vtkRenderWindow *);
+
+  // Description:
+  // Assign what renderer to automate streaming in.
+  void SetRenderer(vtkRenderer *);
 
   // Description:
   // Assign the helper that decides on the ordering of pieces
