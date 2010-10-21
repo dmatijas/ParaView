@@ -56,7 +56,7 @@ void vtkIterativeStreamer::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-void vtkIterativeStreamer::RenderEventInternal()
+void vtkIterativeStreamer::StartRenderEvent()
 {
   vtkCollection *harnesses = this->GetHarnesses();
   vtkRenderer *ren = this->GetRenderer();
@@ -68,8 +68,56 @@ void vtkIterativeStreamer::RenderEventInternal()
 
   vtkCollectionIterator *iter = harnesses->NewIterator();
   iter->InitTraversal();
-  bool someone_not_ready_to_flip = false;
-  bool someone_not_done = false;
+  bool everyone_done = true;
+  while(!iter->IsDoneWithTraversal())
+    {
+    vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
+      (iter->GetCurrentObject());
+    iter->GoToNextItem();
+    int pieceNow = next->GetPiece();
+    if (pieceNow == 0)
+      {
+      //first pass has to clear to start off
+      ren->EraseOn();
+      rw->EraseOn();
+
+      //and none but the last pass should swap back to front automatically
+      rw->SwapBuffersOff();
+      }
+
+    int maxPiece = next->GetNumberOfPieces();
+    if (pieceNow < maxPiece-1)
+      {
+      everyone_done = false;
+      }
+    }
+
+  if (everyone_done)
+    {
+    //cerr << "This is the last pass" << endl;
+    }
+
+  iter->Delete();
+}
+
+//----------------------------------------------------------------------------
+void vtkIterativeStreamer::EndRenderEvent()
+{
+  vtkCollection *harnesses = this->GetHarnesses();
+  vtkRenderer *ren = this->GetRenderer();
+  vtkRenderWindow *rw = this->GetRenderWindow();
+  if (!harnesses || !ren || !rw)
+    {
+    return;
+    }
+
+  //subsequent renders can not clear or they will erase what we drew before
+  ren->EraseOff();
+  rw->EraseOff();
+
+  vtkCollectionIterator *iter = harnesses->NewIterator();
+  iter->InitTraversal();
+  bool everyone_done = true;
   while(!iter->IsDoneWithTraversal())
     {
     vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
@@ -77,39 +125,19 @@ void vtkIterativeStreamer::RenderEventInternal()
     iter->GoToNextItem();
     int maxPiece = next->GetNumberOfPieces();
     int pieceNow = next->GetPiece();
-
-    if (pieceNow+2 < maxPiece)
-      {
-      someone_not_ready_to_flip = true;
-      }
-
     int pieceNext = pieceNow;
     if (pieceNow+1 < maxPiece)
       {
-      someone_not_done = true;
+      everyone_done = false;
       pieceNext++;
       }
     next->SetPiece(pieceNext);
     }
 
-  if (!someone_not_ready_to_flip && someone_not_done)
+  if (everyone_done)
     {
-    //we are at next to last frame, the next frame (last one) has to swap
-    //b2f to show what's been drawn
-    rw->SwapBuffersOn();
-    }
-  else
-    {
-    //don't allow swapping otherwise so we can keep adding to image without
-    //showing progress
-    rw->SwapBuffersOff();
-    }
-  if (!someone_not_done)
-    {
-    //we just drew the last frame, next frame should start by clearing
-    ren->EraseOn();
+    //we just drew the last frame everyone has to start over next time
     iter->InitTraversal();
-    //and everyone should start over
     while(!iter->IsDoneWithTraversal())
       {
       vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
@@ -117,74 +145,16 @@ void vtkIterativeStreamer::RenderEventInternal()
       next->SetPiece(0);
       iter->GoToNextItem();
       }
+
+    //we also need to bring back buffer forward to show what we drew
+    rw->SwapBuffersOn();
+    rw->Frame();
     }
   else
     {
-    ren->EraseOff();
-    //TODO: In a GUI, this should be scheduled at a future point in time
-    //rather than called (recursively) here.
-    rw->Render();
-    }
-}
-
-//----------------------------------------------------------------------------
-void vtkIterativeStreamer::RenderInternal()
-{
-  vtkRenderer *ren = this->GetRenderer();
-  vtkRenderWindow *rw = this->GetRenderWindow();
-  vtkCollection *harnesses = this->GetHarnesses();
-  if (!harnesses || !rw || !ren)
-    {
-    return;
+    //we haven't finished yet so schedule the next pass
+    this->RenderEventually();
     }
 
-  //find max number of passes
-  vtkCollectionIterator *iter = harnesses->NewIterator();
-  iter->InitTraversal();
-  int maxpieces = -1;
-  while(!iter->IsDoneWithTraversal())
-    {
-    vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
-      (iter->GetCurrentObject());
-    iter->GoToNextItem();
-    int maxpiece = next->GetNumberOfPieces();
-    if (maxpiece > maxpieces)
-      {
-      maxpieces = maxpiece;
-      }
-    }
-
-  for (int i = 0; i < maxpieces; i++)
-    {
-    iter->InitTraversal();
-    cerr << "RENDER " << i << endl;
-    while(!iter->IsDoneWithTraversal())
-      {
-      vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
-        (iter->GetCurrentObject());
-      iter->GoToNextItem();
-      if (i < next->GetNumberOfPieces())
-        {
-        next->SetPiece(i);
-        }
-      }
-    if (i == 0)
-      {
-      cerr << "FIRST" << endl;
-      //first pass has to begin by clearing background
-      ren->EraseOn();
-      rw->SwapBuffersOff();
-      }
-    else
-      {
-      //rest can not clear
-      ren->EraseOff();
-      }
-    if (i == maxpieces-1)
-      {
-      cerr << "next to last" << endl;
-      rw->SwapBuffersOn();
-      }
-    rw->Render();
-    }
+  iter->Delete();
 }

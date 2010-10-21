@@ -40,11 +40,6 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // causes the render window to cycle through renders until all
-  // passes are complete
-  void Render();
-
-  // Description:
   // Assign what window to automate streaming in.
   void SetRenderWindow(vtkRenderWindow *);
   vtkRenderWindow* GetRenderWindow();
@@ -62,8 +57,15 @@ public:
   vtkCollection *GetHarnesses();
 
   // Description:
+  // Assign a function that this driver can call to schedule eventual
+  // render calls. This allows automatic streaming to work as part of
+  // a GUI event loop so that it can be interruptable.
+  void AssignRenderLaterFunction(void (*function)(void));
+
+  // Description:
   // For internal use, window events call back here.
-  void RenderEvent();
+  virtual void StartRenderEvent() = 0;
+  virtual void EndRenderEvent() = 0;
 
 protected:
   vtkStreamingDriver();
@@ -71,8 +73,7 @@ protected:
 
   Internals *Internal;
 
-  virtual void RenderEventInternal() = 0;
-  virtual void RenderInternal() = 0;
+  void RenderEventually();
 
 private:
   vtkStreamingDriver(const vtkStreamingDriver&);  // Not implemented.

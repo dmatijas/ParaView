@@ -34,8 +34,8 @@ protected:
   vtkIterativeStreamer();
   ~vtkIterativeStreamer();
 
-  void RenderInternal();
-  void RenderEventInternal();
+  void StartRenderEvent();
+  void EndRenderEvent();
 
   Internals *Internal;
 

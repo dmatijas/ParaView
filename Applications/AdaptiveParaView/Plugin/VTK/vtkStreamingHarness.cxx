@@ -50,7 +50,6 @@ void vtkStreamingHarness::PrintSelf(ostream& os, vtkIndent indent)
 //----------------------------------------------------------------------------
 void vtkStreamingHarness::SetResolution(double newRes)
 {
-  cerr << newRes << endl;
   if (newRes != this->Resolution)
     {
     this->Resolution = newRes;

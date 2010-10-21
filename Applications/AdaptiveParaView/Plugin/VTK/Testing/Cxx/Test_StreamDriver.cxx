@@ -30,6 +30,10 @@
 
 #include "vtksys/SystemTools.hxx"
 
+void foo(void)
+{
+  cerr << "FOO" << endl;
+}
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
@@ -74,8 +78,6 @@ int main(int argc, char *argv[])
     vtkSmartPointer<vtkRenderWindowInteractor>::New();
   iren->SetRenderWindow(renWin);
 
-  renWin->Render();
-
   vtkSmartPointer<vtkActor> act1 = vtkSmartPointer<vtkActor>::New();
   act1->SetMapper(map1);
   renderer->AddActor(act1);
@@ -86,13 +88,11 @@ int main(int argc, char *argv[])
   sd->SetRenderer(renderer);
   sd->AddHarness(harness);
 
-  for (int i = 0; i < 1; i++)
-    {
-    //test programmatic streaming render call
-    sd->Render();
-    }
+  //sd->AssignRenderLaterFunction(foo);
 
   //test automatic streaming
+  renWin->Render();
+
   iren->Start();
 
   return 0;

@@ -19,7 +19,8 @@
 
 #include <vtkstd/vector>
 
-#define DEBUGPRINT_METAINFORMATION(arg) arg;
+#define DEBUGPRINT_METAINFORMATION(arg) \
+  ;
 /*
   if (vtkAdaptiveOptions::GetEnableStreamMessages()) \
     { \

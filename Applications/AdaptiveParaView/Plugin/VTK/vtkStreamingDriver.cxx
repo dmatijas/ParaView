@@ -38,7 +38,7 @@ public:
     this->RenderWindow = NULL;
     this->WindowWatcher = NULL;
     this->Harnesses = vtkCollection::New();
-    this->WatchRenders = true;
+    this->RenderLaterFunction = NULL;
   }
   ~Internals()
   {
@@ -55,16 +55,29 @@ public:
   vtkRenderWindow *RenderWindow;
   vtkCallbackCommand *WindowWatcher;
   vtkCollection *Harnesses;
-  bool WatchRenders;
+  void (*RenderLaterFunction) (void);
 };
 
 static void VTKSD_RenderEvent(vtkObject *vtkNotUsed(caller),
-                              unsigned long vtkNotUsed(eventid),
+                              unsigned long eventid,
                               void *who,
                               void *)
 {
   vtkStreamingDriver *self = reinterpret_cast<vtkStreamingDriver*>(who);
-  self->RenderEvent();
+  if (eventid == vtkCommand::StartEvent)
+    {
+    self->StartRenderEvent();
+    }
+  if (eventid == vtkCommand::EndEvent)
+    {
+    self->EndRenderEvent();
+    }
+}
+
+//----------------------------------------------------------------------------
+void vtkStreamingDriver::AssignRenderLaterFunction(void (*foo)(void))
+{
+  this->Internal->RenderLaterFunction = foo;
 }
 
 //----------------------------------------------------------------------------
@@ -99,10 +112,6 @@ void vtkStreamingDriver::SetRenderWindow(vtkRenderWindow *rw)
   rw->Register(this);
   this->Internal->RenderWindow = rw;
 
-  //set up for multipass renders in which we continuously add to the
-  //the back buffer until done and then show it
-  rw->SwapBuffersOff();
-
   if (this->Internal->WindowWatcher)
     {
     this->Internal->WindowWatcher->Delete();
@@ -110,6 +119,7 @@ void vtkStreamingDriver::SetRenderWindow(vtkRenderWindow *rw)
   vtkCallbackCommand *cbc = vtkCallbackCommand::New();
   cbc->SetCallback(VTKSD_RenderEvent);
   cbc->SetClientData((void*)this);
+  rw->AddObserver(vtkCommand::StartEvent,cbc);
   rw->AddObserver(vtkCommand::EndEvent,cbc);
   this->Internal->WindowWatcher = cbc;
 }
@@ -131,9 +141,6 @@ void vtkStreamingDriver::SetRenderer(vtkRenderer *ren)
     {
     return;
     }
-  //set up for multipass renders in which we continuously add to the
-  //the back buffer until done and then show it
-  ren->EraseOff();
 
   ren->Register(this);
   this->Internal->Renderer = ren;
@@ -143,18 +150,6 @@ void vtkStreamingDriver::SetRenderer(vtkRenderer *ren)
 vtkRenderer *vtkStreamingDriver::GetRenderer()
 {
   return this->Internal->Renderer;
-}
-
-//----------------------------------------------------------------------------
-void vtkStreamingDriver::RenderEvent()
-{
-  if (!this->Internal->WatchRenders)
-    {
-    //if asked to stream directly, don't autostream
-    return;
-    }
-
-  this->RenderEventInternal();
 }
 
 //----------------------------------------------------------------------------
@@ -194,12 +189,16 @@ vtkCollection * vtkStreamingDriver::GetHarnesses()
 }
 
 //----------------------------------------------------------------------------
-void vtkStreamingDriver::Render()
+void vtkStreamingDriver::RenderEventually()
 {
-  bool wrNow = this->Internal->WatchRenders;
-  this->Internal->WatchRenders = false;
+  if (this->Internal->RenderLaterFunction)
+    {
+    this->Internal->RenderLaterFunction();
+    return;
+    }
 
-  this->RenderInternal();
-
-  this->Internal->WatchRenders = wrNow;
+  if (this->Internal->RenderWindow)
+    {
+    this->Internal->RenderWindow->Render();
+    }
 }

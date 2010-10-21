@@ -28,13 +28,16 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 
 #define DEBUGPRINT(arg)\
-  arg;
+  ;
+//arg;
 
 #define DEBUGPRINT_RESOLUTION(arg)\
-  arg;
+  ;
+//  arg;
 
 #define DEBUGPRINT_METAINFORMATION(arg)\
-  arg;
+  ;
+//  arg;
 
 vtkStandardNewMacro(vtkStreamedMandelbrot);
 
