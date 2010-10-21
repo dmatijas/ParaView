@@ -16,21 +16,15 @@
 // Tests that the stream harness class works as expected.
 
 #include "vtkActor.h"
-#include "vtkArrayCalculator.h"
 #include "vtkCamera.h"
 #include "vtkContourFilter.h"
 #include "vtkDataSetMapper.h"
-#include "vtkImageData.h"
-#include "vtkInformation.h"
-#include "vtkInformationExecutivePortKey.h"
-#include "vtkInformationVector.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkSmartPointer.h"
 #include "vtkStreamedMandelbrot.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
-#include "vtkStreamingDriver.h"
 #include "vtkStreamingHarness.h"
 #include "vtkTesting.h"
 
@@ -161,11 +155,6 @@ int main(int argc, char *argv[])
   vtkSmartPointer<vtkActor> act1 = vtkSmartPointer<vtkActor>::New();
   act1->SetMapper(map1);
   renderer->AddActor(act1);
-
-  vtkSmartPointer<vtkStreamingDriver> sd =
-    vtkSmartPointer<vtkStreamingDriver>::New();
-  sd->SetRenderWindow(renWin);
-  sd->AddHarness(harness);
 
   renWin->Render();
   iren->Start();

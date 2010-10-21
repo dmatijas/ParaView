@@ -19,7 +19,7 @@ SET(vtkAdaptive_SOURCES
   vtkStreamedMandelbrot.cxx
   vtkStreamingDriver.cxx
   vtkStreamingHarness.cxx
-  vtkStreamingProgression.cxx
+  vtkIterativeStreamer.cxx
   vtkVisibilityPrioritizer.cxx
 )
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    vtkStreamingProgression.h
+  Module:    vtkIterativeStreamer.h
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -12,33 +12,36 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkStreamingProgression - calculates progression of streamed pieces
+// .NAME vtkIterativeStreamer - calculates progression of streamed pieces
 // .SECTION Description
 
-#ifndef __vtkStreamingProgression_h
-#define __vtkStreamingProgression_h
+#ifndef __vtkIterativeStreamer_h
+#define __vtkIterativeStreamer_h
 
-#include "vtkObject.h"
+#include "vtkStreamingDriver.h"
 
 class Internals;
 
-class VTK_EXPORT vtkStreamingProgression : public vtkObject
+class VTK_EXPORT vtkIterativeStreamer : public vtkStreamingDriver
 {
 public:
-  vtkTypeMacro(vtkStreamingProgression,vtkObject);
+  vtkTypeMacro(vtkIterativeStreamer,vtkStreamingDriver);
   void PrintSelf(ostream& os, vtkIndent indent);
-  static vtkStreamingProgression *New();
+  static vtkIterativeStreamer *New();
 
 //BTX
 protected:
-  vtkStreamingProgression();
-  ~vtkStreamingProgression();
+  vtkIterativeStreamer();
+  ~vtkIterativeStreamer();
+
+  void RenderInternal();
+  void RenderEventInternal();
 
   Internals *Internal;
 
 private:
-  vtkStreamingProgression(const vtkStreamingProgression&);  // Not implemented.
-  void operator=(const vtkStreamingProgression&);  // Not implemented.
+  vtkIterativeStreamer(const vtkIterativeStreamer&);  // Not implemented.
+  void operator=(const vtkIterativeStreamer&);  // Not implemented.
 
 //ETX
 };

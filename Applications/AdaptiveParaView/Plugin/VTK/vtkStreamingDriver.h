@@ -19,8 +19,7 @@
 // they fire to start, restart and stop streaming, and cycles through passes
 // until completion.
 // It controls the pipeline with the help of vtkStreamingHarness classes.
-// It delegates the task of deciding what piece to show next to a helper class,
-// namely vtkStreamingProgression, and it's specialized subclasses.
+// It delegates the task of deciding what piece to show next to subclasses.
 
 #ifndef __vtkStreamingDriver_h
 #define __vtkStreamingDriver_h
@@ -29,17 +28,16 @@
 
 class Internals;
 class vtkCallbackCommand;
+class vtkCollection;
 class vtkRenderer;
 class vtkRenderWindow;
 class vtkStreamingHarness;
-class vtkStreamingProgression;
 
 class VTK_EXPORT vtkStreamingDriver : public vtkObject
 {
 public:
   vtkTypeMacro(vtkStreamingDriver,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
-  static vtkStreamingDriver *New();
 
   // Description:
   // causes the render window to cycle through renders until all
@@ -49,20 +47,19 @@ public:
   // Description:
   // Assign what window to automate streaming in.
   void SetRenderWindow(vtkRenderWindow *);
+  vtkRenderWindow* GetRenderWindow();
 
   // Description:
   // Assign what renderer to automate streaming in.
   void SetRenderer(vtkRenderer *);
-
-  // Description:
-  // Assign the helper that decides on the ordering of pieces
-  void SetProgression(vtkStreamingProgression *);
+  vtkRenderer* GetRenderer();
 
   // Description:
   // Control over the list of things that this renders in streaming fashion.
   void AddHarness(vtkStreamingHarness *);
   void RemoveHarness(vtkStreamingHarness *);
   void RemoveAllHarnesses();
+  vtkCollection *GetHarnesses();
 
   // Description:
   // For internal use, window events call back here.
@@ -73,6 +70,9 @@ protected:
   ~vtkStreamingDriver();
 
   Internals *Internal;
+
+  virtual void RenderEventInternal() = 0;
+  virtual void RenderInternal() = 0;
 
 private:
   vtkStreamingDriver(const vtkStreamingDriver&);  // Not implemented.
