@@ -12,15 +12,17 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkIterativeStreamer - calculates progression of streamed pieces
+// .NAME vtkIterativeStreamer - simply iterates through streamed pieces
 // .SECTION Description
+// This is the simplest of the streaming progression algorithms.
+// It is a simple for loop through the pieces with no prioritization at all.
+// It allows multiple streamed objects and can be interrupted through the
+// render eventually hook.
 
 #ifndef __vtkIterativeStreamer_h
 #define __vtkIterativeStreamer_h
 
 #include "vtkStreamingDriver.h"
-
-class Internals;
 
 class VTK_EXPORT vtkIterativeStreamer : public vtkStreamingDriver
 {
@@ -36,8 +38,6 @@ protected:
 
   void StartRenderEvent();
   void EndRenderEvent();
-
-  Internals *Internal;
 
 private:
   vtkIterativeStreamer(const vtkIterativeStreamer&);  // Not implemented.

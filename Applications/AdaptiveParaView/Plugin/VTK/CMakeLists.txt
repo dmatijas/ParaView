@@ -10,16 +10,17 @@ SET(vtkAdaptive_SOURCES
   vtkAdaptiveOptions.cxx
   vtkGridSampler1.cxx
   vtkGridSampler2.cxx
+  vtkIterativeStreamer.cxx
   vtkMetaInfoDatabase.cxx
   vtkPiece.cxx
   vtkPieceCacheExecutive.cxx
   vtkPieceCacheFilter.cxx
   vtkPieceList.cxx
+  vtkPrioritizedStreamer.cxx
   vtkRawStridedReader1.cxx
   vtkStreamedMandelbrot.cxx
   vtkStreamingDriver.cxx
   vtkStreamingHarness.cxx
-  vtkIterativeStreamer.cxx
   vtkVisibilityPrioritizer.cxx
 )
 

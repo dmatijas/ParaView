@@ -13,7 +13,8 @@
 
 =========================================================================*/
 
-// Tests that the stream harness class works as expected.
+// Tests that the stream driver can cycle through pieces and render whole
+// objects.
 
 #include "vtkActor.h"
 #include "vtkCamera.h"
@@ -88,9 +89,15 @@ int main(int argc, char *argv[])
   sd->SetRenderer(renderer);
   sd->AddHarness(harness);
 
+  //TODO:
+  //add a meaningful test of render later/interuptability
   //sd->AssignRenderLaterFunction(foo);
 
-  //test automatic streaming
+  //TODO:
+  //test multiple harnessed objects
+  //test harness objects with different num pieces (from 1 to high)
+  //test rendering of non harnessed objects
+
   renWin->Render();
 
   iren->Start();

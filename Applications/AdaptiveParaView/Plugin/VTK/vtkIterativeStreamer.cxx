@@ -24,29 +24,14 @@
 
 vtkStandardNewMacro(vtkIterativeStreamer);
 
-class Internals
-{
-public:
-  Internals(vtkIterativeStreamer *owner)
-  {
-    this->Owner = owner;
-  }
-  ~Internals()
-  {
-  }
-  vtkIterativeStreamer *Owner;
-};
-
 //----------------------------------------------------------------------------
 vtkIterativeStreamer::vtkIterativeStreamer()
 {
-  this->Internal = new Internals(this);
 }
 
 //----------------------------------------------------------------------------
 vtkIterativeStreamer::~vtkIterativeStreamer()
 {
-  delete this->Internal;
 }
 
 //----------------------------------------------------------------------------
