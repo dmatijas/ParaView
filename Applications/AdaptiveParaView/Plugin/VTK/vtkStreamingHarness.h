@@ -27,6 +27,9 @@
 
 #include "vtkPassInputTypeAlgorithm.h"
 
+class vtkPieceList;
+class vtkPieceCacheFilter;
+
 class VTK_EXPORT vtkStreamingHarness : public vtkPassInputTypeAlgorithm
 {
 public:
@@ -35,12 +38,23 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //Description:
-  //control over pass number
+  //control over pass number.
+  //if prioritization is not in effect this is the same thing as Piece
+  //otherwise it is not
+  //NOTE: this is a placeholder for callers to use, it is up to them to
+  //do the indirection from abstract Pass number to absolute Piece number
+  //since that can be done in any number of ways, this class does not attempt
+  //to do so anywhere internally.
+  vtkSetMacro(Pass, int);
+  vtkGetMacro(Pass, int);
+
+  //Description:
+  //control over absolute piece to request
   vtkSetMacro(Piece, int);
   vtkGetMacro(Piece, int);
 
   //Description:
-  //control over number of passes
+  //control over number of pieces that the pipeline can be split into
   vtkSetMacro(NumberOfPieces, int);
   vtkGetMacro(NumberOfPieces, int);
 
@@ -64,6 +78,20 @@ public:
      double bounds[6], double &geometric_confidence,
      double &min, double &max, double &attribute_confidence);
 
+  //Description:
+  //Handle to storage for the computed meta-data and priorities.
+  //This may or may not be present, but when so having the handle here simplifies
+  //the driver's code to manage the information
+  void SetPieceList(vtkPieceList *);
+  vtkGetObjectMacro(PieceList, vtkPieceList);
+
+  //Description:
+  //Handle to immediately upstream cache filter.
+  //This may or may not be present, but when so having the handle here simplifies
+  //the driver's code to manage the cache.
+  void SetCacheFilter(vtkPieceCacheFilter *);
+  vtkGetObjectMacro(CacheFilter, vtkPieceCacheFilter);
+
 protected:
   vtkStreamingHarness();
   ~vtkStreamingHarness();
@@ -83,10 +111,14 @@ protected:
     vtkInformationVector **,
     vtkInformationVector *);
 
+  int Pass;
   int Piece;
   int NumberOfPieces;
   double Resolution;
   bool ForOther;
+
+  vtkPieceList *PieceList;
+  vtkPieceCacheFilter *CacheFilter;
 
 private:
   vtkStreamingHarness(const vtkStreamingHarness&);  // Not implemented.

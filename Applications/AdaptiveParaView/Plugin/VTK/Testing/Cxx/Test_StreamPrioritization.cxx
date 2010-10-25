@@ -58,9 +58,9 @@ int main(int argc, char *argv[])
   vtkSmartPointer<vtkStreamingHarness> harness=
     vtkSmartPointer<vtkStreamingHarness>::New();
   harness->SetInputConnection(contour->GetOutputPort());
-  harness->SetNumberOfPieces(5);
+  harness->SetNumberOfPieces(16);
   harness->SetPiece(0);
-  harness->SetResolution(0.0);
+  harness->SetResolution(1.0);
 
   vtkSmartPointer<vtkDataSetMapper> map1 =
     vtkSmartPointer<vtkDataSetMapper>::New();

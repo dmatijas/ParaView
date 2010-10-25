@@ -12,19 +12,15 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkPieceList - A Priority Queue of vtkPieces
+// .NAME vtkPieceList - A set of vtkPieces
 // .SECTION Description
-// This implements a collection of vtkPieces. The list can be sorted to
-// maintain the list in priority order, so that the next piece popped
-// will always be the piece with the highest priority. PieceLists can
-// be merged (draining one to add to another), copied, and serialized.
 
 #ifndef __vtkPieceList_h
 #define __vtkPieceList_h
 
 #include "vtkObject.h"
+#include "vtkPiece.h"
 
-class vtkPiece;
 class vtkInternals;
 
 class VTK_EXPORT vtkPieceList : public vtkObject
@@ -34,13 +30,18 @@ public:
   vtkTypeMacro(vtkPieceList, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  //BTX
   //Description
   //Add a piece to the list.
-  void AddPiece(vtkPiece *Piece);
+  void AddPiece(vtkPiece Piece);
 
   //Description:
   //Get the n'th piece.
-  vtkPiece *GetPiece(int n);
+  vtkPiece GetPiece(int n);
+
+  //Description:
+  //Replace the n'th piece.
+  void SetPiece(int n, vtkPiece p);
 
   //Description:
   //Removes the n'th piece.
@@ -48,8 +49,8 @@ public:
 
   //Description:
   //GetPiece followed by RemovePiece.
-  //WARNING Caller must eventually call Delete on the returned piece.
-  vtkPiece *PopPiece(int n = 0);
+  vtkPiece PopPiece(int n = 0);
+  //ETX
 
   //Description:
   //Removes all of the Pieces
@@ -58,18 +59,17 @@ public:
   //Description:
   //Get the number of pieces that have been added.
   int GetNumberOfPieces();
-  bool IsEmpty() {return this->GetNumberOfPieces() == 0;}
 
   //Description:
   //Sort the list into decreasing Priority order (highest priority first).
   void SortPriorities();
 
   //Description:
-  //Get the number of important pieces, ie those with non zero Priority.
+  //Get the number of pieces that have non zero Priority.
   int GetNumberNonZeroPriority();
 
   //Description:
-  //Removes all of self's Pieces and then deep copies other's.
+  //Removes all Pieces and then deep copies the pieces from other.
   void CopyPieceList(vtkPieceList *other);
 
   //Description:
@@ -78,16 +78,18 @@ public:
   void MergePieceList(vtkPieceList *other);
 
   //Description:
-  //Share lists over the network.
-  //Call Serialize, then call GetSerialized list to access the result.
-  //Call Unserialize elsewhere to recover the list from the buffer.
+  //Call to convert into a string buffer that can be transfered
+  //over the netork and reconstituted on another procss
   void Serialize();
-  void UnSerialize(double *buffer);
-  void GetSerializedList(double **buffer, int *sz);
+  void GetSerializedList(char **buffer, int *sz);
+  void UnSerialize(char *buffer, int *sz);
 
   //Description:
   //For debugging.
   void Print();
+  void PrintSerializedList();
+  void DummyFill();
+  void CopyBuddy(vtkPieceList *buddy);
 
 protected:
   vtkPieceList();
@@ -95,6 +97,7 @@ protected:
 
   vtkInternals *Internals;
 
+  //Description:
   void CopyInternal(vtkPieceList *other, int merge);
 
 private:

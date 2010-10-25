@@ -36,8 +36,8 @@ protected:
   vtkIterativeStreamer();
   ~vtkIterativeStreamer();
 
-  void StartRenderEvent();
-  void EndRenderEvent();
+  virtual void StartRenderEvent();
+  virtual void EndRenderEvent();
 
 private:
   vtkIterativeStreamer(const vtkIterativeStreamer&);  // Not implemented.

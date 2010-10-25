@@ -39,16 +39,16 @@ protected:
   vtkPrioritizedStreamer();
   ~vtkPrioritizedStreamer();
 
-  void StartRenderEvent();
-  void EndRenderEvent();
+  virtual void StartRenderEvent();
+  virtual void EndRenderEvent();
 
-  bool IsFirstPass();
-  bool IsRestart();
-  bool IsEveryoneDone();
+  virtual bool IsFirstPass();
+  virtual bool IsRestart();
+  virtual bool IsEveryoneDone();
 
-  void ResetEveryone();
-  void BumpEveryone();
-  void FinalizeEveryone();
+  virtual void ResetEveryone();
+  virtual void AdvanceEveryone();
+  virtual void FinalizeEveryone();
 
   Internals *Internal;
 

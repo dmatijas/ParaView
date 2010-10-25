@@ -17,6 +17,7 @@
 #include "vtkCollection.h"
 #include "vtkCollectionIterator.h"
 #include "vtkObjectFactory.h"
+#include "vtkPieceList.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkStreamingDriver.h"
@@ -91,10 +92,22 @@ bool vtkPrioritizedStreamer::IsEveryoneDone()
     vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
       (iter->GetCurrentObject());
     iter->GoToNextItem();
-    int pieceNow = next->GetPiece();
+
+    //check if anyone hasn't reached the last necessary and possible pass
+    int passNow = next->GetPass();
     int maxPiece = next->GetNumberOfPieces();
-    if (pieceNow < maxPiece)
+    if (passNow < maxPiece)
       {
+      vtkPieceList *pl = next->GetPieceList();
+      if (pl)
+        {
+        double priority = pl->GetPiece(passNow).GetPriority();
+        if (priority == 0.0)
+          {
+          //if this object finished early, don't keep going just for it's sake
+          continue;
+          }
+        }
       everyone_done = false;
       break;
       }
@@ -117,16 +130,50 @@ void vtkPrioritizedStreamer::ResetEveryone()
   iter->InitTraversal();
   while(!iter->IsDoneWithTraversal())
     {
+    //get a hold of the pipeline for this object
     vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
       (iter->GetCurrentObject());
-    next->SetPiece(0);
     iter->GoToNextItem();
+
+    //make it start over
+    next->SetPass(0);
+
+    //compute pipeline priority to render in most to least important order
+    //get a hold of the priority list
+    vtkPieceList *pl = next->GetPieceList();
+    if (!pl)
+      {
+      //make one if never created befor
+      pl = vtkPieceList::New();
+      next->SetPieceList(pl);
+      pl->Delete();
+      }
+    //start off cleanly
+    pl->Clear();
+
+    //compute a priority for each piece and sort them
+    int max = next->GetNumberOfPieces();
+    for (int i = 0; i < max; i++)
+      {
+      vtkPiece p;
+      p.SetPiece(i);
+      p.SetNumPieces(max);
+      p.SetResolution(1.0);
+      p.SetPipelinePriority(next->ComputePriority(i,max,1.0));
+      pl->AddPiece(p);
+      }
+    pl->SortPriorities();
+
+    //convert pass number to absolute piece number
+    int pieceNext = pl->GetPiece(0).GetPiece();
+    //cerr << "PASS " << 0 << " PIECE " << pieceNext << endl;
+    next->SetPiece(pieceNext);
     }
   iter->Delete();
 }
 
 //----------------------------------------------------------------------------
-void vtkPrioritizedStreamer::BumpEveryone()
+void vtkPrioritizedStreamer::AdvanceEveryone()
 {
   vtkCollection *harnesses = this->GetHarnesses();
   if (!harnesses)
@@ -142,15 +189,28 @@ void vtkPrioritizedStreamer::BumpEveryone()
     vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
       (iter->GetCurrentObject());
     iter->GoToNextItem();
+
+    //increment to the next pass
     int maxPiece = next->GetNumberOfPieces();
-    int pieceNow = next->GetPiece();
-    int pieceNext = pieceNow;
-    if (pieceNow < maxPiece)
+    int passNow = next->GetPass();
+    int passNext = passNow;
+    if (passNow < maxPiece)
       {
-      pieceNext++;
+      passNext++;
       }
+    next->SetPass(passNext);
+
+    //map that to an absolute piece number
+    int pieceNext = (passNext<maxPiece)?passNext:passNow;
+    vtkPieceList *pl = next->GetPieceList();
+    if (pl)
+      {
+      pieceNext = pl->GetPiece(passNext).GetPiece();
+      }
+    //cerr << "PASS " << passNext << " PIECE " << pieceNext << endl;
     next->SetPiece(pieceNext);
-    }
+   }
+
   iter->Delete();
 }
 
@@ -206,7 +266,7 @@ void vtkPrioritizedStreamer::EndRenderEvent()
   ren->EraseOff();
   rw->EraseOff();
 
-  this->BumpEveryone();
+  this->AdvanceEveryone();
 
   if (this->IsEveryoneDone())
     {

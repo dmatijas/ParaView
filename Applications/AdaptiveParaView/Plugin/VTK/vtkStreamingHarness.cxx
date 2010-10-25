@@ -20,31 +20,44 @@
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
+#include "vtkPieceCacheFilter.h"
+#include "vtkPieceList.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
 vtkStandardNewMacro(vtkStreamingHarness);
 
+vtkCxxSetObjectMacro(vtkStreamingHarness, PieceList, vtkPieceList);
+vtkCxxSetObjectMacro(vtkStreamingHarness, CacheFilter, vtkPieceCacheFilter);
+
 //----------------------------------------------------------------------------
 vtkStreamingHarness::vtkStreamingHarness()
 {
+  this->Pass = 0;
   this->Piece = 0;
   this->NumberOfPieces = 2;
   this->Resolution = 1.0;
   this->ForOther = false;
+  this->PieceList = NULL;
+  this->CacheFilter = NULL;
 }
 
 //----------------------------------------------------------------------------
 vtkStreamingHarness::~vtkStreamingHarness()
 {
+  this->SetCacheFilter(NULL);
+  this->SetPieceList(NULL);
 }
 
 //----------------------------------------------------------------------------
 void vtkStreamingHarness::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
+  os << indent << "Pass: " << this->Pass << endl;
   os << indent << "Piece: " << this->Piece << endl;
   os << indent << "NumberOfPieces: " << this->NumberOfPieces << endl;
   os << indent << "Resolution: " << this->Resolution << endl;
+  os << indent << "PieceList: " << this->PieceList << endl;
+  os << indent << "CacheFilter: " << this->CacheFilter << endl;
 }
 
 //----------------------------------------------------------------------------
@@ -126,6 +139,7 @@ int vtkStreamingHarness::RequestUpdateExtent(
     }
   return 1;
 }
+
 
 //----------------------------------------------------------------------------
 int vtkStreamingHarness::RequestData(
