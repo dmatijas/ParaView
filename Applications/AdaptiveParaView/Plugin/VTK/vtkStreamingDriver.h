@@ -73,6 +73,9 @@ protected:
 
   Internals *Internal;
 
+  // Description:
+  // Driver calls this to ask for a render. If a render later function is
+  // assigned, that is used, otherwise render is called directly.
   void RenderEventually();
 
 private:
