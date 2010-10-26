@@ -26,7 +26,9 @@
 
 vtkStandardNewMacro(vtkStreamingHarness);
 
-vtkCxxSetObjectMacro(vtkStreamingHarness, PieceList, vtkPieceList);
+vtkCxxSetObjectMacro(vtkStreamingHarness, PieceList1, vtkPieceList);
+vtkCxxSetObjectMacro(vtkStreamingHarness, PieceList2, vtkPieceList);
+vtkCxxSetObjectMacro(vtkStreamingHarness, PieceList3, vtkPieceList);
 vtkCxxSetObjectMacro(vtkStreamingHarness, CacheFilter, vtkPieceCacheFilter);
 
 //----------------------------------------------------------------------------
@@ -37,15 +39,20 @@ vtkStreamingHarness::vtkStreamingHarness()
   this->NumberOfPieces = 2;
   this->Resolution = 1.0;
   this->ForOther = false;
-  this->PieceList = NULL;
+  this->PieceList1 = NULL;
+  this->PieceList2 = NULL;
+  this->PieceList3 = NULL;
+  this->NoneToRefine = false;
   this->CacheFilter = NULL;
 }
 
 //----------------------------------------------------------------------------
 vtkStreamingHarness::~vtkStreamingHarness()
 {
+  this->SetPieceList1(NULL);
+  this->SetPieceList2(NULL);
+  this->SetPieceList3(NULL);
   this->SetCacheFilter(NULL);
-  this->SetPieceList(NULL);
 }
 
 //----------------------------------------------------------------------------
@@ -56,7 +63,10 @@ void vtkStreamingHarness::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Piece: " << this->Piece << endl;
   os << indent << "NumberOfPieces: " << this->NumberOfPieces << endl;
   os << indent << "Resolution: " << this->Resolution << endl;
-  os << indent << "PieceList: " << this->PieceList << endl;
+  os << indent << "PieceList1: " << this->PieceList1 << endl;
+  os << indent << "PieceList2: " << this->PieceList2 << endl;
+  os << indent << "PieceList3: " << this->PieceList3 << endl;
+  os << indent << "NoneToRefine: " << (this->NoneToRefine?"true":"false") << endl;
   os << indent << "CacheFilter: " << this->CacheFilter << endl;
 }
 

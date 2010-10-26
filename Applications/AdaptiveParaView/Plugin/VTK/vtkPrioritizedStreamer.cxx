@@ -98,7 +98,7 @@ bool vtkPrioritizedStreamer::IsEveryoneDone()
     int maxPiece = next->GetNumberOfPieces();
     if (passNow < maxPiece)
       {
-      vtkPieceList *pl = next->GetPieceList();
+      vtkPieceList *pl = next->GetPieceList1();
       if (pl)
         {
         double priority = pl->GetPiece(passNow).GetPriority();
@@ -140,12 +140,12 @@ void vtkPrioritizedStreamer::ResetEveryone()
 
     //compute pipeline priority to render in most to least important order
     //get a hold of the priority list
-    vtkPieceList *pl = next->GetPieceList();
+    vtkPieceList *pl = next->GetPieceList1();
     if (!pl)
       {
       //make one if never created befor
       pl = vtkPieceList::New();
-      next->SetPieceList(pl);
+      next->SetPieceList1(pl);
       pl->Delete();
       }
     //start off cleanly
@@ -201,8 +201,8 @@ void vtkPrioritizedStreamer::AdvanceEveryone()
     next->SetPass(passNext);
 
     //map that to an absolute piece number
-    int pieceNext = (passNext<maxPiece)?passNext:passNow;
-    vtkPieceList *pl = next->GetPieceList();
+    int pieceNext = passNext;
+    vtkPieceList *pl = next->GetPieceList1();
     if (pl)
       {
       pieceNext = pl->GetPiece(passNext).GetPiece();

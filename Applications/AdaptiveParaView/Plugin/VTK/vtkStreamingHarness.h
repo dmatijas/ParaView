@@ -80,10 +80,16 @@ public:
 
   //Description:
   //Handle to storage for the computed meta-data and priorities.
-  //This may or may not be present, but when so having the handle here simplifies
-  //the driver's code to manage the information
-  void SetPieceList(vtkPieceList *);
-  vtkGetObjectMacro(PieceList, vtkPieceList);
+  //This may or may not be present but when they are, having the handle
+  //here simplifies the driver's code to manage the information
+  void SetPieceList1(vtkPieceList *);
+  vtkGetObjectMacro(PieceList1, vtkPieceList);
+  void SetPieceList2(vtkPieceList *);
+  vtkGetObjectMacro(PieceList2, vtkPieceList);
+  void SetPieceList3(vtkPieceList *);
+  vtkGetObjectMacro(PieceList3, vtkPieceList);
+  vtkSetMacro(NoneToRefine, bool);
+  vtkGetMacro(NoneToRefine, bool);
 
   //Description:
   //Handle to immediately upstream cache filter.
@@ -116,8 +122,11 @@ protected:
   int NumberOfPieces;
   double Resolution;
   bool ForOther;
+  bool NoneToRefine;
 
-  vtkPieceList *PieceList;
+  vtkPieceList *PieceList1;
+  vtkPieceList *PieceList2;
+  vtkPieceList *PieceList3;
   vtkPieceCacheFilter *CacheFilter;
 
 private:

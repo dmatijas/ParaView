@@ -12,6 +12,7 @@ SET(vtkAdaptive_SOURCES
   vtkGridSampler2.cxx
   vtkIterativeStreamer.cxx
   vtkMetaInfoDatabase.cxx
+  vtkMultiResolutionStreamer.cxx
   vtkPiece.cxx
   vtkPieceCacheExecutive.cxx
   vtkPieceCacheFilter.cxx

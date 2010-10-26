@@ -13,3 +13,6 @@ TARGET_LINK_LIBRARIES(Test_StreamDriver vtkAdaptive vtkRendering vtkFiltering vt
 
 ADD_EXECUTABLE(Test_StreamPrioritization Test_StreamPrioritization.cxx)
 TARGET_LINK_LIBRARIES(Test_StreamPrioritization vtkAdaptive vtkRendering vtkFiltering vtkGraphics vtkCommon vtkImaging)
+
+ADD_EXECUTABLE(Test_StreamRefinement Test_StreamRefinement.cxx)
+TARGET_LINK_LIBRARIES(Test_StreamRefinement vtkAdaptive vtkRendering vtkFiltering vtkGraphics vtkCommon vtkImaging)
