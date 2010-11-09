@@ -166,7 +166,6 @@ SET ( MANTA_CLASSES
   vtkMantaProperty.cxx
   vtkMantaRenderer.cxx
   vtkMantaRenderWindow.cxx
-  vtkMantaTestSource.cxx
   vtkMantaTexture.cxx
   )
 

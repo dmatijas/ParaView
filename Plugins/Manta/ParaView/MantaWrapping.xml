@@ -212,7 +212,7 @@
       <SubProxy>
         <Proxy  name="Tree" 
                 proxygroup="compositers"
-                proxyname="TreeCompositer">
+                proxyname="BSwapCompositer">
         </Proxy>
       </SubProxy>
 
@@ -304,7 +304,7 @@
       <SubProxy>
         <Proxy  name="Tree"
                 proxygroup="compositers"
-                proxyname="TreeCompositer">
+                proxyname="BSwapCompositer">
         </Proxy>
       </SubProxy>
 

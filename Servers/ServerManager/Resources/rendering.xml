@@ -3444,6 +3444,8 @@
     </Proxy>
     <Proxy  name="TreeCompositer" class="vtkTreeCompositer">
     </Proxy>
+    <Proxy  name="BSwapCompositer" class="vtkBinarySwapCompositer">
+    </Proxy>
   </ProxyGroup>
 
 
