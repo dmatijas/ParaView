@@ -86,8 +86,6 @@ public:
   vtkGetObjectMacro(PieceList1, vtkPieceList);
   void SetPieceList2(vtkPieceList *);
   vtkGetObjectMacro(PieceList2, vtkPieceList);
-  void SetPieceList3(vtkPieceList *);
-  vtkGetObjectMacro(PieceList3, vtkPieceList);
   vtkSetMacro(NoneToRefine, bool);
   vtkGetMacro(NoneToRefine, bool);
 
@@ -126,7 +124,6 @@ protected:
 
   vtkPieceList *PieceList1;
   vtkPieceList *PieceList2;
-  vtkPieceList *PieceList3;
   vtkPieceCacheFilter *CacheFilter;
 
 private:

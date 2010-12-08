@@ -79,7 +79,8 @@ int vtkVisibilityPrioritizer::ProcessRequest(vtkInformation* request,
     {
     if (vtkAdaptiveOptions::GetUseViewOrdering())
       {
-      return this->RequestUpdateExtentInformation(request, inputVector, outputVector);
+      return this->RequestUpdateExtentInformation
+        (request, inputVector, outputVector);
       }
     else
       {
@@ -121,7 +122,8 @@ int vtkVisibilityPrioritizer::RequestUpdateExtentInformation(
     inPriority = inInfo->Get(vtkStreamingDemandDrivenPipeline::
                           PRIORITY());
     }
-  DEBUGPRINT_PRIORITY(cerr << "VS(" << this << ") In Priority is " << inPriority << endl;);
+  DEBUGPRINT_PRIORITY
+    (cerr << "VS(" << this << ") In Priority is " << inPriority << endl;);
   if (!inPriority)
     {
     return 1;
@@ -144,112 +146,96 @@ int vtkVisibilityPrioritizer::RequestUpdateExtentInformation(
                         );
     sddp->GetPieceBoundingBox(port, pbbox);
 
-    if (pbbox[0] <= pbbox[1] &&
-        pbbox[2] <= pbbox[3] &&
-        pbbox[4] <= pbbox[5])
-      {
-      // use the frustum extraction filter to reject pieces that do not intersect the view frustum
-      if (!this->FrustumTester->OverallBoundsTest(pbbox))
-        {
-        DEBUGPRINT_PRIORITY(
-        int updatePiece = outInfo->Get(
-          vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
-        int updatePieces = outInfo->Get(
-          vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
-        cerr << "VS(" << this << ") Frustum reject! "
-        << updatePiece << "/" << updatePieces << " "
-        << pbbox[0] << "," << pbbox[1] << "," << pbbox[2] << "," << pbbox[3] << "," << pbbox[4] << "," << pbbox[5]
-        << endl;
-          );
-        outPriority = 0.0;
-        }
-      else
-        {
-        //for those that are not rejected, compute a priority from the bounds
-        //such that pieces nearest to camera eye have highest priority 1 and
-        //those furthest away have lowest 0.
-        //Must do this using only information about current piece.
-        vtkBoundingBox box(pbbox);
-        double center[3];
-        //box.GetCenter(center);
-
-        // use the closest corner, not the center for uneven sized pieces
-        if(fabs(this->CameraState[0] - pbbox[0]) <
-           fabs(this->CameraState[0] - pbbox[1]))
-          {
-          center[0] = pbbox[0];
-          }
-        else
-          {
-          center[0] = pbbox[1];
-          }
-
-        if(fabs(this->CameraState[1] - pbbox[2]) <
-           fabs(this->CameraState[1] - pbbox[3]))
-          {
-          center[1] = pbbox[2];
-          }
-        else
-          {
-          center[1] = pbbox[3];
-          }
-
-        if(fabs(this->CameraState[2] - pbbox[4]) <
-           fabs(this->CameraState[2] - pbbox[5]))
-          {
-          center[2] = pbbox[4];
-          }
-        else
-          {
-          center[2] = pbbox[5];
-          }
-
-        double dbox=sqrt
-          (vtkMath::Distance2BetweenPoints(&this->CameraState[0], center));
-        const double *farlowerleftcorner = &this->Frustum[1*4];
-        double dfar=sqrt
-          (vtkMath::Distance2BetweenPoints
-           (&this->CameraState[0], farlowerleftcorner));
-
-        double dist = 1.0-dbox/dfar;
-        if (dist < 0.0)
-          {
-          DEBUGPRINT_PRIORITY(cerr << "VS(" << this << ") reject too far" << endl;);
-          dist = 0.0;
-          }
-        if (dist > 1.0)
-          {
-          DEBUGPRINT_PRIORITY(cerr << "VS(" << this << ") reject too near" << endl;);
-          dist = 0.0;
-          }
-
-        DEBUGPRINT_PRIORITY(
-        int updatePiece = outInfo->Get(
-          vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
-        int updatePieces = outInfo->Get(
-          vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
-        double updateRes = outInfo->Get(
-          vtkStreamingDemandDrivenPipeline::UPDATE_RESOLUTION());
-        cerr << "VS(" << this << ") Center of "
-        << updatePiece << "/" << updatePieces << "@" << updateRes << " is "
-        << center[0] << "," << center[1] << "," << center[2] << endl;
-        cerr << "VS(" << this << ") Dists " << dbox << "/" << dfar << "=" << dbox/dfar << endl;
-        cerr << "VS(" << this << ") DIST= " << dist << endl;
-        );
-
-        outPriority = inPriority*dist;
-        DEBUGPRINT_PRIORITY(
-        cerr << "VS(" << this
-               << ") distance metric = " << dist
-               << " priority " << inPriority << "->" << outPriority << endl;
-                            );
-        }
-      }
+    double viewPriority = this->CalculatePriority(pbbox);
+    outPriority = inPriority * viewPriority;
     }
 
   outInfo->Set(vtkStreamingDemandDrivenPipeline::PRIORITY(), outPriority);
 
   return 1;
+}
+
+//------------------------------------------------------------------------------
+double vtkVisibilityPrioritizer::CalculatePriority(double *pbbox)
+{
+  double outPriority = 1.0;
+
+  if (pbbox[0] <= pbbox[1] &&
+      pbbox[2] <= pbbox[3] &&
+      pbbox[4] <= pbbox[5])
+    {
+    //use the frustum extraction filter to reject pieces that do not
+    //intersect the view frustum
+    if (!this->FrustumTester->OverallBoundsTest(pbbox))
+      {
+      outPriority = 0.0;
+      }
+    else
+      {
+      //for those that are not rejected, compute a priority from the bounds
+      //such that pieces nearest to camera eye have highest priority 1 and
+      //those furthest away have lowest 0.
+      //Must do this using only information about current piece.
+      vtkBoundingBox box(pbbox);
+      double center[3];
+      //box.GetCenter(center);
+
+      // use the closest corner, not the center for uneven sized pieces
+      if(fabs(this->CameraState[0] - pbbox[0]) <
+         fabs(this->CameraState[0] - pbbox[1]))
+        {
+        center[0] = pbbox[0];
+        }
+      else
+        {
+        center[0] = pbbox[1];
+        }
+
+      if(fabs(this->CameraState[1] - pbbox[2]) <
+         fabs(this->CameraState[1] - pbbox[3]))
+        {
+        center[1] = pbbox[2];
+        }
+      else
+        {
+        center[1] = pbbox[3];
+        }
+
+      if(fabs(this->CameraState[2] - pbbox[4]) <
+         fabs(this->CameraState[2] - pbbox[5]))
+        {
+        center[2] = pbbox[4];
+        }
+      else
+        {
+        center[2] = pbbox[5];
+        }
+
+      double dbox=sqrt
+        (vtkMath::Distance2BetweenPoints(&this->CameraState[0], center));
+      const double *farlowerleftcorner = &this->Frustum[1*4];
+      double dfar=sqrt
+        (vtkMath::Distance2BetweenPoints
+         (&this->CameraState[0], farlowerleftcorner));
+
+      double dist = 1.0-dbox/dfar;
+      if (dist < 0.0)
+        {
+        DEBUGPRINT_PRIORITY
+          (cerr << "VS(" << this << ") reject too far" << endl;);
+        dist = 0.0;
+        }
+      if (dist > 1.0)
+        {
+        DEBUGPRINT_PRIORITY
+          (cerr << "VS(" << this << ") reject too near" << endl;);
+        dist = 0.0;
+        }
+
+      outPriority = dist;
+      }
+    }
+  return outPriority;
 }
 
 //----------------------------------------------------------------------------
@@ -287,7 +273,9 @@ void vtkVisibilityPrioritizer::SetFrustum(double *frustum)
     cerr << "FRUST" << endl;
     for (i=0; i<8; i++)
       {
-      cerr << this->Frustum[i*4+0] << "," << this->Frustum[i*4+1] << "," << this->Frustum[i*4+2] << endl;
+      cerr << this->Frustum[i*4+0] << ","
+           << this->Frustum[i*4+1] << ","
+           << this->Frustum[i*4+2] << endl;
       }
     );
 
@@ -317,7 +305,11 @@ void vtkVisibilityPrioritizer::SetCameraState(double *cameraState)
       this->CameraState[i] = cameraState[i];
       }
     DEBUGPRINT_PRIORITY(
-    cerr << "EYE" << this->CameraState[0] << "," << this->CameraState[1] << "," << this->CameraState[2] << endl;
+    cerr
+    << "EYE" << this->CameraState[0]
+    << "," << this->CameraState[1]
+    << "," << this->CameraState[2]
+    << endl;
                         );
     }
 }

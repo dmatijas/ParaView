@@ -89,12 +89,12 @@ bool vtkMultiResolutionStreamer::IsWendDone()
   iter->InitTraversal();
   while(!iter->IsDoneWithTraversal())
     {
-    vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
+    vtkStreamingHarness *harness = vtkStreamingHarness::SafeDownCast
       (iter->GetCurrentObject());
     iter->GoToNextItem();
 
     //check if anyone hasn't reached the end of the visible domain
-    vtkPieceList *ToDo = next->GetPieceList1();
+    vtkPieceList *ToDo = harness->GetPieceList1();
     if (ToDo->GetNumberNonZeroPriority() > 0)
       {
       everyone_finished_wend = false;
@@ -120,18 +120,18 @@ bool vtkMultiResolutionStreamer::IsEveryoneDone()
   iter->InitTraversal();
   while(!iter->IsDoneWithTraversal())
     {
-    vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
+    vtkStreamingHarness *harness = vtkStreamingHarness::SafeDownCast
       (iter->GetCurrentObject());
     iter->GoToNextItem();
 
-    vtkPieceList *ToDo = next->GetPieceList1();
+    vtkPieceList *ToDo = harness->GetPieceList1();
     if (ToDo->GetNumberNonZeroPriority() > 0)
       {
       everyone_completely_done = false;
       break;
       }
 
-    if (next->GetNoneToRefine() == false)
+    if (harness->GetNoneToRefine() == false)
       {
       everyone_completely_done = false;
       break;
@@ -155,11 +155,11 @@ void vtkMultiResolutionStreamer::PrepareFirstPass()
   iter->InitTraversal();
   while(!iter->IsDoneWithTraversal())
     {
-    vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
+    vtkStreamingHarness *harness = vtkStreamingHarness::SafeDownCast
       (iter->GetCurrentObject());
     iter->GoToNextItem();
 
-    vtkPieceList *ToDo = next->GetPieceList1();
+    vtkPieceList *ToDo = harness->GetPieceList1();
     if (!ToDo)
       {
       //very first pass, start off with one piece at lowest res
@@ -169,25 +169,22 @@ void vtkMultiResolutionStreamer::PrepareFirstPass()
       p.SetPiece(0);
       p.SetNumPieces(1);
       pl->AddPiece(p);
-      next->SetPieceList1(pl);
+      harness->SetPieceList1(pl);
       pl->Delete();
       ToDo = pl;
 
       //and initialize the other two queues
       pl = vtkPieceList::New();
-      next->SetPieceList2(pl);
-      pl->Delete();
-      pl = vtkPieceList::New();
-      next->SetPieceList3(pl);
+      harness->SetPieceList2(pl);
       pl->Delete();
       }
 
-    next->SetNoneToRefine(false); //assume it isn't all done
+    harness->SetNoneToRefine(false); //assume it isn't all done
     //split and refine some of the pieces in nextframe
-    int numRefined = this->Refine(next);
+    int numRefined = this->Refine(harness);
     if (numRefined==0)
       {
-      next->SetNoneToRefine(true);
+      harness->SetNoneToRefine(true);
       //cerr << "NONE TO REFINE" << endl;
       }
 
@@ -197,7 +194,7 @@ void vtkMultiResolutionStreamer::PrepareFirstPass()
       int p = ToDo->GetPiece(i).GetPiece();
       int np = ToDo->GetPiece(i).GetNumPieces();
       double res = ToDo->GetPiece(i).GetResolution();
-      double priority = next->ComputePriority(p, np, res);
+      double priority = harness->ComputePriority(p, np, res);
       ToDo->GetPiece(i).SetPipelinePriority(priority);
       }
 
@@ -225,12 +222,12 @@ void vtkMultiResolutionStreamer::ChooseNextPieces()
   iter->InitTraversal();
   while(!iter->IsDoneWithTraversal())
     {
-    vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
+    vtkStreamingHarness *harness = vtkStreamingHarness::SafeDownCast
       (iter->GetCurrentObject());
     iter->GoToNextItem();
 
-    vtkPieceList *ToDo = next->GetPieceList1();
-    vtkPieceList *NextFrame = next->GetPieceList2();
+    vtkPieceList *ToDo = harness->GetPieceList1();
+    vtkPieceList *NextFrame = harness->GetPieceList2();
     if (ToDo->GetNumberNonZeroPriority() > 0)
       {
       vtkPiece p = ToDo->PopPiece();
@@ -239,9 +236,9 @@ void vtkMultiResolutionStreamer::ChooseNextPieces()
       //cerr << "CHOSE "
       //     << p.GetPiece() << "/" << p.GetNumPieces()
       //     << "@" << p.GetResolution() << endl;
-      next->SetPiece(p.GetPiece());
-      next->SetNumberOfPieces(p.GetNumPieces());
-      next->SetResolution(p.GetResolution());
+      harness->SetPiece(p.GetPiece());
+      harness->SetNumberOfPieces(p.GetNumPieces());
+      harness->SetResolution(p.GetResolution());
       }
     }
 
@@ -249,11 +246,11 @@ void vtkMultiResolutionStreamer::ChooseNextPieces()
 }
 
 //----------------------------------------------------------------------------
-int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *next)
+int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
 {
-  vtkPieceList *ToDo = next->GetPieceList1();
-  vtkPieceList *NextFrame = next->GetPieceList2();
-  vtkPieceList *ToSplit = next->GetPieceList3();
+  vtkPieceList *ToDo = harness->GetPieceList1();
+  vtkPieceList *NextFrame = harness->GetPieceList2();
+  vtkPieceList *ToSplit = vtkPieceList::New();
 
   int numSplittable = 0;
   while (NextFrame->GetNumberOfPieces() != 0)
@@ -304,7 +301,7 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *next)
       pA.SetPiece(nrA);
       pA.SetNumPieces(nrNP);
       pA.SetResolution(resolution);
-      double priority = next->ComputePriority(gPieceA, gPieces, resolution);
+      double priority = harness->ComputePriority(gPieceA, gPieces, resolution);
       pA.SetPipelinePriority(priority);
 
       ToDo->AddPiece(pA);
@@ -313,6 +310,7 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *next)
 
   //put any pieces we did not split back into next wend
   ToDo->MergePieceList(ToSplit);
+  ToSplit->Delete();
 
   return numSplit;
 }

@@ -40,6 +40,9 @@ public:
   void SetFrustum(double *frustum);
   vtkGetVectorMacro(Frustum, double, 32);
 
+  //an interface to use this class outside of the pipeline
+  double CalculatePriority(double *piecebbox);
+
 protected:
   vtkVisibilityPrioritizer();
   ~vtkVisibilityPrioritizer();

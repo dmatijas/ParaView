@@ -14,6 +14,7 @@
 =========================================================================*/
 #include "vtkPrioritizedStreamer.h"
 
+#include "vtkCamera.h"
 #include "vtkCollection.h"
 #include "vtkCollectionIterator.h"
 #include "vtkObjectFactory.h"
@@ -22,6 +23,7 @@
 #include "vtkRenderWindow.h"
 #include "vtkStreamingDriver.h"
 #include "vtkStreamingHarness.h"
+#include "vtkVisibilityPrioritizer.h"
 
 vtkStandardNewMacro(vtkPrioritizedStreamer);
 
@@ -32,12 +34,18 @@ public:
   {
     this->Owner = owner;
     this->FirstPass = true;
+    this->CameraTime = 0;
+    this->ViewSorter = vtkVisibilityPrioritizer::New();
   }
   ~Internals()
   {
+    this->ViewSorter->Delete();
   }
+
   vtkPrioritizedStreamer *Owner;
+  vtkVisibilityPrioritizer *ViewSorter;
   bool FirstPass;
+  unsigned long CameraTime;
 };
 
 //----------------------------------------------------------------------------
@@ -72,6 +80,56 @@ bool vtkPrioritizedStreamer::IsFirstPass()
 bool vtkPrioritizedStreamer::IsRestart()
 {
   //TODO: compare stored last camera with current camera
+  vtkRenderer *ren = this->GetRenderer();
+  if (ren)
+    {
+    vtkCamera * cam = ren->GetActiveCamera();
+    if (cam)
+      {
+      unsigned long mtime = cam->GetMTime();
+      if (mtime > this->Internal->CameraTime)
+        {
+        this->Internal->CameraTime = mtime;
+
+        double camState[9];
+        cam->GetPosition(&camState[0]);
+        cam->GetViewUp(&camState[3]);
+        cam->GetFocalPoint(&camState[6]);
+
+        this->Internal->ViewSorter->SetCameraState(camState);
+
+        //convert screen rectangle to world frustum
+        const double HALFEXT=1.0; /*1.0 means all way to edge of screen*/
+        const double XMAX=HALFEXT;
+        const double XMIN=-HALFEXT;
+        const double YMAX=HALFEXT;
+        const double YMIN=-HALFEXT;
+        const double viewP[32] = {
+          XMIN, YMIN,  0.0, 1.0,
+          XMIN, YMIN,  1.0, 1.0,
+          XMIN, YMAX,  0.0, 1.0,
+          XMIN, YMAX,  1.0, 1.0,
+          XMAX, YMIN,  0.0, 1.0,
+          XMAX, YMIN,  1.0, 1.0,
+          XMAX, YMAX,  0.0, 1.0,
+          XMAX, YMAX,  1.0, 1.0
+        };
+
+        double frust[32];
+        memcpy(frust, viewP, 32*sizeof(double));
+        for (int index=0; index<8; index++)
+          {
+          ren->ViewToWorld(frust[index*4+0],
+                           frust[index*4+1],
+                           frust[index*4+2]);
+          }
+
+        this->Internal->ViewSorter->SetFrustum(frust);
+        return true;
+        }
+      }
+    }
+
   return false;
 }
 
@@ -131,35 +189,48 @@ void vtkPrioritizedStreamer::ResetEveryone()
   while(!iter->IsDoneWithTraversal())
     {
     //get a hold of the pipeline for this object
-    vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
+    vtkStreamingHarness *harness = vtkStreamingHarness::SafeDownCast
       (iter->GetCurrentObject());
     iter->GoToNextItem();
 
     //make it start over
-    next->SetPass(0);
+    harness->SetPass(0);
 
     //compute pipeline priority to render in most to least important order
     //get a hold of the priority list
-    vtkPieceList *pl = next->GetPieceList1();
+    vtkPieceList *pl = harness->GetPieceList1();
     if (!pl)
       {
-      //make one if never created befor
+      //make one if never created before
       pl = vtkPieceList::New();
-      next->SetPieceList1(pl);
+      harness->SetPieceList1(pl);
       pl->Delete();
       }
     //start off cleanly
     pl->Clear();
 
     //compute a priority for each piece and sort them
-    int max = next->GetNumberOfPieces();
+    int max = harness->GetNumberOfPieces();
     for (int i = 0; i < max; i++)
       {
       vtkPiece p;
       p.SetPiece(i);
       p.SetNumPieces(max);
       p.SetResolution(1.0);
-      p.SetPipelinePriority(next->ComputePriority(i,max,1.0));
+      p.SetPipelinePriority(harness->ComputePriority(i,max,1.0));
+
+      double pbbox[6];
+      double gConf = 1.0;
+      double aMin = 1.0;
+      double aMax = -1.0;
+      double aConf = 1.0;
+      harness->ComputeMetaInformation
+        (i, max, 1.0,
+         pbbox, gConf, aMin, aMax, aConf);
+
+      double gPri = this->Internal->ViewSorter->CalculatePriority(pbbox);
+      p.SetViewPriority(gPri);
+
       pl->AddPiece(p);
       }
     pl->SortPriorities();
@@ -167,7 +238,7 @@ void vtkPrioritizedStreamer::ResetEveryone()
     //convert pass number to absolute piece number
     int pieceNext = pl->GetPiece(0).GetPiece();
     //cerr << "PASS " << 0 << " PIECE " << pieceNext << endl;
-    next->SetPiece(pieceNext);
+    harness->SetPiece(pieceNext);
     }
   iter->Delete();
 }
@@ -186,29 +257,29 @@ void vtkPrioritizedStreamer::AdvanceEveryone()
   bool everyone_done = true;
   while(!iter->IsDoneWithTraversal())
     {
-    vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
+    vtkStreamingHarness *harness = vtkStreamingHarness::SafeDownCast
       (iter->GetCurrentObject());
     iter->GoToNextItem();
 
     //increment to the next pass
-    int maxPiece = next->GetNumberOfPieces();
-    int passNow = next->GetPass();
+    int maxPiece = harness->GetNumberOfPieces();
+    int passNow = harness->GetPass();
     int passNext = passNow;
     if (passNow < maxPiece)
       {
       passNext++;
       }
-    next->SetPass(passNext);
+    harness->SetPass(passNext);
 
     //map that to an absolute piece number
     int pieceNext = passNext;
-    vtkPieceList *pl = next->GetPieceList1();
+    vtkPieceList *pl = harness->GetPieceList1();
     if (pl)
       {
       pieceNext = pl->GetPiece(passNext).GetPiece();
       }
     //cerr << "PASS " << passNext << " PIECE " << pieceNext << endl;
-    next->SetPiece(pieceNext);
+    harness->SetPiece(pieceNext);
    }
 
   iter->Delete();
@@ -231,7 +302,7 @@ void vtkPrioritizedStreamer::StartRenderEvent()
     return;
     }
 
-  if (this->IsFirstPass() || this->IsRestart())
+  if (this->IsRestart() || this->IsFirstPass())
     {
     //start off by clearing the screen
     ren->EraseOn();

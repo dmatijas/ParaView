@@ -17,13 +17,15 @@
 #include "vtkCallbackCommand.h"
 #include "vtkCollection.h"
 #include "vtkCollectionIterator.h"
+#include "vtkInteractorStyle.h"
 #include "vtkObjectFactory.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
+#include "vtkRenderWindowInteractor.h"
 #include "vtkStreamingHarness.h"
 
 //TODO:
-//consider multiple renderers and non harnesses sources carefully
+//consider multiple renderers and non harnessed sources carefully
 //consider other UI events
 //interface to schedule render callbacks at a later time
 //interface to progressor
@@ -105,12 +107,23 @@ void vtkStreamingDriver::SetRenderWindow(vtkRenderWindow *rw)
     {
     this->Internal->RenderWindow->Delete();
     }
+  this->Internal->RenderWindow = rw;
   if (!rw)
     {
     return;
     }
   rw->Register(this);
-  this->Internal->RenderWindow = rw;
+  vtkRenderWindowInteractor *iren = rw->GetInteractor();
+  if(iren)
+    {
+    vtkInteractorStyle *istyle = vtkInteractorStyle::SafeDownCast
+      (iren->GetInteractorStyle());
+    if (istyle)
+      {
+      //cerr << "SET OFF" << endl;
+      //istyle->AutoAdjustCameraClippingRangeOff();
+      }
+    }
 
   if (this->Internal->WindowWatcher)
     {

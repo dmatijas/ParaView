@@ -56,10 +56,10 @@ void vtkIterativeStreamer::StartRenderEvent()
   bool everyone_done = true;
   while(!iter->IsDoneWithTraversal())
     {
-    vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
+    vtkStreamingHarness *harness = vtkStreamingHarness::SafeDownCast
       (iter->GetCurrentObject());
     iter->GoToNextItem();
-    int pieceNow = next->GetPiece();
+    int pieceNow = harness->GetPiece();
     if (pieceNow == 0)
       {
       //first pass has to clear to start off
@@ -70,7 +70,7 @@ void vtkIterativeStreamer::StartRenderEvent()
       rw->SwapBuffersOff();
       }
 
-    int maxPiece = next->GetNumberOfPieces();
+    int maxPiece = harness->GetNumberOfPieces();
     if (pieceNow < maxPiece-1)
       {
       everyone_done = false;
@@ -105,18 +105,18 @@ void vtkIterativeStreamer::EndRenderEvent()
   bool everyone_done = true;
   while(!iter->IsDoneWithTraversal())
     {
-    vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
+    vtkStreamingHarness *harness = vtkStreamingHarness::SafeDownCast
       (iter->GetCurrentObject());
     iter->GoToNextItem();
-    int maxPiece = next->GetNumberOfPieces();
-    int pieceNow = next->GetPiece();
+    int maxPiece = harness->GetNumberOfPieces();
+    int pieceNow = harness->GetPiece();
     int pieceNext = pieceNow;
     if (pieceNow+1 < maxPiece)
       {
       everyone_done = false;
       pieceNext++;
       }
-    next->SetPiece(pieceNext);
+    harness->SetPiece(pieceNext);
     }
 
   if (everyone_done)
@@ -125,9 +125,9 @@ void vtkIterativeStreamer::EndRenderEvent()
     iter->InitTraversal();
     while(!iter->IsDoneWithTraversal())
       {
-      vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
+      vtkStreamingHarness *harness = vtkStreamingHarness::SafeDownCast
         (iter->GetCurrentObject());
-      next->SetPiece(0);
+      harness->SetPiece(0);
       iter->GoToNextItem();
       }
 

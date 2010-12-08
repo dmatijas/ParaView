@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
+IF( COMMAND CMAKE_POLICY )
+  CMAKE_POLICY( SET CMP0003 NEW )
+ENDIF( COMMAND CMAKE_POLICY )
 
 PROJECT(vtkAdaptive)
 INCLUDE ( ${CMAKE_ROOT}/Modules/FindVTK.cmake )
