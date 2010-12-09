@@ -185,15 +185,17 @@ int vtkPieceCacheFilter::RequestData(
   double updateResolution = outInfo->Get(
     vtkStreamingDemandDrivenPipeline::UPDATE_RESOLUTION());
 
+
+  int index = this->ComputeIndex(updatePiece, updatePieces);
   DEBUGPRINT_CACHING(
   cerr << "PCF(" << this << ") Looking for "
        << updatePiece << "/"
        << updatePieces << "+"
        << updateGhosts << "@"
-       << updateResolution << endl;
+       << updateResolution << " in slot "
+       << index << endl;
                      );
 
-  int index = this->ComputeIndex(updatePiece, updatePieces);
   CacheType::iterator pos = this->Cache.find(index);
   bool found = false;
   if (pos != this->Cache.end())
@@ -266,7 +268,8 @@ int vtkPieceCacheFilter::RequestData(
     DEBUGPRINT_CACHING(
     cerr << "PCF(" << this
     << ") Cache insert of piece "
-    << updatePiece << "/" << updatePieces << "@" << updateResolution << endl;
+    << updatePiece << "/" << updatePieces << "@" << updateResolution << " in slot "
+    << index << endl;
                       );
 
     vtkDataSet *cpy = inData->NewInstance();
@@ -417,4 +420,10 @@ void vtkPieceCacheFilter::ClearAppendTable()
     {
     this->AppendTable.erase(pos++);
     }
+}
+
+//----------------------------------------------------------------------------
+vtkExecutive* vtkPieceCacheFilter::CreateDefaultExecutive()
+{
+  return vtkPieceCacheExecutive::New();
 }

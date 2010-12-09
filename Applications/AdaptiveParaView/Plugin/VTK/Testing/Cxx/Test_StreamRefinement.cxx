@@ -13,13 +13,14 @@
 
 =========================================================================*/
 
-// Tests that the prioritized streaming works as expected.
+// Tests that multiresolution streaming works as expected.
 
 #include "vtkActor.h"
 #include "vtkCamera.h"
 #include "vtkContourFilter.h"
 #include "vtkDataSetMapper.h"
 #include "vtkMultiResolutionStreamer.h"
+#include "vtkPieceCacheFilter.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
@@ -54,10 +55,15 @@ int main(int argc, char *argv[])
   contour->SetInputConnection(sms->GetOutputPort());
   contour->SetValue(0,50.0);
 
+  // A cache in the pipeline is essential for decent performance
+  vtkSmartPointer<vtkPieceCacheFilter> pcf =
+    vtkSmartPointer<vtkPieceCacheFilter>::New();
+  pcf->SetInputConnection(contour->GetOutputPort());
+
   // An access point to inject resolution into the pipeline
   vtkSmartPointer<vtkStreamingHarness> harness=
     vtkSmartPointer<vtkStreamingHarness>::New();
-  harness->SetInputConnection(contour->GetOutputPort());
+  harness->SetInputConnection(pcf->GetOutputPort());
   harness->SetNumberOfPieces(1);
   harness->SetPiece(0);
   harness->SetResolution(0.0);

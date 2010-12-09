@@ -19,12 +19,13 @@
 #include "vtkCamera.h"
 #include "vtkContourFilter.h"
 #include "vtkDataSetMapper.h"
+#include "vtkPieceCacheFilter.h"
+#include "vtkPrioritizedStreamer.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkSmartPointer.h"
 #include "vtkStreamedMandelbrot.h"
-#include "vtkPrioritizedStreamer.h"
 #include "vtkStreamingHarness.h"
 #include "vtkTesting.h"
 
@@ -54,10 +55,15 @@ int main(int argc, char *argv[])
   contour->SetInputConnection(sms->GetOutputPort());
   contour->SetValue(0,50.0);
 
+  // A cache in the pipeline is essential for decent performance
+  vtkSmartPointer<vtkPieceCacheFilter> pcf =
+    vtkSmartPointer<vtkPieceCacheFilter>::New();
+  pcf->SetInputConnection(contour->GetOutputPort());
+
   // An access point to inject resolution into the pipeline
   vtkSmartPointer<vtkStreamingHarness> harness=
     vtkSmartPointer<vtkStreamingHarness>::New();
-  harness->SetInputConnection(contour->GetOutputPort());
+  harness->SetInputConnection(pcf->GetOutputPort());
   harness->SetNumberOfPieces(16);
   harness->SetPiece(0);
   harness->SetResolution(1.0);

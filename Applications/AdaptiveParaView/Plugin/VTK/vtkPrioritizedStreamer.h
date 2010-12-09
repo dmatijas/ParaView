@@ -43,7 +43,6 @@ protected:
   virtual void EndRenderEvent();
 
   virtual bool IsFirstPass();
-  virtual bool IsRestart();
   virtual bool IsEveryoneDone();
 
   virtual void ResetEveryone();

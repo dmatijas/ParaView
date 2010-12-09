@@ -14,7 +14,6 @@
 =========================================================================*/
 #include "vtkPrioritizedStreamer.h"
 
-#include "vtkCamera.h"
 #include "vtkCollection.h"
 #include "vtkCollectionIterator.h"
 #include "vtkObjectFactory.h"
@@ -23,7 +22,6 @@
 #include "vtkRenderWindow.h"
 #include "vtkStreamingDriver.h"
 #include "vtkStreamingHarness.h"
-#include "vtkVisibilityPrioritizer.h"
 
 vtkStandardNewMacro(vtkPrioritizedStreamer);
 
@@ -34,18 +32,13 @@ public:
   {
     this->Owner = owner;
     this->FirstPass = true;
-    this->CameraTime = 0;
-    this->ViewSorter = vtkVisibilityPrioritizer::New();
   }
   ~Internals()
   {
-    this->ViewSorter->Delete();
   }
 
   vtkPrioritizedStreamer *Owner;
-  vtkVisibilityPrioritizer *ViewSorter;
   bool FirstPass;
-  unsigned long CameraTime;
 };
 
 //----------------------------------------------------------------------------
@@ -73,63 +66,6 @@ bool vtkPrioritizedStreamer::IsFirstPass()
     {
     return true;
     }
-  return false;
-}
-
-//----------------------------------------------------------------------------
-bool vtkPrioritizedStreamer::IsRestart()
-{
-  //TODO: compare stored last camera with current camera
-  vtkRenderer *ren = this->GetRenderer();
-  if (ren)
-    {
-    vtkCamera * cam = ren->GetActiveCamera();
-    if (cam)
-      {
-      unsigned long mtime = cam->GetMTime();
-      if (mtime > this->Internal->CameraTime)
-        {
-        this->Internal->CameraTime = mtime;
-
-        double camState[9];
-        cam->GetPosition(&camState[0]);
-        cam->GetViewUp(&camState[3]);
-        cam->GetFocalPoint(&camState[6]);
-
-        this->Internal->ViewSorter->SetCameraState(camState);
-
-        //convert screen rectangle to world frustum
-        const double HALFEXT=1.0; /*1.0 means all way to edge of screen*/
-        const double XMAX=HALFEXT;
-        const double XMIN=-HALFEXT;
-        const double YMAX=HALFEXT;
-        const double YMIN=-HALFEXT;
-        const double viewP[32] = {
-          XMIN, YMIN,  0.0, 1.0,
-          XMIN, YMIN,  1.0, 1.0,
-          XMIN, YMAX,  0.0, 1.0,
-          XMIN, YMAX,  1.0, 1.0,
-          XMAX, YMIN,  0.0, 1.0,
-          XMAX, YMIN,  1.0, 1.0,
-          XMAX, YMAX,  0.0, 1.0,
-          XMAX, YMAX,  1.0, 1.0
-        };
-
-        double frust[32];
-        memcpy(frust, viewP, 32*sizeof(double));
-        for (int index=0; index<8; index++)
-          {
-          ren->ViewToWorld(frust[index*4+0],
-                           frust[index*4+1],
-                           frust[index*4+2]);
-          }
-
-        this->Internal->ViewSorter->SetFrustum(frust);
-        return true;
-        }
-      }
-    }
-
   return false;
 }
 
@@ -227,8 +163,7 @@ void vtkPrioritizedStreamer::ResetEveryone()
       harness->ComputeMetaInformation
         (i, max, 1.0,
          pbbox, gConf, aMin, aMax, aConf);
-
-      double gPri = this->Internal->ViewSorter->CalculatePriority(pbbox);
+      double gPri = this->CalculateViewPriority(pbbox);
       p.SetViewPriority(gPri);
 
       pl->AddPiece(p);

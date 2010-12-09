@@ -112,6 +112,11 @@ protected:
   vtkPieceCacheFilter();
   ~vtkPieceCacheFilter();
 
+  // Description:
+  // We need to override this method because we need to use a
+  // specialized executive.
+  vtkExecutive* CreateDefaultExecutive();
+
   //Description:
   //Overriden to retrieve results from cache if present and to insert them into the
   //cache when not

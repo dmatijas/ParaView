@@ -69,13 +69,6 @@ bool vtkMultiResolutionStreamer::IsFirstPass()
 }
 
 //----------------------------------------------------------------------------
-bool vtkMultiResolutionStreamer::IsRestart()
-{
-  //TODO: compare stored last camera with current camera
-  return false;
-}
-
-//----------------------------------------------------------------------------
 bool vtkMultiResolutionStreamer::IsWendDone()
 {
   vtkCollection *harnesses = this->GetHarnesses();
@@ -195,7 +188,19 @@ void vtkMultiResolutionStreamer::PrepareFirstPass()
       int np = ToDo->GetPiece(i).GetNumPieces();
       double res = ToDo->GetPiece(i).GetResolution();
       double priority = harness->ComputePriority(p, np, res);
+      //cerr << "CHECKED PPRI OF " << p << "/" << np << "@" << res << " = " << priority << endl;
       ToDo->GetPiece(i).SetPipelinePriority(priority);
+
+      double pbbox[6];
+      double gConf = 1.0;
+      double aMin = 1.0;
+      double aMax = -1.0;
+      double aConf = 1.0;
+      harness->ComputeMetaInformation
+        (p, np, res,
+         pbbox, gConf, aMin, aMax, aConf);
+      double gPri = this->CalculateViewPriority(pbbox);
+      ToDo->GetPiece(i).SetViewPriority(gPri);
       }
 
     //sort them
@@ -233,12 +238,19 @@ void vtkMultiResolutionStreamer::ChooseNextPieces()
       vtkPiece p = ToDo->PopPiece();
       NextFrame->AddPiece(p);
       //adjust pipeline to draw the chosen piece
-      //cerr << "CHOSE "
-      //     << p.GetPiece() << "/" << p.GetNumPieces()
-      //     << "@" << p.GetResolution() << endl;
+      /*
+      cerr << "CHOSE "
+           << p.GetPiece() << "/" << p.GetNumPieces()
+           << "@" << p.GetResolution() << endl;
+      */
       harness->SetPiece(p.GetPiece());
       harness->SetNumberOfPieces(p.GetNumPieces());
       harness->SetResolution(p.GetResolution());
+
+      //TODO:
+      //This should not be necessary, but the PieceCacheFilter is silently
+      //producing the stale (lower res?) results without it.
+      harness->ComputePriority(p.GetPiece(), p.GetNumPieces(), p.GetResolution());
       }
     }
 
@@ -291,18 +303,18 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
 
     //split it N times
     int nrNP = np*degree;
-    int gPieces = nrNP;
     for (int child=0; child < degree; child++)
       {
       int nrA = p * degree + child;
-      int gPieceA = nrNP + nrA;
 
       vtkPiece pA;
       pA.SetPiece(nrA);
       pA.SetNumPieces(nrNP);
       pA.SetResolution(resolution);
-      double priority = harness->ComputePriority(gPieceA, gPieces, resolution);
-      pA.SetPipelinePriority(priority);
+
+      //TODO: is this needed here? If so shouldn't I also do view priority?
+      //double priority = harness->ComputePriority(nrA, nrNP, resolution);
+      //pA.SetPipelinePriority(priority);
 
       ToDo->AddPiece(pA);
       }
@@ -326,10 +338,8 @@ void vtkMultiResolutionStreamer::StartRenderEvent()
     return;
     }
 
-  if (this->IsFirstPass() || this->IsRestart())
+  if (this->IsRestart() || this->IsFirstPass())
     {
-    //cerr << "FIRST PASS" << endl;
-
     //start off by clearing the screen
     ren->EraseOn();
     rw->EraseOn();

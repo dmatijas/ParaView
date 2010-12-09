@@ -15,6 +15,7 @@
 #include "vtkStreamingDriver.h"
 
 #include "vtkCallbackCommand.h"
+#include "vtkCamera.h"
 #include "vtkCollection.h"
 #include "vtkCollectionIterator.h"
 #include "vtkInteractorStyle.h"
@@ -23,6 +24,7 @@
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkStreamingHarness.h"
+#include "vtkVisibilityPrioritizer.h"
 
 //TODO:
 //consider multiple renderers and non harnessed sources carefully
@@ -41,6 +43,10 @@ public:
     this->WindowWatcher = NULL;
     this->Harnesses = vtkCollection::New();
     this->RenderLaterFunction = NULL;
+
+    //auxilliary functionality, that help view sorting sublasses
+    this->ViewSorter = vtkVisibilityPrioritizer::New();
+    this->CameraTime = 0;
   }
   ~Internals()
   {
@@ -51,13 +57,19 @@ public:
     this->WindowWatcher->Delete();
     }
   this->Harnesses->Delete();
+  this->ViewSorter->Delete();
   }
+
   vtkStreamingDriver *Owner;
   vtkRenderer *Renderer;
   vtkRenderWindow *RenderWindow;
   vtkCallbackCommand *WindowWatcher;
   vtkCollection *Harnesses;
   void (*RenderLaterFunction) (void);
+
+  //auxilliary functionality, that help view sorting sublasses
+  vtkVisibilityPrioritizer *ViewSorter;
+  unsigned long CameraTime;
 };
 
 static void VTKSD_RenderEvent(vtkObject *vtkNotUsed(caller),
@@ -121,7 +133,7 @@ void vtkStreamingDriver::SetRenderWindow(vtkRenderWindow *rw)
     if (istyle)
       {
       //cerr << "SET OFF" << endl;
-      //istyle->AutoAdjustCameraClippingRangeOff();
+      istyle->AutoAdjustCameraClippingRangeOff();
       }
     }
 
@@ -214,4 +226,66 @@ void vtkStreamingDriver::RenderEventually()
     {
     this->Internal->RenderWindow->Render();
     }
+}
+
+//----------------------------------------------------------------------------
+bool vtkStreamingDriver::IsRestart()
+{
+  vtkRenderer *ren = this->GetRenderer();
+  if (ren)
+    {
+    vtkCamera * cam = ren->GetActiveCamera();
+    if (cam)
+      {
+      unsigned long mtime = cam->GetMTime();
+      if (mtime > this->Internal->CameraTime)
+        {
+        this->Internal->CameraTime = mtime;
+
+        double camState[9];
+        cam->GetPosition(&camState[0]);
+        cam->GetViewUp(&camState[3]);
+        cam->GetFocalPoint(&camState[6]);
+
+        this->Internal->ViewSorter->SetCameraState(camState);
+
+        //convert screen rectangle to world frustum
+        const double HALFEXT=1.0; /*1.0 means all way to edge of screen*/
+        const double XMAX=HALFEXT;
+        const double XMIN=-HALFEXT;
+        const double YMAX=HALFEXT;
+        const double YMIN=-HALFEXT;
+        const double viewP[32] = {
+          XMIN, YMIN,  0.0, 1.0,
+          XMIN, YMIN,  1.0, 1.0,
+          XMIN, YMAX,  0.0, 1.0,
+          XMIN, YMAX,  1.0, 1.0,
+          XMAX, YMIN,  0.0, 1.0,
+          XMAX, YMIN,  1.0, 1.0,
+          XMAX, YMAX,  0.0, 1.0,
+          XMAX, YMAX,  1.0, 1.0
+        };
+
+        double frust[32];
+        memcpy(frust, viewP, 32*sizeof(double));
+        for (int index=0; index<8; index++)
+          {
+          ren->ViewToWorld(frust[index*4+0],
+                           frust[index*4+1],
+                           frust[index*4+2]);
+          }
+
+        this->Internal->ViewSorter->SetFrustum(frust);
+        return true;
+        }
+      }
+    }
+
+  return false;
+}
+
+//------------------------------------------------------------------------------
+double vtkStreamingDriver::CalculateViewPriority(double *pbbox)
+{
+  return this->Internal->ViewSorter->CalculatePriority(pbbox);
 }

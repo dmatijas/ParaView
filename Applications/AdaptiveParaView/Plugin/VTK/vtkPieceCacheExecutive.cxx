@@ -25,12 +25,16 @@
 
 vtkStandardNewMacro(vtkPieceCacheExecutive);
 
+#if 0
+#define DEBUGPRINT_CACHING(arg) arg;
+#else
 #define DEBUGPRINT_CACHING(arg) \
   if (!vtkPieceCacheFilter::SafeDownCast(this->GetAlgorithm())->GetSilenced()\
       && vtkAdaptiveOptions::GetEnableStreamMessages())\
     {\
       arg;\
     }
+#endif
 
 //----------------------------------------------------------------------------
 vtkPieceCacheExecutive
@@ -124,7 +128,8 @@ int vtkPieceCacheExecutive
           cerr << "PCE(" << this << ") cache hit piece "
                << updatePiece << "/"
                << updateNumberOfPieces << "@"
-               << updateResolution << " DR=" << dataResolution <<endl;
+               << updateResolution << " DR=" << dataResolution << " in slot "
+          << index << endl;
           );
           //pipeline request can terminate now, yeah!
           return 0;
@@ -152,6 +157,11 @@ int vtkPieceCacheExecutive
            << updateNumberOfPieces << "@"
            << updateResolution << endl;
                          );
+      if (updatePiece >= updateNumberOfPieces)
+        {
+        vtkErrorMacro("Requested an invalid piece, something is badly wrong");
+        updatePiece = updateNumberOfPieces-1;
+        }
       }
     }
   else if (dataInfo->Get(vtkDataObject::DATA_EXTENT_TYPE()) == VTK_3D_EXTENT)

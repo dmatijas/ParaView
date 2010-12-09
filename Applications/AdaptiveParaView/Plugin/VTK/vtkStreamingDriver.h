@@ -78,6 +78,17 @@ protected:
   // assigned, that is used, otherwise render is called directly.
   void RenderEventually();
 
+  // Description:
+  // Determines if camera has changed AND sets up for view prioritization
+  // This is common to prioritized subclasses, so I've placed it here
+  virtual bool IsRestart();
+
+  // Description
+  // Determines view priority of an object relative to camera frustum
+  // Must call Is Restart prior to calling this.
+  // This is common to prioritized subclasses, so I've placed it here
+  double CalculateViewPriority(double *bbox);
+
 private:
   vtkStreamingDriver(const vtkStreamingDriver&);  // Not implemented.
   void operator=(const vtkStreamingDriver&);  // Not implemented.
