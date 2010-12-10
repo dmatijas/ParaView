@@ -61,6 +61,7 @@ SET (MOC_HEADERS
   pqObjectPickingBehavior.h
   pqParaViewBehaviors.h
   pqPersistentMainWindowStateBehavior.h
+  pqPipelineContextMenuBehavior.h
   pqPluginActionGroupBehavior.h
   pqPluginDockWidgetsBehavior.h
   pqProxyGroupMenuManager.h
@@ -91,6 +92,7 @@ SET (MOC_HEADERS
   pqUndoRedoBehavior.h
   pqUndoRedoReaction.h
   pqVCRToolbar.h
+  pqVerifyRequiredPluginBehavior.h
   pqViewFrameActionsBehavior.h
   pqViewMenuManager.h
   pqViewSettingsManager.h
@@ -200,6 +202,8 @@ SET (SOURCE_FILES
   pqParaViewMenuBuilders.h
   pqPersistentMainWindowStateBehavior.cxx
   pqPersistentMainWindowStateBehavior.h
+  pqPipelineContextMenuBehavior.cxx
+  pqPipelineContextMenuBehavior.h
   pqPluginActionGroupBehavior.cxx
   pqPluginActionGroupBehavior.h
   pqPluginDockWidgetsBehavior.cxx
@@ -260,6 +264,8 @@ SET (SOURCE_FILES
   pqUndoRedoReaction.h
   pqVCRToolbar.cxx
   pqVCRToolbar.h
+  pqVerifyRequiredPluginBehavior.cxx
+  pqVerifyRequiredPluginBehavior.h
   pqViewFrameActionsBehavior.cxx
   pqViewFrameActionsBehavior.h
   pqViewMenuManager.cxx
@@ -273,19 +279,13 @@ SET (SOURCE_FILES
 IF(PARAVIEW_ENABLE_PYTHON)
   SET (MOC_HEADERS
     ${MOC_HEADERS}
-    pqEditTraceReaction.h
     pqMacroReaction.h
-    pqSaveTraceReaction.h
     pqTraceReaction.h
     )
   SET (SOURCE_FILES
     ${SOURCE_FILES}
-    pqEditTraceReaction.cxx
-    pqEditTraceReaction.h
     pqMacroReaction.cxx
     pqMacroReaction.h
-    pqSaveTraceReaction.cxx
-    pqSaveTraceReaction.h
     pqTraceReaction.cxx
     pqTraceReaction.h
     )

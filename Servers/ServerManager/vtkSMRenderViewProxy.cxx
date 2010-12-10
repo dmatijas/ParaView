@@ -28,13 +28,16 @@
 #include "vtkPVDataInformation.h"
 #include "vtkPVGenericRenderWindowInteractor.h"
 #include "vtkPVLastSelectionInformation.h"
+#include "vtkPVOptions.h"
 #include "vtkPVRenderView.h"
 #include "vtkPVRenderViewProxy.h"
+#include "vtkPVServerInformation.h"
 #include "vtkPVXMLElement.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkSelectionNode.h"
 #include "vtkSmartPointer.h"
+#include "vtkSMEnumerationDomain.h"
 #include "vtkSMInputProperty.h"
 #include "vtkSMProperty.h"
 #include "vtkSMPropertyHelper.h"
@@ -45,6 +48,10 @@
 #include "vtkTransform.h"
 #include "vtkWeakPointer.h"
 #include "vtkWindowToImageFilter.h"
+#include "vtkSelection.h"
+#include "vtkInformation.h"
+
+#include <vtkstd/map>
 
 namespace
 {
@@ -78,6 +85,12 @@ public:
     {
     this->Proxy->InteractiveRender();
     }
+  // Description:
+  // Returns true if the most recent render indeed employed low-res rendering.
+  virtual bool LastRenderWasInteractive()
+    {
+    return this->Proxy->LastRenderWasInteractive();
+    }
 
   vtkWeakPointer<vtkSMRenderViewProxy> Proxy;
   };
@@ -88,11 +101,20 @@ vtkStandardNewMacro(vtkSMRenderViewProxy);
 //----------------------------------------------------------------------------
 vtkSMRenderViewProxy::vtkSMRenderViewProxy()
 {
+  this->IsSelectionCached = false;
 }
 
 //----------------------------------------------------------------------------
 vtkSMRenderViewProxy::~vtkSMRenderViewProxy()
 {
+}
+
+//-----------------------------------------------------------------------------
+bool vtkSMRenderViewProxy::LastRenderWasInteractive()
+{
+  vtkPVRenderView* rv = vtkPVRenderView::SafeDownCast(
+    this->GetClientSideObject());
+  return rv? rv->GetUsedLODForLastRender() : false;
 }
 
 //-----------------------------------------------------------------------------
@@ -111,9 +133,20 @@ bool vtkSMRenderViewProxy::IsSelectionAvailable()
 //-----------------------------------------------------------------------------
 const char* vtkSMRenderViewProxy::IsSelectVisibleCellsAvailable()
 {
-  if (vtkProcessModule::GetProcessModule()->GetRenderClientMode(this->ConnectionID))
+  vtkProcessModule* pm = vtkProcessModule::GetProcessModule();
+  if (pm->GetIsAutoMPI())
+    {
+    return "Cannot support selection in auto-mpi mode";
+    }
+  if (pm->GetRenderClientMode(this->ConnectionID))
     {
     return "Cannot support selection in render-server mode";
+    }
+  vtkPVServerInformation* server_info =
+    pm->GetServerInformation(this->ConnectionID);
+  if (server_info && server_info->GetNumberOfMachines() > 0)
+    {
+    return "Cannot support selection in CAVE mode.";
     }
 
   //check if we don't have enough color depth to do color buffer selection
@@ -251,6 +284,24 @@ void vtkSMRenderViewProxy::CreateVTKObjects()
   rv->AddObserver(vtkCommand::SelectionChangedEvent, forwarder);
   rv->AddObserver(vtkCommand::ResetCameraEvent, forwarder);
   forwarder->Delete();
+
+  // We'll do this for now. But we need to not do this here. I am leaning
+  // towards not making stereo a command line option as mentioned by a very
+  // not-too-pleased user on the mailing list a while ago.
+  vtkProcessModule* pm = vtkProcessModule::GetProcessModule();
+  vtkPVOptions* pvoptions = pm->GetOptions();
+  if (pvoptions->GetUseStereoRendering())
+    {
+    vtkSMPropertyHelper(this, "StereoCapableWindow").Set(1);
+    vtkSMPropertyHelper(this, "StereoRender").Set(1);
+    vtkSMEnumerationDomain* domain = vtkSMEnumerationDomain::SafeDownCast(
+      this->GetProperty("StereoType")->GetDomain("enum"));
+    if (domain && domain->HasEntryText(pvoptions->GetStereoType()))
+      {
+      vtkSMPropertyHelper(this, "StereoType").Set(
+        domain->GetEntryValueForText(pvoptions->GetStereoType()));
+      }
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -425,6 +476,23 @@ void vtkSMRenderViewProxy::ResetCamera(double bounds[6])
 }
 
 //-----------------------------------------------------------------------------
+void vtkSMRenderViewProxy::MarkDirty(vtkSMProxy* modifiedProxy)
+{
+  if (this->IsSelectionCached)
+    {
+    this->IsSelectionCached = false;
+    // cout << "InvalidateCachedSelection" << endl;
+    vtkClientServerStream stream;
+    stream << vtkClientServerStream::Invoke
+      << this->GetID()
+      << "InvalidateCachedSelection"
+      << vtkClientServerStream::End;
+    vtkProcessModule::GetProcessModule()->SendStream(
+      this->ConnectionID, this->Servers, stream);
+    }
+}
+
+//-----------------------------------------------------------------------------
 vtkSMRepresentationProxy* vtkSMRenderViewProxy::Pick(int x, int y)
 {
   // 1) Create surface selection.
@@ -450,74 +518,103 @@ vtkSMRepresentationProxy* vtkSMRenderViewProxy::Pick(int x, int y)
 bool vtkSMRenderViewProxy::SelectSurfaceCells(int region[4],
   vtkCollection* selectedRepresentations,
   vtkCollection* selectionSources,
-  bool vtkNotUsed(multiple_selections))
+  bool multiple_selections)
 {
   if (!this->IsSelectionAvailable())
     {
     return false;
     }
 
+  this->IsSelectionCached = true;
   vtkProcessModule* pm = vtkProcessModule::GetProcessModule();
   vtkClientServerStream stream;
-  stream << vtkClientServerStream::Invoke
-    << this->GetID()
-    << "ForceRemoteRenderingOn"
-    << vtkClientServerStream::End;
-  pm->SendStream(this->ConnectionID, this->Servers, stream);
-
-  this->StillRender();
-
   stream << vtkClientServerStream::Invoke
     << this->GetID()
     << "SelectCells"
     << vtkClientServerStream::InsertArray(region, 4)
     << vtkClientServerStream::End;
-  stream << vtkClientServerStream::Invoke
-    << this->GetID()
-    << "ForceRemoteRenderingOff"
-    << vtkClientServerStream::End;
   pm->SendStream(this->ConnectionID, this->Servers, stream);
-
-  return this->FetchLastSelection(selectedRepresentations, selectionSources);
+  return this->FetchLastSelection(
+    multiple_selections, selectedRepresentations, selectionSources);
 }
 
 //----------------------------------------------------------------------------
 bool vtkSMRenderViewProxy::SelectSurfacePoints(int region[4],
   vtkCollection* selectedRepresentations,
   vtkCollection* selectionSources,
-  bool vtkNotUsed(multiple_selections))
+  bool multiple_selections)
 {
   if (!this->IsSelectionAvailable())
     {
     return false;
     }
 
+  this->IsSelectionCached = true;
   vtkProcessModule* pm = vtkProcessModule::GetProcessModule();
   vtkClientServerStream stream;
-  stream << vtkClientServerStream::Invoke
-    << this->GetID()
-    << "ForceRemoteRenderingOn"
-    << vtkClientServerStream::End;
-  pm->SendStream(this->ConnectionID, this->Servers, stream);
-
-  this->StillRender();
-
   stream << vtkClientServerStream::Invoke
     << this->GetID()
     << "SelectPoints"
     << vtkClientServerStream::InsertArray(region, 4)
     << vtkClientServerStream::End;
-  stream << vtkClientServerStream::Invoke
-    << this->GetID()
-    << "ForceRemoteRenderingOff"
-    << vtkClientServerStream::End;
   pm->SendStream(this->ConnectionID, this->Servers, stream);
+  return this->FetchLastSelection(
+    multiple_selections, selectedRepresentations, selectionSources);
+}
 
-  return this->FetchLastSelection(selectedRepresentations, selectionSources);
+namespace
+{
+  //-----------------------------------------------------------------------------
+  static void vtkShrinkSelection(vtkSelection* sel)
+    {
+    // sel->Print(cout);
+    vtkstd::map<int, int> pixelCounts;
+    unsigned int numNodes = sel->GetNumberOfNodes();
+    int choosen = -1;
+    int maxPixels = -1;
+    for (unsigned int cc=0; cc < numNodes; cc++)
+      {
+      vtkSelectionNode* node = sel->GetNode(cc);
+      vtkInformation* properties = node->GetProperties();
+      if (properties->Has(vtkSelectionNode::PIXEL_COUNT()) &&
+        properties->Has(vtkSelectionNode::SOURCE_ID()))
+        {
+        int numPixels = properties->Get(vtkSelectionNode::PIXEL_COUNT());
+        int source_id = properties->Get(vtkSelectionNode::SOURCE_ID());
+        pixelCounts[source_id] += numPixels;
+        if (pixelCounts[source_id] > maxPixels)
+          {
+          maxPixels = numPixels;
+          choosen = source_id;
+          }
+        }
+      }
+
+    vtkstd::vector<vtkSmartPointer<vtkSelectionNode> > choosenNodes;
+    if (choosen != -1)
+      {
+      for (unsigned int cc=0; cc < numNodes; cc++)
+        {
+        vtkSelectionNode* node = sel->GetNode(cc);
+        vtkInformation* properties = node->GetProperties();
+        if (properties->Has(vtkSelectionNode::SOURCE_ID()) &&
+          properties->Get(vtkSelectionNode::SOURCE_ID()) == choosen)
+          {
+          choosenNodes.push_back(node);
+          }
+        }
+      }
+    sel->RemoveAllNodes();
+    for (unsigned int cc=0; cc <choosenNodes.size(); cc++)
+      {
+      sel->AddNode(choosenNodes[cc]);
+      }
+    }
 }
 
 //----------------------------------------------------------------------------
 bool vtkSMRenderViewProxy::FetchLastSelection(
+  bool multiple_selections,
   vtkCollection* selectedRepresentations, vtkCollection* selectionSources)
 {
   if (selectionSources && selectedRepresentations)
@@ -529,6 +626,11 @@ bool vtkSMRenderViewProxy::FetchLastSelection(
       vtkProcessModule::DATA_SERVER, info, this->GetID());
 
     vtkSelection* selection = info->GetSelection();
+    if (!multiple_selections)
+      {
+      // only pass through selection over a single representation.
+      vtkShrinkSelection(selection);
+      }
     vtkSMSelectionHelper::NewSelectionSourcesFromSelection(
       selection, this, selectionSources, selectedRepresentations);
     return (selectionSources->GetNumberOfItems() > 0);
@@ -671,13 +773,13 @@ bool vtkSMRenderViewProxy::SelectFrustumInternal(int region[4],
 //----------------------------------------------------------------------------
 vtkImageData* vtkSMRenderViewProxy::CaptureWindowInternal(int magnification)
 {
-  vtkRenderWindow* window = this->GetRenderWindow();
   vtkPVRenderView* view =
     vtkPVRenderView::SafeDownCast(this->GetClientSideObject());
 
   // Offscreen rendering is not functioning properly on the mac.
   // Do not use it.
 #if !defined(__APPLE__)
+  vtkRenderWindow* window = this->GetRenderWindow();
   int prevOffscreen = window->GetOffScreenRendering();
   bool use_offscreen = view->GetUseOffscreenRendering() ||
     view->GetUseOffscreenRenderingForScreenshots();
@@ -701,6 +803,7 @@ vtkImageData* vtkSMRenderViewProxy::CaptureWindowInternal(int magnification)
   w2i->SetMagnification(magnification);
   w2i->ReadFrontBufferOff();
   w2i->ShouldRerenderOff();
+  w2i->FixBoundaryOn();
 
   // BUG #8715: We go through this indirection since the active connection needs
   // to be set during update since it may request re-renders if magnification >1.

@@ -127,6 +127,10 @@ IF(NOT PV_INSTALL_DOC_DIR)
   SET(PV_INSTALL_DOC_DIR doc)
 ENDIF(NOT PV_INSTALL_DOC_DIR)
 
+# Override QtTesting install variables
+SET(QtTesting_INSTALL_BIN_DIR ${PV_INSTALL_BIN_DIR})
+SET(QtTesting_INSTALL_LIB_DIR ${PV_INSTALL_LIB_DIR})
+
 #########################################################################
 # Install no development files by default, but allow the user to get
 # them installed by setting PV_INSTALL_DEVELOPMENT to true.
@@ -247,9 +251,9 @@ ENDIF(CMAKE_COMPILER_2005)
 IF(CMAKE_SYSTEM MATCHES AIX  AND CMAKE_CXX_COMPILER MATCHES xlC)
   INCLUDE(CheckCCompilerFlag)
   CHECK_C_COMPILER_FLAG("-binitfini:poe_remote_main" _XLC_COMPILER_HAS_INITFINI)
-  IF(_XLC_COMPILER_HAS_INITFINI)
-    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -binitfini:poe_remote_main")
-  ENDIF(_XLC_COMPILER_HAS_INITFINI)
+  IF(_XLC_COMPILER_HAS_INITFINI AND PARAVIEW_USE_MPI)
+    SET(MPI_EXTRA_LIBRARY "${MPI_EXTRA_LIBRARY} -binitfini:poe_remote_main" CACHE STRING "" FORCE)
+  ENDIF(_XLC_COMPILER_HAS_INITFINI AND PARAVIEW_USE_MPI)
 ENDIF(CMAKE_SYSTEM MATCHES AIX  AND CMAKE_CXX_COMPILER MATCHES xlC)
 
 # Cray Xt3/Catamount does support only a subset of networking/posix/etc. functions
@@ -454,7 +458,7 @@ ELSE(PARAVIEW_USE_SYSTEM_HDF5)
   SET(HDF5_INSTALL_LIB_DIR ${PV_INSTALL_LIB_DIR})
   SET(HDF5_INSTALL_INCLUDE_DIR ${PV_INSTALL_INCLUDE_DIR})
 
-  SET(HDF5_ENABLE_Z_LIB_SUPPORT ON)
+  SET(HDF5_ENABLE_Z_LIB_SUPPORT ON CACHE BOOL "Enable Zlib Filters" FORCE)
 
   # Setup all necessary overrides for zlib so that HDF5 uses our
   # internally compiled zlib rather than any other version
@@ -505,6 +509,8 @@ ELSE(PARAVIEW_USE_SYSTEM_HDF5)
     HDF5_ENABLE_Z_LIB_SUPPORT
     HDF5_ENABLE_SZIP_SUPPORT
     HDF5_ENABLE_SZIP_ENCODING
+    HDF5_ENABLE_THREADSAFE
+    HDF5_ENABLE_TRACE
     HDF5_USE_H5DUMP_PACKED_BITS
     HDF5_BUILD_FORTRAN
     HDF5_BUILD_EXAMPLES
@@ -522,17 +528,10 @@ ELSE(PARAVIEW_USE_SYSTEM_HDF5)
     HDF5_ENABLE_HSIZET
     H5_SET_LIB_OPTIONS
     HDF5_BUILD_WITH_INSTALL_NAME
+    HDF5_PACKAGE_EXTLIBS
     )
 
 ENDIF(PARAVIEW_USE_SYSTEM_HDF5)
-
-#########################################################################
-# Configure SILO
-OPTION(PARAVIEW_USE_SILO "Use SILO library" OFF)
-MARK_AS_ADVANCED(PARAVIEW_USE_SILO)
-IF(PARAVIEW_USE_SILO)
-  INCLUDE(${ParaView_CMAKE_DIR}/FindSILO.cmake)
-ENDIF(PARAVIEW_USE_SILO)
 
 #########################################################################
 # Configure Xdmf
@@ -597,16 +596,16 @@ IF(VTK_USE_MPI)
   OPTION(PARAVIEW_USE_ICE_T "Use IceT multi display manager" ON)
   MARK_AS_ADVANCED(PARAVIEW_USE_ICE_T)
   IF (BUILD_TESTING)
-    OPTION(ICET_BUILD_TESTING "Build and run the ICE-T tests." OFF)
+    OPTION(ICET_BUILD_TESTING "Build and run the IceT tests." OFF)
     MARK_AS_ADVANCED(ICET_BUILD_TESTING)
     IF (PARAVIEW_TEST_COMPOSITING)
       # Force the testing of IceT if we are testing compositing.
       SET(ICET_BUILD_TESTING ON
-        CACHE BOOL "Build and run the ICE-T tests." FORCE)
+        CACHE BOOL "Build and run the IceT tests." FORCE)
     ENDIF (PARAVIEW_TEST_COMPOSITING)
   ENDIF (BUILD_TESTING)
   IF(PARAVIEW_USE_ICE_T)
-    SET(ICE_T_INCLUDE_DIR
+    SET(ICET_INCLUDE_DIR
       ${ParaView_SOURCE_DIR}/Utilities/IceT/src/include
       ${ParaView_BINARY_DIR}/Utilities/IceT/src/include
       )
@@ -616,6 +615,39 @@ IF(VTK_USE_MPI)
   # Needed for mpich 2
   ADD_DEFINITIONS("-DMPICH_IGNORE_CXX_SEEK")
 ENDIF(VTK_USE_MPI)
+
+ #########################################################################
+# Configure VisItBridge
+OPTION(PARAVIEW_USE_VISITBRIDGE "Use VisIt Bridge" OFF)
+SET(VISITBRIDGE_USE_SILO OFF)
+SET(VISITBRIDGE_USE_CGNS OFF)
+IF(PARAVIEW_USE_VISITBRIDGE)
+  ADD_SUBDIRECTORY(Utilities/VisItBridge)
+  #these are need for the client server wrappings of the databases
+  #and the avt algorithms
+  SET(VISITAVTALGORITHMS_KITS_DIR
+    "${ParaView_BINARY_DIR}/Utilities/VisItBridge/AvtAlgorithms/Utilities")
+  SET(VISITAVTALGORITHMS_INCLUDE_DIRS
+    "${ParaView_SOURCE_DIR}/Utilities/VisItBridge/AvtAlgorithms"
+    "${ParaView_BINARY_DIR}/Utilities/VisItBridge/AvtAlgorithms"
+    )
+
+  SET(VISITDATABASES_KITS_DIR
+    "${ParaView_BINARY_DIR}/Utilities/VisItBridge/databases/Utilities")
+  SET(VISITDATABASES_INCLUDE_DIRS
+    ${VISITAVTALGORITHMS_INCLUDE_DIRS}
+    "${ParaView_SOURCE_DIR}/Utilities/VisItBridge/databases"
+    "${ParaView_BINARY_DIR}/Utilities/VisItBridge/databases"
+    )
+  SET(VISITBRIDGE_READERS_XML_FILE "${ParaView_SOURCE_DIR}/Utilities/VisItBridge/databases/visit_readers.xml")
+  SET(VISITBRIDGE_READERS_GUI_XML_FILE "${ParaView_SOURCE_DIR}/Utilities/VisItBridge/databases/visit_readers_gui.xml")
+
+  #needed for plugins to be able to use the VisIt Plugin macros
+  SET(VISITBRIDGE_CMAKE_DIR
+     "${ParaView_SOURCE_DIR}/Utilities/VisItBridge/CMake")
+  SET(VISITBRIDGE_USE_FILE "${ParaView_BINARY_DIR}/Utilities/VisItBridge/VisItBridgeUse.cmake")
+ENDIF(PARAVIEW_USE_VISITBRIDGE)
+
 
 #########################################################################
 # Configure Common
@@ -784,6 +816,11 @@ SET(PVSERVERCOMMON_INCLUDE_DIR
   ${ParaView_SOURCE_DIR}/Servers/Common
   ${ParaView_BINARY_DIR}/Servers/Common)
 
+IF(PARAVIEW_USE_VISITBRIDGE)
+  PARAVIEW_INCLUDE_SERVERMANAGER_RESOURCES(${VISITBRIDGE_READERS_XML_FILE})
+  PARAVIEW_INCLUDE_GUI_RESOURCES(${VISITBRIDGE_READERS_GUI_XML_FILE})
+ENDIF(PARAVIEW_USE_VISITBRIDGE)
+
 ADD_SUBDIRECTORY(Servers)
 
 #########################################################################
@@ -820,7 +857,6 @@ SET(PARAVIEW_INCLUDE_DIRS
   ${ParaView_SOURCE_DIR}/Utilities/VTKPythonWrapping/Executable
   ${ParaView_SOURCE_DIR}/VTK/Wrapping
   ${ParaView_BINARY_DIR}/VTK/Wrapping
-#
   ${ParaView_BINARY_DIR}
   ${ParaView_BINARY_DIR}/Utilities/VTKClientServer
   ${ParaView_BINARY_DIR}/Servers/Filters
@@ -829,6 +865,11 @@ SET(PARAVIEW_INCLUDE_DIRS
   ${XDMF_INCLUDE_DIRS}
   ${HDF5_INCLUDE_DIR}
   )
+
+IF(PARAVIEW_USE_VISITBRIDGE)
+  SET(PARAVIEW_INCLUDE_DIRS ${PARAVIEW_INCLUDE_DIRS}
+  ${VISITAVTALGORITHMS_INCLUDE_DIRS})
+ENDIF(PARAVIEW_USE_VISITBRIDGE)
 
 CONFIGURE_FILE(${ParaView_SOURCE_DIR}/vtkPVConfig.h.in
   ${ParaView_BINARY_DIR}/vtkPVConfig.h

@@ -5,7 +5,8 @@ MACRO(paraview_build_optional_plugin name comment subdirectory default)
   MARK_AS_ADVANCED(PARAVIEW_BUILD_PLUGIN_${name})
   IF(PARAVIEW_BUILD_PLUGIN_${name})
     MESSAGE(STATUS "Plugin: ${comment} enabled")
-    ADD_SUBDIRECTORY("${subdirectory}")
+    get_filename_component(builddirectory ${subdirectory} NAME_WE)
+    ADD_SUBDIRECTORY("${subdirectory}" "${CMAKE_CURRENT_BINARY_DIR}/${builddirectory}")
   ELSE(PARAVIEW_BUILD_PLUGIN_${name})
     MESSAGE(STATUS "Plugin: ${comment} disabled")
   ENDIF(PARAVIEW_BUILD_PLUGIN_${name})
@@ -46,7 +47,6 @@ paraview_build_optional_plugin( SurfaceLIC "SurfaceLIC" SurfaceLIC ON )
 #paraview_build_optional_plugin(ClientGraphViewFrame "ClientGraphViewFrame" ClientGraphViewFrame OFF)
 #paraview_build_optional_plugin(ClientTreeAreaView "ClientTreeAreaView" ClientTreeAreaView OFF)
 paraview_build_optional_plugin(VaporPlugin "Plugin to read NCAR VDF files" Vapor OFF)
-paraview_build_optional_plugin(VisItReaderPlugin "VisItReaderPlugin" VisItDatabaseBridge OFF)
 paraview_build_optional_plugin(H5PartReader "Reader for *.h5part files" H5PartReader ON)
 paraview_build_optional_plugin(AdiosReader "Reader for *.bp files based on Adios" AdiosReader OFF)
 IF(PARAVIEW_BUILD_QT_GUI)
@@ -59,3 +59,14 @@ paraview_build_optional_plugin(ForceTime "Override time requests" ForceTime OFF)
 IF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/VisTrails/CMakeLists.txt)
   paraview_build_optional_plugin(VisTrailsPlugin "VisTrailsPlugin" VisTrails ON)
 ENDIF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/VisTrails/CMakeLists.txt)
+
+#------------------------------------------------------------------------
+# Build any plugins located outside of ParaView.
+SET (PARAVIEW_EXTERNAL_PLUGINS_FILE "" CACHE FILEPATH
+  "Path to a cmake file containing calls to build additional plugins external to ParaView.")
+
+MARK_AS_ADVANCED(PARAVIEW_EXTERNAL_PLUGINS_FILE)
+
+IF (EXISTS "${PARAVIEW_EXTERNAL_PLUGINS_FILE}")
+  INCLUDE("${PARAVIEW_EXTERNAL_PLUGINS_FILE}")
+ENDIF (EXISTS "${PARAVIEW_EXTERNAL_PLUGINS_FILE}")

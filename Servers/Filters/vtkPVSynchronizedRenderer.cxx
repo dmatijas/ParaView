@@ -16,10 +16,12 @@
 
 #include "vtkBoundingBox.h"
 #include "vtkCameraPass.h"
-#include "vtkClientServerSynchronizedRenderers.h"
+#include "vtkCaveSynchronizedRenderers.h"
+#include "vtkCompositedSynchronizedRenderers.h"
 #include "vtkImageProcessingPass.h"
 #include "vtkObjectFactory.h"
 #include "vtkProcessModule.h"
+#include "vtkPVClientServerSynchronizedRenderers.h"
 #include "vtkPVConfig.h"
 #include "vtkPVDefaultPass.h"
 #include "vtkPVOptions.h"
@@ -32,6 +34,8 @@
 # include "vtkIceTSynchronizedRenderers.h"
 #endif
 
+#include <assert.h>
+
 vtkStandardNewMacro(vtkPVSynchronizedRenderer);
 //----------------------------------------------------------------------------
 vtkPVSynchronizedRenderer::vtkPVSynchronizedRenderer()
@@ -41,7 +45,16 @@ vtkPVSynchronizedRenderer::vtkPVSynchronizedRenderer()
   this->Enabled = true;
   this->ImageReductionFactor = 1;
   this->Renderer = 0;
+  this->Mode = INVALID;
+  this->CSSynchronizer = 0;
+  this->ParallelSynchronizer = 0;
+  this->DisableIceT = false;
+}
 
+//----------------------------------------------------------------------------
+void vtkPVSynchronizedRenderer::Initialize()
+{
+  assert(this->Mode == INVALID);
   vtkProcessModule* pm = vtkProcessModule::GetProcessModule();
   if (!pm)
     {
@@ -76,11 +89,8 @@ vtkPVSynchronizedRenderer::vtkPVSynchronizedRenderer()
     this->Mode = CLIENT;
     }
 
-
-  this->CSSynchronizer = 0;
-  this->ParallelSynchronizer = 0;
-
   bool in_tile_display_mode = false;
+  bool in_cave_mode = false;
   int tile_dims[2] = {0, 0};
   int tile_mullions[2] = {0, 0};
   vtkPVServerInformation* server_info = NULL;
@@ -97,6 +107,11 @@ vtkPVSynchronizedRenderer::vtkPVSynchronizedRenderer()
   tile_dims[0] = server_info->GetTileDimensions()[0];
   tile_dims[1] = server_info->GetTileDimensions()[1];
   in_tile_display_mode = (tile_dims[0] > 0 || tile_dims[1] > 0);
+  if (!in_tile_display_mode)
+    {
+    in_cave_mode = server_info->GetNumberOfMachines() > 0;
+      // these are present when a pvx file is specified.
+    }
 
   // we ensure that tile_dims are non-zero. We are passing the tile_dims to
   // vtkIceTSynchronizedRenderers and should be (1, 1) when not in tile-display
@@ -114,14 +129,14 @@ vtkPVSynchronizedRenderer::vtkPVSynchronizedRenderer()
 
   case CLIENT:
       {
-      if (in_tile_display_mode)
+      if (in_tile_display_mode || in_cave_mode)
         {
         this->CSSynchronizer = vtkSynchronizedRenderers::New();
         this->CSSynchronizer->WriteBackImagesOff();
         }
       else
         {
-        this->CSSynchronizer = vtkClientServerSynchronizedRenderers::New();
+        this->CSSynchronizer = vtkPVClientServerSynchronizedRenderers::New();
         this->CSSynchronizer->WriteBackImagesOn();
         }
       this->CSSynchronizer->SetRootProcessId(0);
@@ -133,13 +148,13 @@ vtkPVSynchronizedRenderer::vtkPVSynchronizedRenderer()
 
   case SERVER:
       {
-      if (in_tile_display_mode)
+      if (in_tile_display_mode || in_cave_mode)
         {
         this->CSSynchronizer = vtkSynchronizedRenderers::New();
         }
       else
         {
-        this->CSSynchronizer = vtkClientServerSynchronizedRenderers::New();
+        this->CSSynchronizer = vtkPVClientServerSynchronizedRenderers::New();
         }
       this->CSSynchronizer->WriteBackImagesOff();
       this->CSSynchronizer->SetRootProcessId(1);
@@ -151,17 +166,31 @@ vtkPVSynchronizedRenderer::vtkPVSynchronizedRenderer()
     // break;
 
   case BATCH:
-    if (pm->GetNumberOfLocalPartitions() > 1)
+    if (in_cave_mode)
+      {
+      this->ParallelSynchronizer = vtkCaveSynchronizedRenderers::New();
+      this->ParallelSynchronizer->SetParallelController(
+        vtkMultiProcessController::GetGlobalController());
+      this->ParallelSynchronizer->WriteBackImagesOn();
+      }
+    else if (pm->GetNumberOfLocalPartitions() > 1)
       {
 #ifdef PARAVIEW_USE_ICE_T
-      this->ParallelSynchronizer = vtkIceTSynchronizedRenderers::New();
-      static_cast<vtkIceTSynchronizedRenderers*>(this->ParallelSynchronizer)->SetTileDimensions(
-        tile_dims[0], tile_dims[1]);
-      static_cast<vtkIceTSynchronizedRenderers*>(this->ParallelSynchronizer)->SetTileMullions(
-        tile_mullions[0], tile_mullions[1]);
+      if (this->DisableIceT)
+        {
+        this->ParallelSynchronizer = vtkCompositedSynchronizedRenderers::New();
+        }
+      else
+        {
+        this->ParallelSynchronizer = vtkIceTSynchronizedRenderers::New();
+        static_cast<vtkIceTSynchronizedRenderers*>(this->ParallelSynchronizer)->SetTileDimensions(
+          tile_dims[0], tile_dims[1]);
+        static_cast<vtkIceTSynchronizedRenderers*>(this->ParallelSynchronizer)->SetTileMullions(
+          tile_mullions[0], tile_mullions[1]);
+        }
 #else
       // FIXME: need to add support for compositing when not using IceT
-      this->ParallelSynchronizer = vtkSynchronizedRenderers::New();
+      this->ParallelSynchronizer = vtkCompositedSynchronizedRenderers::New();
 #endif
       this->ParallelSynchronizer->SetParallelController(
         vtkMultiProcessController::GetGlobalController());
@@ -207,6 +236,37 @@ vtkPVSynchronizedRenderer::~vtkPVSynchronizedRenderer()
     }
   this->SetImageProcessingPass(0);
   this->SetRenderPass(0);
+}
+
+//----------------------------------------------------------------------------
+void vtkPVSynchronizedRenderer::SetLossLessCompression(bool val)
+{
+  vtkPVClientServerSynchronizedRenderers* cssync =
+    vtkPVClientServerSynchronizedRenderers::SafeDownCast(this->CSSynchronizer);
+  if (cssync)
+    {
+    cssync->SetLossLessCompression(val);
+    }
+  else
+    {
+    vtkDebugMacro("Not in client-server mode.");
+    }
+}
+
+
+//----------------------------------------------------------------------------
+void vtkPVSynchronizedRenderer::ConfigureCompressor(const char* configuration)
+{
+  vtkPVClientServerSynchronizedRenderers* cssync =
+    vtkPVClientServerSynchronizedRenderers::SafeDownCast(this->CSSynchronizer);
+  if (cssync)
+    {
+    cssync->ConfigureCompressor(configuration);
+    }
+  else
+    {
+    vtkDebugMacro("Not in client-server mode.");
+    }
 }
 
 //----------------------------------------------------------------------------

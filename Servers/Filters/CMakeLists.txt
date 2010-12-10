@@ -39,6 +39,7 @@ SET(Filters_SRCS
   vtkCameraInterpolator2.cxx
   vtkCameraManipulator.cxx
   vtkCameraManipulatorGUIHelper.cxx
+  vtkCaveSynchronizedRenderers.cxx
   vtkChartRepresentation.cxx
   vtkCleanArrays.cxx
   vtkCleanUnstructuredGrid.cxx
@@ -100,7 +101,6 @@ SET(Filters_SRCS
   vtkOutlineRepresentation.cxx
   vtkPConvertSelection.cxx
   vtkPExtractHistogram.cxx
-  vtkParallelCoordinatesRepresentation.cxx
   vtkParallelSerialWriter.cxx
   vtkPEnSightGoldBinaryReader.cxx
   vtkPEnSightGoldReader.cxx
@@ -125,6 +125,7 @@ SET(Filters_SRCS
   vtkPVCacheKeeper.cxx
   vtkPVCacheKeeperPipeline.cxx
   vtkPVCenterAxesActor.cxx
+  vtkPVClientServerSynchronizedRenderers.cxx
   vtkPVClipClosedSurface.cxx
   vtkPVClipDataSet.cxx
   vtkPVCompositeDataPipeline.cxx
@@ -158,6 +159,7 @@ SET(Filters_SRCS
   vtkPVMain.cxx
   vtkPVMergeTables.cxx
   vtkPVNullSource.cxx
+  vtkPVParallelCoordinatesRepresentation.cxx
   vtkPVPostFilter.cxx
   vtkPVPostFilterExecutive.cxx
   vtkPVRecoverGeometryWireframe.cxx
@@ -205,12 +207,14 @@ SET(Filters_SRCS
   vtkSpyPlotBlockIterator.cxx
   vtkSpyPlotIStream.cxx
   vtkSpyPlotReader.cxx
+  vtkSpyPlotHistoryReader.cxx
   vtkSpyPlotReaderMap.cxx
   vtkSpyPlotUniReader.cxx
   vtkSquirtCompressor.cxx
   vtkZlibImageCompressor.cxx
   vtkSurfaceVectors.cxx
   vtkTextSourceRepresentation.cxx
+  vtkTileDisplayHelper.cxx
   vtkTilesHelper.cxx
   vtkTableFFT.cxx
 #  vtkTemporalCacheFilter.cxx
@@ -271,6 +275,7 @@ SET_SOURCE_FILES_PROPERTIES(
   vtkPVRenderViewProxy.cxx
   vtkPVView.cxx
   vtkSciVizStatistics.cxx
+  vtkTileDisplayHelper.cxx
   vtkTransferFunctionEditorRepresentation1D.cxx
   vtkTransferFunctionEditorRepresentation.cxx
   vtkTransferFunctionEditorWidget1D.cxx
@@ -288,13 +293,6 @@ IF(PARAVIEW_ENABLE_PYTHON)
     vtkPythonProgrammableFilter.cxx
     )
 ENDIF(PARAVIEW_ENABLE_PYTHON)
-
-IF(PARAVIEW_USE_SILO)
-  SET(Filters_SRCS ${Filters_SRCS}
-    vtkSiloReader.cxx
-    )
-  INCLUDE_DIRECTORIES(${SILO_INCLUDE_DIR})
-ENDIF(PARAVIEW_USE_SILO)
 
 IF(VTK_USE_MPI)
   SET(Filters_SRCS ${Filters_SRCS}
@@ -347,9 +345,9 @@ INCLUDE_DIRECTORIES(
 # The following was copy/paste from vtkIncludeDirectories.cmake
 # OpenGL include directories.
 IF(APPLE)
-  IF(VTK_USE_X)
+  IF(VTK_USE_X OR VTK_OPENGL_HAS_OSMESA)
     INCLUDE_DIRECTORIES(${OPENGL_INCLUDE_DIR})
-  ENDIF(VTK_USE_X)
+  ENDIF(VTK_USE_X OR VTK_OPENGL_HAS_OSMESA)
 ELSE(APPLE)
   INCLUDE_DIRECTORIES(${OPENGL_INCLUDE_DIR})
 ENDIF(APPLE)
@@ -448,6 +446,10 @@ TARGET_LINK_LIBRARIES(vtkPVFilters
   ${PARAVIEW_ADDITIONAL_LIBRARIES}
   )
 
+IF (VTK_OPENGL_HAS_OSMESA AND OSMESA_LIBRARY)
+  TARGET_LINK_LIBRARIES(vtkPVFilters ${OSMESA_LIBRARY} )
+ENDIF (VTK_OPENGL_HAS_OSMESA AND OSMESA_LIBRARY)
+
 IF(PARAVIEW_ENABLE_PYTHON)
   TARGET_LINK_LIBRARIES(vtkPVFilters
     ${PYTHON_LIBRARIES}
@@ -463,8 +465,8 @@ TARGET_LINK_LIBRARIES(vtkPVFilters ${PARAVIEW_HDF5_LIBRARIES} ${SPCTH_LIBRARIES}
 TARGET_LINK_LIBRARIES(vtkPVFilters vtkClientServer)
 
 IF(VTK_USE_MPI AND PARAVIEW_USE_ICE_T)
-  TARGET_LINK_LIBRARIES(vtkPVFilters icet icet_mpi icet_strategies)
-  INCLUDE_DIRECTORIES(${ICE_T_INCLUDE_DIR})
+  TARGET_LINK_LIBRARIES(vtkPVFilters IceTCore IceTMPI IceTGL)
+  INCLUDE_DIRECTORIES(${ICET_INCLUDE_DIR})
 ENDIF(VTK_USE_MPI AND PARAVIEW_USE_ICE_T)
 
 IF (PARAVIEW_ADAPTOR_LIBRARY)
@@ -538,5 +540,5 @@ ENDIF (NOT PV_INSTALL_NO_DEVELOPMENT)
 # Tests
 #-------------------------------------------------------------------------------------------------
 IF(BUILD_TESTING)
-  SUBDIRS(Testing)
+  ADD_SUBDIRECTORY(Testing)
 ENDIF(BUILD_TESTING)

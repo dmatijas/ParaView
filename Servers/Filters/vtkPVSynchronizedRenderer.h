@@ -37,6 +37,16 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
+  // Set this flag to true before calling Initialize() to disable using
+  // vtkIceTSynchronizedRenderers for parallel rendering.
+  vtkSetMacro(DisableIceT, bool);
+  vtkGetMacro(DisableIceT, bool);
+
+  // Description:
+  // Must be called once to initialize the class.
+  void Initialize();
+
+  // Description:
   // kd tree that gives processes ordering. Initial value is a NULL pointer.
   // This is used only when UseOrderedCompositing is true.
   void SetKdTree(vtkPKdTree *kdtree);
@@ -78,6 +88,15 @@ public:
   void SetRenderPass(vtkRenderPass*);
   vtkGetObjectMacro(RenderPass, vtkRenderPass);
 
+  // Description:
+  // Passes the compressor configuration to the client-server synchronizer, if
+  // any. This affects the image compression used to relay images back to the
+  // client.
+  // See vtkPVClientServerSynchronizedRenderers::ConfigureCompressor() for
+  // details.
+  void ConfigureCompressor(const char* configuration);
+  void SetLossLessCompression(bool);
+
 //BTX
 protected:
   vtkPVSynchronizedRenderer();
@@ -105,6 +124,7 @@ protected:
 
   ModeEnum Mode;
   bool Enabled;
+  bool DisableIceT;
   int ImageReductionFactor;
   vtkRenderer* Renderer;
 private:
