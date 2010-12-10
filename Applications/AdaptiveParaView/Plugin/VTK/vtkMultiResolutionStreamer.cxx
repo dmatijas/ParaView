@@ -137,7 +137,7 @@ bool vtkMultiResolutionStreamer::IsEveryoneDone()
 }
 
 //----------------------------------------------------------------------------
-void vtkMultiResolutionStreamer::PrepareFirstPass()
+void vtkMultiResolutionStreamer::PrepareFirstPass(bool forCamera)
 {
   vtkCollection *harnesses = this->GetHarnesses();
   if (!harnesses)
@@ -173,8 +173,8 @@ void vtkMultiResolutionStreamer::PrepareFirstPass()
       pl->Delete();
       }
 
-    cerr << "PRE REFINE ToDo:" << endl;
-    ToDo->Print();
+    //combine empties that no longer matter
+    this->Reap(harness);
 
     harness->SetNoneToRefine(false); //assume it isn't all done
     //split and refine some of the pieces in nextframe
@@ -182,11 +182,7 @@ void vtkMultiResolutionStreamer::PrepareFirstPass()
     if (numRefined==0)
       {
       harness->SetNoneToRefine(true);
-      cerr << "NONE TO REFINE" << endl;
       }
-
-    cerr << "POST REFINE ToDo:" << endl;
-    ToDo->Print();
 
     //compute priorities for everything we are going to draw this wend
     for (int i = 0; i < ToDo->GetNumberOfPieces(); i++)
@@ -196,7 +192,13 @@ void vtkMultiResolutionStreamer::PrepareFirstPass()
       int np = piece.GetNumPieces();
       double res = piece.GetResolution();
       double priority = harness->ComputePriority(p, np, res);
-      //cerr << "CHECKED PPRI OF " << p << "/" << np << "@" << res << " = " << priority << endl;
+      /*
+      if (!priority)
+        {
+        cerr << "CHECKED PPRI OF " << p << "/" << np << "@" << res
+             << " = " << priority << endl;
+        }
+      */
       piece.SetPipelinePriority(priority);
 
       double pbbox[6];
@@ -208,8 +210,17 @@ void vtkMultiResolutionStreamer::PrepareFirstPass()
         (p, np, res,
          pbbox, gConf, aMin, aMax, aConf);
       double gPri = this->CalculateViewPriority(pbbox);
-      //cerr << "CHECKED VPRI OF " << p << "/" << np << "@" << res << " = " << gPri << endl;
+      //cerr << "CHECKED VPRI OF " << p << "/" << np << "@" << res
+      //<< " = " << gPri << endl;
       piece.SetViewPriority(gPri);
+
+      if (forCamera)
+        {
+        //TODO: this whole forCamera and reapedflag business is a workaround
+        //for the way refining/reaping can by cyclic and not terminate.
+        //I would like to find a better termination condition and remove this.
+        piece.SetReapedFlag(false);
+        }
 
       ToDo->SetPiece(i, piece);
       }
@@ -218,12 +229,7 @@ void vtkMultiResolutionStreamer::PrepareFirstPass()
     ToDo->SortPriorities();
     //cerr << "NUM PIECES " << ToDo->GetNumberOfPieces() << endl;
 
-    cerr << "POST COMPUTE AND SORT ToDo:" << endl;
-    ToDo->Print();
-
-    //combine empties that no longer matter
-    this->Reap(harness);
-    }
+   }
 
   iter->Delete();
 }
@@ -274,6 +280,10 @@ void vtkMultiResolutionStreamer::ChooseNextPieces()
 //----------------------------------------------------------------------------
 int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
 {
+  //TODO: maxHeight must be common to both reap and refine and should be setable
+  int maxHeight = 5;
+  double res_delta = (1.0/maxHeight);
+
   vtkPieceList *ToDo = harness->GetPieceList1();
   vtkPieceList *NextFrame = harness->GetPieceList2();
   vtkPieceList *ToSplit = vtkPieceList::New();
@@ -285,8 +295,10 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
     double res = piece.GetResolution();
     double priority = piece.GetPriority();
     double mdr = 1.0;
-    if (priority > 0.0 &&
-        res < 1.0)
+    bool reaped = piece.GetReapedFlag();
+    if (!reaped &&
+        priority > 0.0 &&
+        (res+res_delta <= 1.0))
       {
       numSplittable++;
       ToSplit->AddPiece(piece);
@@ -301,8 +313,6 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
   int numSplit = 0;
   //TODO: maxSplits should be setable
   int maxSplits = 2;
-  //TODO: maxHeight must be common to both reap and refine and should be setable
-  int maxHeight = 5;
   //TODO: Degree could be variable
   int degree = 2;
   for (;
@@ -315,13 +325,18 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
     int np = piece.GetNumPieces();
     double res = piece.GetResolution();
 
+    /*
     cerr << "SPLIT "
          << p << "/" << np
          << " -> ";
+    */
 
     //compute next resolution to request for it
-    double resolution = res + (1.0/maxHeight);
-
+    double resolution = res + res_delta;
+    if (resolution > 1.0)
+      {
+      resolution = 1.0;
+      }
 
     //split it N times
     int nrNP = np*degree;
@@ -334,16 +349,11 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
       pA.SetNumPieces(nrNP);
       pA.SetResolution(resolution);
 
-      cerr << nrA << "/" << nrNP << " & ";
-
-      //TODO: is this needed here? If so shouldn't I also do view priority?
-      //double priority = harness->ComputePriority(nrA, nrNP, resolution);
-      //pA.SetPipelinePriority(priority);
-
+      //cerr << nrA << "/" << nrNP << "@" << resolution << " & ";
       ToDo->AddPiece(pA);
       }
 
-    cerr << endl;
+    //cerr << endl;
     }
 
   //put any pieces we did not split back into next wend
@@ -357,7 +367,6 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
 void vtkMultiResolutionStreamer::Reap(vtkStreamingHarness *harness)
 {
   vtkPieceList *ToDo = harness->GetPieceList1();
-
   int important = ToDo->GetNumberNonZeroPriority();
   int total = ToDo->GetNumberOfPieces();
 
@@ -369,6 +378,10 @@ void vtkMultiResolutionStreamer::Reap(vtkStreamingHarness *harness)
     return;
     }
 
+  //TODO: maxHeight must be common to both reap and refine and should be setable
+  int maxHeight = 5;
+  double res_delta = (1.0/maxHeight);
+
   vtkPieceList *toMerge = vtkPieceList::New();
   for (int i = total-1; i>=important; --i)
     {
@@ -376,13 +389,8 @@ void vtkMultiResolutionStreamer::Reap(vtkStreamingHarness *harness)
     toMerge->AddPiece(piece);
     }
 
-  cerr << "TOMERGE:" << endl;
-  toMerge->Print();
+ vtkPieceList *merged = vtkPieceList::New();
 
-  vtkPieceList *merged = vtkPieceList::New();
-
-  //TODO: maxHeight must be common to both reap and refine and should be setable
-  int maxHeight = 5;
   bool done = false;
   while (!done)
     {
@@ -406,14 +414,21 @@ void vtkMultiResolutionStreamer::Reap(vtkStreamingHarness *harness)
           {
           piece.SetPiece(p/2);
           piece.SetNumPieces(np/2);
-          double res = piece.GetResolution()-(1.0/maxHeight);
+          double res = piece.GetResolution()-res_delta;
+          if (res < 0.0)
+            {
+            res = 0.0;
+            }
           piece.SetResolution(res);
-          //piece.SetPipelinePriority(0.0);
+          piece.SetPipelinePriority(0.0);
+          piece.SetReapedFlag(true);
 
+          /*
           cerr << "REAP "
                << p << "&" << p2 << "/" << np
                << " -> "
-               << p/2 << "/" << np/2 << endl;
+               << p/2 << "/" << np/2 << "@" << res << endl;
+          */
 
           merged->AddPiece(piece);
           toMerge->RemovePiece(j);
@@ -446,14 +461,9 @@ void vtkMultiResolutionStreamer::Reap(vtkStreamingHarness *harness)
 
     toMerge->MergePieceList(merged);
     }
-  cerr << "POST REAP:"<< endl;
-  //toMerge->Print();
-  //cerr << "TM:" << toMerge->GetNumberOfPieces() << " "
-  //     << "M: " << merged->GetNumberOfPieces() << endl;
 
   //add whatever remains back in
   ToDo->MergePieceList(toMerge);
-  ToDo->Print();
   toMerge->Delete();
   merged->Delete();
 }
@@ -461,22 +471,22 @@ void vtkMultiResolutionStreamer::Reap(vtkStreamingHarness *harness)
 //----------------------------------------------------------------------------
 void vtkMultiResolutionStreamer::StartRenderEvent()
 {
-  vtkCollection *harnesses = this->GetHarnesses();
   vtkRenderer *ren = this->GetRenderer();
   vtkRenderWindow *rw = this->GetRenderWindow();
-  if (!harnesses || !ren || !rw)
+  if (!ren || !rw)
     {
     return;
     }
 
-  if (this->IsRestart() || this->IsFirstPass())
+  bool forCamera = this->IsRestart();
+  if (forCamera || this->IsFirstPass())
     {
     //start off by clearing the screen
     ren->EraseOn();
     rw->EraseOn();
 
     //and telling all the harnesses to get ready
-    this->PrepareFirstPass();
+    this->PrepareFirstPass(forCamera);
 
     //don't swap back to front automatically, only show what we've
     //drawn when the entire domain is covered
@@ -495,10 +505,9 @@ void vtkMultiResolutionStreamer::StartRenderEvent()
 //----------------------------------------------------------------------------
 void vtkMultiResolutionStreamer::EndRenderEvent()
 {
-  vtkCollection *harnesses = this->GetHarnesses();
   vtkRenderer *ren = this->GetRenderer();
   vtkRenderWindow *rw = this->GetRenderWindow();
-  if (!harnesses || !ren || !rw)
+  if (!ren || !rw)
     {
     return;
     }
@@ -510,7 +519,7 @@ void vtkMultiResolutionStreamer::EndRenderEvent()
 
  if (this->IsEveryoneDone())
     {
-    cerr << "EVERYONE DONE" << endl;
+    //cerr << "EVERYONE DONE" << endl;
     //next pass should start with clear screen
     this->Internal->WendDone = true;
 
@@ -522,7 +531,7 @@ void vtkMultiResolutionStreamer::EndRenderEvent()
     {
     if (this->IsWendDone())
       {
-      cerr << "START NEXT WEND" << endl;
+      //cerr << "START NEXT WEND" << endl;
       //next pass should start with clear screen
       this->Internal->WendDone = true;
 

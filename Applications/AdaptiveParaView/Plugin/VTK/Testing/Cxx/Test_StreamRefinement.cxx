@@ -67,6 +67,7 @@ int main(int argc, char *argv[])
   harness->SetNumberOfPieces(1);
   harness->SetPiece(0);
   harness->SetResolution(0.0);
+  harness->SetCacheFilter(pcf);
 
   vtkSmartPointer<vtkDataSetMapper> map1 =
     vtkSmartPointer<vtkDataSetMapper>::New();

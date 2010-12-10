@@ -9,7 +9,8 @@
 #include <sstream>
 #include <iostream>
 
-#define LOG(arg) cerr << arg;
+#define LOG(arg) ;
+//cerr << arg;
 /*
   {\
   std::ostringstream stream;\
@@ -154,7 +155,7 @@ void vtkPieceList::SortPriorities()
 void vtkPieceList::Print()
 {
   int np = this->GetNumberOfPieces();
-  LOG("PL(" << this << "):" << np << " [";);
+  LOG("PL(" << this << "):" << np << " \n[";);
   for (int i = 0; i < np; i++)
     {
     LOG(
@@ -172,7 +173,7 @@ void vtkPieceList::Print()
     << this->GetPiece(i).GetPipelinePriority() << " "
     << this->GetPiece(i).GetViewPriority() << " "
     << this->GetPiece(i).GetCachedPriority() << ")"
-    << "},";);
+    << "},\n";);
     }
 
   LOG("]" << endl;);

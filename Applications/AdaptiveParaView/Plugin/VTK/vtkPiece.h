@@ -122,6 +122,9 @@ public:
   }
 
 
+  void SetReapedFlag(bool nv) { this->ReapedFlag = nv; }
+  int GetReapedFlag() { return this->ReapedFlag; }
+
 protected:
 
   int Processor;
@@ -134,6 +137,8 @@ protected:
   double PipelinePriority;
   double ViewPriority;
   double CachedPriority;
+
+  bool ReapedFlag;
 
   friend class vtkPieceList;
 
