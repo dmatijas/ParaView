@@ -49,6 +49,7 @@ protected:
   virtual void PrepareFirstPass();
   virtual void ChooseNextPieces();
   virtual int Refine(vtkStreamingHarness *);
+  virtual void Reap(vtkStreamingHarness *);
 
   Internals *Internal;
 

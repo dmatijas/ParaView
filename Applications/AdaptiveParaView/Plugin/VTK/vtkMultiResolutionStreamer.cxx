@@ -17,6 +17,7 @@
 #include "vtkCollection.h"
 #include "vtkCollectionIterator.h"
 #include "vtkObjectFactory.h"
+#include "vtkPieceCacheFilter.h"
 #include "vtkPieceList.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
@@ -172,24 +173,31 @@ void vtkMultiResolutionStreamer::PrepareFirstPass()
       pl->Delete();
       }
 
+    cerr << "PRE REFINE ToDo:" << endl;
+    ToDo->Print();
+
     harness->SetNoneToRefine(false); //assume it isn't all done
     //split and refine some of the pieces in nextframe
     int numRefined = this->Refine(harness);
     if (numRefined==0)
       {
       harness->SetNoneToRefine(true);
-      //cerr << "NONE TO REFINE" << endl;
+      cerr << "NONE TO REFINE" << endl;
       }
+
+    cerr << "POST REFINE ToDo:" << endl;
+    ToDo->Print();
 
     //compute priorities for everything we are going to draw this wend
     for (int i = 0; i < ToDo->GetNumberOfPieces(); i++)
       {
-      int p = ToDo->GetPiece(i).GetPiece();
-      int np = ToDo->GetPiece(i).GetNumPieces();
-      double res = ToDo->GetPiece(i).GetResolution();
+      vtkPiece piece = ToDo->GetPiece(i);
+      int p = piece.GetPiece();
+      int np = piece.GetNumPieces();
+      double res = piece.GetResolution();
       double priority = harness->ComputePriority(p, np, res);
       //cerr << "CHECKED PPRI OF " << p << "/" << np << "@" << res << " = " << priority << endl;
-      ToDo->GetPiece(i).SetPipelinePriority(priority);
+      piece.SetPipelinePriority(priority);
 
       double pbbox[6];
       double gConf = 1.0;
@@ -200,15 +208,21 @@ void vtkMultiResolutionStreamer::PrepareFirstPass()
         (p, np, res,
          pbbox, gConf, aMin, aMax, aConf);
       double gPri = this->CalculateViewPriority(pbbox);
-      ToDo->GetPiece(i).SetViewPriority(gPri);
+      //cerr << "CHECKED VPRI OF " << p << "/" << np << "@" << res << " = " << gPri << endl;
+      piece.SetViewPriority(gPri);
+
+      ToDo->SetPiece(i, piece);
       }
 
     //sort them
     ToDo->SortPriorities();
     //cerr << "NUM PIECES " << ToDo->GetNumberOfPieces() << endl;
 
-    //TODO: combine empties that no longer matter
-    //this->Reap();
+    cerr << "POST COMPUTE AND SORT ToDo:" << endl;
+    ToDo->Print();
+
+    //combine empties that no longer matter
+    this->Reap(harness);
     }
 
   iter->Delete();
@@ -285,8 +299,11 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
 
   //loop through the splittable pieces, and split some of them
   int numSplit = 0;
+  //TODO: maxSplits should be setable
   int maxSplits = 2;
+  //TODO: maxHeight must be common to both reap and refine and should be setable
   int maxHeight = 5;
+  //TODO: Degree could be variable
   int degree = 2;
   for (;
        numSplit < maxSplits && ToSplit->GetNumberOfPieces() != 0;
@@ -298,8 +315,13 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
     int np = piece.GetNumPieces();
     double res = piece.GetResolution();
 
+    cerr << "SPLIT "
+         << p << "/" << np
+         << " -> ";
+
     //compute next resolution to request for it
     double resolution = res + (1.0/maxHeight);
+
 
     //split it N times
     int nrNP = np*degree;
@@ -312,12 +334,16 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
       pA.SetNumPieces(nrNP);
       pA.SetResolution(resolution);
 
+      cerr << nrA << "/" << nrNP << " & ";
+
       //TODO: is this needed here? If so shouldn't I also do view priority?
       //double priority = harness->ComputePriority(nrA, nrNP, resolution);
       //pA.SetPipelinePriority(priority);
 
       ToDo->AddPiece(pA);
       }
+
+    cerr << endl;
     }
 
   //put any pieces we did not split back into next wend
@@ -325,6 +351,111 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
   ToSplit->Delete();
 
   return numSplit;
+}
+
+//----------------------------------------------------------------------------
+void vtkMultiResolutionStreamer::Reap(vtkStreamingHarness *harness)
+{
+  vtkPieceList *ToDo = harness->GetPieceList1();
+
+  int important = ToDo->GetNumberNonZeroPriority();
+  int total = ToDo->GetNumberOfPieces();
+
+  //cerr << "ToDo:" << endl;
+  //ToDo->Print();
+
+  if (important == total)
+    {
+    return;
+    }
+
+  vtkPieceList *toMerge = vtkPieceList::New();
+  for (int i = total-1; i>=important; --i)
+    {
+    vtkPiece piece = ToDo->PopPiece(i);
+    toMerge->AddPiece(piece);
+    }
+
+  cerr << "TOMERGE:" << endl;
+  toMerge->Print();
+
+  vtkPieceList *merged = vtkPieceList::New();
+
+  //TODO: maxHeight must be common to both reap and refine and should be setable
+  int maxHeight = 5;
+  bool done = false;
+  while (!done)
+    {
+    int mcount = 0;
+    //pick a piece
+    while (toMerge->GetNumberOfPieces()>0)
+      {
+      vtkPiece piece = toMerge->PopPiece();
+      int p = piece.GetPiece();
+      int np = piece.GetNumPieces();
+      bool found = false;
+
+      //look for a piece that can be merged with it
+      for (int j = 0; j < toMerge->GetNumberOfPieces(); j++)
+        {
+        vtkPiece other = toMerge->GetPiece(j);
+        int p2 = other.GetPiece();
+        int np2 = other.GetNumPieces();
+        if ((np==np2) &&
+            (p/2==p2/2) ) //TODO, when Degree==N!=2, have to round up all N sibs
+          {
+          piece.SetPiece(p/2);
+          piece.SetNumPieces(np/2);
+          double res = piece.GetResolution()-(1.0/maxHeight);
+          piece.SetResolution(res);
+          //piece.SetPipelinePriority(0.0);
+
+          cerr << "REAP "
+               << p << "&" << p2 << "/" << np
+               << " -> "
+               << p/2 << "/" << np/2 << endl;
+
+          merged->AddPiece(piece);
+          toMerge->RemovePiece(j);
+          found = true;
+          mcount++;
+
+          vtkPieceCacheFilter *pcf = harness->GetCacheFilter();
+          if (pcf)
+            {
+            int index;
+            index = pcf->ComputeIndex(p,np);
+            pcf->DeletePiece(index);
+            index = pcf->ComputeIndex(p2,np);
+            pcf->DeletePiece(index);
+            }
+          break;
+          }
+        }
+      if (!found)
+        {
+        //cerr << "no match";
+        merged->AddPiece(piece);
+        }
+      //cerr << endl;
+      }
+    if (mcount==0)
+      {
+      done = true;
+      }
+
+    toMerge->MergePieceList(merged);
+    }
+  cerr << "POST REAP:"<< endl;
+  //toMerge->Print();
+  //cerr << "TM:" << toMerge->GetNumberOfPieces() << " "
+  //     << "M: " << merged->GetNumberOfPieces() << endl;
+
+  //add whatever remains back in
+  ToDo->MergePieceList(toMerge);
+  ToDo->Print();
+  toMerge->Delete();
+  merged->Delete();
 }
 
 //----------------------------------------------------------------------------
@@ -379,7 +510,7 @@ void vtkMultiResolutionStreamer::EndRenderEvent()
 
  if (this->IsEveryoneDone())
     {
-    //cerr << "EVERYONE DONE" << endl;
+    cerr << "EVERYONE DONE" << endl;
     //next pass should start with clear screen
     this->Internal->WendDone = true;
 
@@ -391,7 +522,7 @@ void vtkMultiResolutionStreamer::EndRenderEvent()
     {
     if (this->IsWendDone())
       {
-      //cerr << "START NEXT WEND" << endl;
+      cerr << "START NEXT WEND" << endl;
       //next pass should start with clear screen
       this->Internal->WendDone = true;
 
