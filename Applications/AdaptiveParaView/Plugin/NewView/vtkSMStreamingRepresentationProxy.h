@@ -1,11 +1,11 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    pqStreamingView.cxx
+  Program:   ParaView
+  Module:    vtkSMStreamingRepresentationProxy.h
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) Kitware, Inc.
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+  See Copyright.txt or http://www.paraview.org/HTML/Copyright.html for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -15,7 +15,7 @@
 /*=========================================================================
 
   Program:   VTK/ParaView Los Alamos National Laboratory Modules (PVLANL)
-  Module:    pqStreamingView.cxx
+  Module:    vtkSMStreamingRepresentationProxy.h
 
 Copyright (c) 2007, Los Alamos National Security, LLC
 
@@ -58,30 +58,40 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =========================================================================*/
+// .NAME vtkStreamingRepresentationProxy - representation that renders in streaming fashion
+// .SECTION Description
+// A Representation that sets up the display pipeline so that it iterates
+// to render. At no time is the entire dataset resident in memory. Different
+// configurations of this view render in sequential, prioritized, and
+// multiresolution progressions.
 
-#include "pqStreamingView.h"
+#ifndef __vtkSMStreamingRepresentationProxy_h
+#define __vtkSMStreamingRepresentationProxy_h
 
-#include <QString>
-#include <vtkSMProxy.h>
-#include <vtkSMRenderViewProxy.h>
+#include "vtkSMPVRepresentationProxy.h"
 
-#include <pqServer.h>
-#include <pqApplicationCore.h>
-
-//-----------------------------------------------------------------------------
-pqStreamingView::pqStreamingView(
-  const QString& viewType,
-  const QString& group,
-  const QString& name,
-  vtkSMViewProxy* viewProxy,
-  pqServer* server,
-  QObject* p)
-  : pqRenderView(viewType, group, name, viewProxy, server, p)
+class VTK_EXPORT vtkSMStreamingRepresentationProxy :
+  public vtkSMPVRepresentationProxy
 {
-  cerr << "pqSV(" << this << ") ()" << endl;
-}
+public:
+  static vtkSMStreamingRepresentationProxy* New();
+  vtkTypeMacro(vtkSMStreamingRepresentationProxy,
+               vtkSMPVRepresentationProxy);
+  void PrintSelf(ostream& os, vtkIndent indent);
 
-//-----------------------------------------------------------------------------
-pqStreamingView::~pqStreamingView()
-{
-}
+//BTX
+protected:
+  vtkSMStreamingRepresentationProxy();
+  ~vtkSMStreamingRepresentationProxy();
+
+private:
+
+  vtkSMStreamingRepresentationProxy
+    (const vtkSMStreamingRepresentationProxy&); // Not implemented.
+  void operator=(const vtkSMStreamingRepresentationProxy&); // Not implemented.
+
+//ETX
+};
+
+
+#endif

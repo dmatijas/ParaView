@@ -1,11 +1,11 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    pqStreamingView.cxx
+  Program:   ParaView
+  Module:    vtkSMStreamingRepresentationProxy.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) Kitware, Inc.
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+  See Copyright.txt or http://www.paraview.org/HTML/Copyright.html for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -15,7 +15,7 @@
 /*=========================================================================
 
   Program:   VTK/ParaView Los Alamos National Laboratory Modules (PVLANL)
-  Module:    pqStreamingView.cxx
+  Module:    vtkSMStreamingRepresentationProxy.cxx
 
 Copyright (c) 2007, Los Alamos National Security, LLC
 
@@ -59,29 +59,27 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =========================================================================*/
 
-#include "pqStreamingView.h"
-
-#include <QString>
-#include <vtkSMProxy.h>
-#include <vtkSMRenderViewProxy.h>
-
-#include <pqServer.h>
-#include <pqApplicationCore.h>
+#include "vtkSMStreamingRepresentationProxy.h"
+#include "vtkObjectFactory.h"
+#include "vtkClientServerStream.h"
 
 //-----------------------------------------------------------------------------
-pqStreamingView::pqStreamingView(
-  const QString& viewType,
-  const QString& group,
-  const QString& name,
-  vtkSMViewProxy* viewProxy,
-  pqServer* server,
-  QObject* p)
-  : pqRenderView(viewType, group, name, viewProxy, server, p)
+vtkStandardNewMacro(vtkSMStreamingRepresentationProxy);
+
+
+//-----------------------------------------------------------------------------
+vtkSMStreamingRepresentationProxy::vtkSMStreamingRepresentationProxy()
 {
-  cerr << "pqSV(" << this << ") ()" << endl;
+  cerr << "SMSRP(" << this << ") ()" << endl;
 }
 
 //-----------------------------------------------------------------------------
-pqStreamingView::~pqStreamingView()
+vtkSMStreamingRepresentationProxy::~vtkSMStreamingRepresentationProxy()
 {
+}
+
+//-----------------------------------------------------------------------------
+void vtkSMStreamingRepresentationProxy::PrintSelf(ostream& os, vtkIndent indent)
+{
+  this->Superclass::PrintSelf(os, indent);
 }

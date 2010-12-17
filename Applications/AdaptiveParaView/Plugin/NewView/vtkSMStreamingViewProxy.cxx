@@ -1,11 +1,11 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    pqStreamingView.cxx
+  Program:   ParaView
+  Module:    vtkSMStreamingViewProxy.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) Kitware, Inc.
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+  See Copyright.txt or http://www.paraview.org/HTML/Copyright.html for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -15,7 +15,7 @@
 /*=========================================================================
 
   Program:   VTK/ParaView Los Alamos National Laboratory Modules (PVLANL)
-  Module:    pqStreamingView.cxx
+  Module:    vtkSMStreamingViewProxy.cxx
 
 Copyright (c) 2007, Los Alamos National Security, LLC
 
@@ -59,29 +59,90 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =========================================================================*/
 
-#include "pqStreamingView.h"
+#include "vtkSMStreamingViewProxy.h"
+#include "vtkObjectFactory.h"
+#include "vtkClientServerStream.h"
 
-#include <QString>
-#include <vtkSMProxy.h>
-#include <vtkSMRenderViewProxy.h>
+#include "vtkProcessModule.h"
+#include "vtkSMInputProperty.h"
+#include "vtkSMPropertyHelper.h"
+#include "vtkSMProxyManager.h"
+#include "vtkSMRepresentationProxy.h"
 
-#include <pqServer.h>
-#include <pqApplicationCore.h>
 
 //-----------------------------------------------------------------------------
-pqStreamingView::pqStreamingView(
-  const QString& viewType,
-  const QString& group,
-  const QString& name,
-  vtkSMViewProxy* viewProxy,
-  pqServer* server,
-  QObject* p)
-  : pqRenderView(viewType, group, name, viewProxy, server, p)
+vtkStandardNewMacro(vtkSMStreamingViewProxy);
+
+
+//-----------------------------------------------------------------------------
+vtkSMStreamingViewProxy::vtkSMStreamingViewProxy()
 {
-  cerr << "pqSV(" << this << ") ()" << endl;
+  cerr << "SMSVP(" << this << ") ()" << endl;
 }
 
 //-----------------------------------------------------------------------------
-pqStreamingView::~pqStreamingView()
+vtkSMStreamingViewProxy::~vtkSMStreamingViewProxy()
 {
+}
+
+//-----------------------------------------------------------------------------
+void vtkSMStreamingViewProxy::PrintSelf(ostream& os, vtkIndent indent)
+{
+  this->Superclass::PrintSelf(os, indent);
+}
+
+//------------------------------------------------------------------------------
+void vtkSMStreamingViewProxy::CreateVTKObjects()
+{
+/*
+  vtkProcessModule *pm = vtkProcessModule::GetProcessModule();
+  vtkClientServerStream stream;
+  vtkClientServerID id = pm->NewStreamObject("vtkServerSideFactory", stream);
+  stream << vtkClientServerStream::Invoke
+         << id << "EnableFactory"
+         << vtkClientServerStream::End;
+  pm->DeleteStreamObject(id, stream);
+  pm->SendStream(this->GetConnectionID(),
+                 vtkProcessModule::CLIENT_AND_SERVERS,
+                 stream);
+*/
+  this->Superclass::CreateVTKObjects();
+}
+
+//-----------------------------------------------------------------------------
+vtkSMRepresentationProxy* vtkSMStreamingViewProxy::CreateDefaultRepresentation(
+  vtkSMProxy* source, int opport)
+{
+  if (!source)
+    {
+    return 0;
+    }
+
+  vtkSMProxyManager* pxm = vtkSMProxyManager::GetProxyManager();
+
+  // Update with time to avoid domains updating without time later.
+  vtkSMSourceProxy* sproxy = vtkSMSourceProxy::SafeDownCast(source);
+  if (sproxy)
+    {
+    double view_time = vtkSMPropertyHelper(this, "ViewTime").GetAsDouble();
+    sproxy->UpdatePipeline(view_time);
+    }
+
+  // Choose which type of representation proxy to create.
+  vtkSMProxy* prototype;
+  prototype = pxm->GetPrototypeProxy("representations",
+    "StreamingRepresentation");
+  vtkSMInputProperty *pp = vtkSMInputProperty::SafeDownCast(
+    prototype->GetProperty("Input"));
+  pp->RemoveAllUncheckedProxies();
+  pp->AddUncheckedInputConnection(source, opport);
+  bool g = (pp->IsInDomains()>0);
+  pp->RemoveAllUncheckedProxies();
+  if (g)
+    {
+    return vtkSMRepresentationProxy::SafeDownCast(
+      pxm->NewProxy("representations", "StreamingRepresentation"));
+    }
+
+  return 0;
 }

@@ -8,7 +8,6 @@ ELSE (ParaView_SOURCE_DIR)
   INCLUDE(${PARAVIEW_USE_FILE})
 ENDIF (ParaView_SOURCE_DIR)
 
-
 IF(PARAVIEW_BUILD_QT_GUI)
   INCLUDE_DIRECTORIES(
     ${PARAVIEW_GUI_INCLUDE_DIRS}
@@ -31,15 +30,15 @@ IF(PARAVIEW_BUILD_QT_GUI)
 
 ENDIF()
 
-LINK_DIRECTORIES ( ${MANTA_BUILD_LIB} )
-
 add_paraview_plugin(
   StreamingView "2.0"
   REQUIRED_ON_SERVER
   REQUIRED_ON_CLIENT
   SERVER_MANAGER_SOURCES
-    #vtkPVStreamingView.cxx
-    #vtkSMStreamingViewProxy.cxx
+    vtkPVStreamingRepresentation.cxx
+    vtkPVStreamingView.cxx
+    vtkSMStreamingRepresentationProxy.cxx
+    vtkSMStreamingViewProxy.cxx
   SERVER_MANAGER_XML
     StreamingView.xml
   GUI_INTERFACES

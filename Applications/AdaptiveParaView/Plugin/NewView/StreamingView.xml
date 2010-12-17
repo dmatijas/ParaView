@@ -1,8 +1,24 @@
 <ServerManagerConfiguration>
+
   <ProxyGroup name="views">
-    <RenderViewProxy name="StreamingView" class="vtkPVRenderView"
+    <StreamingViewProxy
+        name="StreamingView"
+        class="vtkPVStreamingView"
         processes="client|renderserver|dataserver"
-        base_proxygroup="views" base_proxyname="RenderView">
-    </RenderViewProxy>
+        base_proxygroup="views"
+        base_proxyname="RenderView">
+    </StreamingViewProxy>
   </ProxyGroup>
+
+  <ProxyGroup name="representations">
+    <StreamingRepresentationProxy
+        name="StreamingRepresentation"
+        class="vtkPVStreamingRepresentation"
+        processes="client|renderserver|dataserver"
+        base_proxygroup="representations"
+        base_proxyname="GeometryRepresentation">
+      <!-- proxy that sets up display pipeline which streams over pieces -->
+    </StreamingRepresentationProxy>
+  </ProxyGroup>
+
 </ServerManagerConfiguration>

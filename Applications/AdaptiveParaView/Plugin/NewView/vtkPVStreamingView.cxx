@@ -1,11 +1,11 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    pqStreamingView.cxx
+  Program:   ParaView
+  Module:    vtkPVStreamingView.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) Kitware, Inc.
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+  See Copyright.txt or http://www.paraview.org/HTML/Copyright.html for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -15,7 +15,7 @@
 /*=========================================================================
 
   Program:   VTK/ParaView Los Alamos National Laboratory Modules (PVLANL)
-  Module:    pqStreamingView.cxx
+  Module:    vtkPVStreamingView.cxx
 
 Copyright (c) 2007, Los Alamos National Security, LLC
 
@@ -59,29 +59,24 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =========================================================================*/
 
-#include "pqStreamingView.h"
+#include "vtkPVStreamingView.h"
+#include "vtkObjectFactory.h"
 
-#include <QString>
-#include <vtkSMProxy.h>
-#include <vtkSMRenderViewProxy.h>
+vtkStandardNewMacro(vtkPVStreamingView);
 
-#include <pqServer.h>
-#include <pqApplicationCore.h>
-
-//-----------------------------------------------------------------------------
-pqStreamingView::pqStreamingView(
-  const QString& viewType,
-  const QString& group,
-  const QString& name,
-  vtkSMViewProxy* viewProxy,
-  pqServer* server,
-  QObject* p)
-  : pqRenderView(viewType, group, name, viewProxy, server, p)
+//----------------------------------------------------------------------------
+vtkPVStreamingView::vtkPVStreamingView()
 {
-  cerr << "pqSV(" << this << ") ()" << endl;
+  cerr << "PVSV(" << this << ") ()" << endl;
 }
 
-//-----------------------------------------------------------------------------
-pqStreamingView::~pqStreamingView()
+//----------------------------------------------------------------------------
+vtkPVStreamingView::~vtkPVStreamingView()
 {
+}
+
+//----------------------------------------------------------------------------
+void vtkPVStreamingView::PrintSelf(ostream& os, vtkIndent indent)
+{
+  this->Superclass::PrintSelf(os, indent);
 }
