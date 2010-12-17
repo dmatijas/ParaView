@@ -270,7 +270,8 @@ void vtkMultiResolutionStreamer::ChooseNextPieces()
       //TODO:
       //This should not be necessary, but the PieceCacheFilter is silently
       //producing the stale (lower res?) results without it.
-      harness->ComputePriority(p.GetPiece(), p.GetNumPieces(), p.GetResolution());
+      harness->ComputePriority(p.GetPiece(), p.GetNumPieces(),
+                               p.GetResolution());
       }
     }
 
@@ -280,7 +281,8 @@ void vtkMultiResolutionStreamer::ChooseNextPieces()
 //----------------------------------------------------------------------------
 int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
 {
-  //TODO: maxHeight must be common to both reap and refine and should be setable
+  //TODO: maxHeight must be common to both reap and refine and
+  //should be setable
   int maxHeight = 5;
   double res_delta = (1.0/maxHeight);
 
@@ -372,13 +374,13 @@ void vtkMultiResolutionStreamer::Reap(vtkStreamingHarness *harness)
 
   //cerr << "ToDo:" << endl;
   //ToDo->Print();
-
   if (important == total)
     {
     return;
     }
 
-  //TODO: maxHeight must be common to both reap and refine and should be setable
+  //TODO: maxHeight must be common to both reap and refine and
+  //should be setable
   int maxHeight = 5;
   double res_delta = (1.0/maxHeight);
 
@@ -389,7 +391,7 @@ void vtkMultiResolutionStreamer::Reap(vtkStreamingHarness *harness)
     toMerge->AddPiece(piece);
     }
 
- vtkPieceList *merged = vtkPieceList::New();
+  vtkPieceList *merged = vtkPieceList::New();
 
   bool done = false;
   while (!done)
@@ -410,7 +412,8 @@ void vtkMultiResolutionStreamer::Reap(vtkStreamingHarness *harness)
         int p2 = other.GetPiece();
         int np2 = other.GetNumPieces();
         if ((np==np2) &&
-            (p/2==p2/2) ) //TODO, when Degree==N!=2, have to round up all N sibs
+            (p/2==p2/2) )
+          //TODO, when Degree==N!=2, have to round up all N sibs
           {
           piece.SetPiece(p/2);
           piece.SetNumPieces(np/2);
