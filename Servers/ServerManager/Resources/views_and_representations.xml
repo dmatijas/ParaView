@@ -599,6 +599,7 @@
          <Property name="CameraParallelScaleInfo" />
          <Property name="CameraParallelProjection" />
          <Property name="EyeAngle" />
+	 <Property name="HeadPose" />
        </ExposedProperties>
      </SubProxy>
     </RenderViewProxy>
@@ -847,6 +848,38 @@
         number_of_elements="12"
         default_values="0 0 0   0 0 0   0 0 0.5   0 0 0.5" >
         <DoubleRangeDomain name="range" min="0" max="1" />
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty
+        name="AxisLabelsLeft"
+        command="SetAxisLabelsLeft"
+        repeat_command="1"
+        set_number_command="SetAxisLabelsLeftNumber"
+        use_index="1">
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty
+        name="AxisLabelsBottom"
+        command="SetAxisLabelsBottom"
+        repeat_command="1"
+        set_number_command="SetAxisLabelsBottomNumber"
+        use_index="1">
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty
+        name="AxisLabelsRight"
+        command="SetAxisLabelsRight"
+        repeat_command="1"
+        set_number_command="SetAxisLabelsRightNumber"
+        use_index="1">
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty
+        name="AxisLabelsTop"
+        command="SetAxisLabelsTop"
+        repeat_command="1"
+        set_number_command="SetAxisLabelsTopNumber"
+        use_index="1">
       </DoubleVectorProperty>
 
     </ContextViewProxy>
@@ -1190,6 +1223,7 @@
           <Property exposed_name="CubeAxesZAxisVisibility" name="ZAxisVisibility" />
           <Property exposed_name="CubeAxesZGridLines" name="ZGridLines" />
           <Property exposed_name="CubeAxesZTitle" name="ZTitle" />
+		  <Property name="DataBounds" />
           <Property name="CustomBounds"/>
           <Property name="CustomBoundsActive"/>
         </ExposedProperties>
@@ -2718,6 +2752,15 @@
         number_of_elements="3"
         default_values="0 0 0">
         <DoubleRangeDomain name="range" />
+      </DoubleVectorProperty>
+
+	  <DoubleVectorProperty
+        name="DataBounds"
+        command="GetDataBounds"
+		information_only="1"
+        number_of_elements="6"
+        default_values="0 1 0 1 0 1">
+		<SimpleDoubleInformationHelper/>
       </DoubleVectorProperty>
 
       <DoubleVectorProperty
