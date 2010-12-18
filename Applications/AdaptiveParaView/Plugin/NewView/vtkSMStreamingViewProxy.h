@@ -88,6 +88,10 @@ public:
   // Disable surface selection since it conflicts with multipass rendering.
   virtual bool IsSelectionAvailable() { return false; }
 
+  // Description:
+  // This is a flag that controls when rendering can stop.
+  bool IsDisplayDone() { return true; }
+
 //BTX
 protected:
   vtkSMStreamingViewProxy();

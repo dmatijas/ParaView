@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    pqStreamingView.cxx
+  Module:    pqMantaView.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,7 @@
 /*=========================================================================
 
   Program:   VTK/ParaView Los Alamos National Laboratory Modules (PVLANL)
-  Module:    pqStreamingView.cxx
+  Module:    pqMantaView.h
 
 Copyright (c) 2007, Los Alamos National Security, LLC
 
@@ -58,30 +58,45 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =========================================================================*/
+// .NAME pqMantaView - Qt interface to a Streaming View
+// .SECTION Description
+// This class is the ParaQ interface to the Streaming View infrastructure.
 
-#include "pqStreamingView.h"
+#ifndef _StreamingView_h
+#define _StreamingView_h
 
-#include <QString>
-#include <vtkSMProxy.h>
-#include <vtkSMRenderViewProxy.h>
+#include "pqRenderView.h"
 
-#include <pqServer.h>
-#include <pqApplicationCore.h>
-
-//-----------------------------------------------------------------------------
-pqStreamingView::pqStreamingView(
-  const QString& viewType,
-  const QString& group,
-  const QString& name,
-  vtkSMViewProxy* viewProxy,
-  pqServer* server,
-  QObject* p)
-  : pqRenderView(viewType, group, name, viewProxy, server, p)
+class StreamingView : public pqRenderView
 {
-  cerr << "pqSV(" << this << ") ()" << endl;
-}
+  Q_OBJECT
+  typedef pqRenderView Superclass;
+public:
+  static QString streamingViewType() { return "StreamingView"; }
+  static QString streamingviewTypeName() { return "StreamingView"; }
 
-//-----------------------------------------------------------------------------
-pqStreamingView::~pqStreamingView()
-{
-}
+  /// constructor takes a bunch of init stuff and must have this signature to
+  /// satisfy pqView
+  StreamingView(
+         const QString& viewtype,
+         const QString& group,
+         const QString& name,
+         vtkSMViewProxy* viewmodule,
+         pqServer* server,
+         QObject* p);
+  ~StreamingView();
+
+protected slots:
+  // whenever finish a render, check if more are needed and schedule one
+  void scheduleNextPass();
+
+protected:
+  int Pass;
+
+private:
+  StreamingView(const StreamingView&); // Not implemented.
+  void operator=(const StreamingView&); // Not implemented.
+
+};
+
+#endif // _StreamingView_h
