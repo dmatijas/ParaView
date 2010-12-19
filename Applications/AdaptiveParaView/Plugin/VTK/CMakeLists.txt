@@ -40,9 +40,43 @@ ADD_LIBRARY(vtkStreaming ${vtkStreaming_SOURCES})
 TARGET_LINK_LIBRARIES( vtkStreaming ${VTK_LINK_LIBRARIES} )
 
 IF (BUILD_AGAINST_PARAVIEW)
+
   INCLUDE_DIRECTORIES(
+    ${CMAKE_CURRENT_SOURCE_DIR}
     ${PARAVIEW_INCLUDE_DIRS}
     )
+
+  # Be sure to wrap vtkMantaRenderWindow.h, which lives in the build directory.
+  # This code was lifted from ParaViewPlugins.cmake
+  SET(HDRS)
+  SET(REALSRCS)
+  SET(INST_SRCS)
+  FOREACH(SRC vtkStreamedMandelbrot.cxx)
+    GET_FILENAME_COMPONENT(src_name "${SRC}" NAME_WE)
+    GET_FILENAME_COMPONENT(src_path "${SRC}" ABSOLUTE)
+    GET_FILENAME_COMPONENT(src_path "${src_path}" PATH)
+    SET(HDR)
+    IF(EXISTS "${src_path}/${src_name}.h")
+      SET(HDR "${src_path}/${src_name}.h")
+    ELSEIF(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/${src_name}.h")
+      SET(HDR "${CMAKE_CURRENT_BINARY_DIR}/${src_name}.h")
+    ENDIF()
+    LIST(APPEND HDRS ${HDR})
+    IF(NOT HDR MATCHES ${SRC})
+      SET(REALSRCS ${REALSRCS} ${SRC})
+    ENDIF(NOT HDR MATCHES ${SRC})
+  ENDFOREACH(SRC ${ARGN})
+
+  SET ( VTK_USE_INSTANTIATOR_NEW 1 )
+
+  VTK_MAKE_INSTANTIATOR3 (${PROJECT_NAME}Instantiator
+    vtkStreamingInstantiator_SRCS
+    "${HDRS}"
+    "VTK_${PROJECT_NAME}_EXPORT"
+    ${PROJECT_BINARY_DIR}
+    "${PROJECT_NAME}Configure.h"
+    )
+
   SET ( VTK_LINK_LIBRARIES ${VTK_LINK_LIBRARIES} vtkPVFilters)
 
   INCLUDE ( ${VTKCS_SOURCE_DIR}/vtkClientServer.cmake )

@@ -33,6 +33,7 @@ vtkCxxSetObjectMacro(vtkStreamingHarness, CacheFilter, vtkPieceCacheFilter);
 //----------------------------------------------------------------------------
 vtkStreamingHarness::vtkStreamingHarness()
 {
+  cerr << "SH(" << this << ") ()" << endl;
   this->Pass = 0;
   this->Piece = 0;
   this->NumberOfPieces = 2;
@@ -47,6 +48,7 @@ vtkStreamingHarness::vtkStreamingHarness()
 //----------------------------------------------------------------------------
 vtkStreamingHarness::~vtkStreamingHarness()
 {
+  cerr << "~SH(" << this << ")" << endl;
   this->SetPieceList1(NULL);
   this->SetPieceList2(NULL);
   this->SetCacheFilter(NULL);
@@ -130,9 +132,11 @@ int vtkStreamingHarness::RequestUpdateExtent(
     int NP = outInfo->Get
     (vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
 
+    cerr << "P/NP " << P << "/" << NP << "->";
     //split each downstream piece into many
     P = P * this->NumberOfPieces + this->Piece;
     NP = NP * this->NumberOfPieces;
+    cerr << "P/NP " << P << "/" << NP << endl;
 
   //send the adjusted piece at my resolution upstream
     vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
@@ -141,7 +145,9 @@ int vtkStreamingHarness::RequestUpdateExtent(
     inInfo->Set
       (vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES(), NP);
     inInfo->Set
-      (vtkStreamingDemandDrivenPipeline::UPDATE_RESOLUTION(), this->Resolution);
+      (vtkStreamingDemandDrivenPipeline::UPDATE_RESOLUTION(),
+       this->Resolution);
+    //inInfo->Set(vtkStreamingDemandDrivenPipeline::EXACT_EXTENT(), 1);
     }
   return 1;
 }
@@ -158,6 +164,7 @@ int vtkStreamingHarness::RequestData(
   vtkDataObject* input = inInfo->Get(vtkDataObject::DATA_OBJECT());
   vtkDataObject* output = outInfo->Get(vtkDataObject::DATA_OBJECT());
   output->ShallowCopy(input);
+  cerr << "RD" << endl;
   return 1;
 }
 

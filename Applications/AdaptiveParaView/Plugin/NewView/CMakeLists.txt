@@ -2,6 +2,7 @@ IF (ParaView_SOURCE_DIR)
   INCLUDE_DIRECTORIES(
     ${VTK_INCLUDE_DIR}
     ${PARAVIEW_INCLUDE_DIRS}
+    ${vtkStreaming_SOURCE_DIR}
   )
 ELSE (ParaView_SOURCE_DIR)
   FIND_PACKAGE(ParaView REQUIRED)
@@ -36,6 +37,7 @@ add_paraview_plugin(
     vtkPVStreamingView.cxx
     vtkSMStreamingRepresentationProxy.cxx
     vtkSMStreamingViewProxy.cxx
+    vtkStreamLibraryWrapper.cxx
   SERVER_MANAGER_XML
     StreamingView.xml
   GUI_INTERFACES
@@ -45,3 +47,6 @@ add_paraview_plugin(
     ${VIEW_IFACE_SRCS}
     StreamingView.cxx
 )
+
+#TARGET_LINK_LIBRARIES ( StreamingView vtkStreaming )
+TARGET_LINK_LIBRARIES ( StreamingView vtkStreamingCS )

@@ -61,7 +61,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // .NAME vtkPVStreamingView - a view that renders in a streaming fashion.
 // .SECTION Description
 // vtkPVStreamingView uses a vtkStreamingDriver to cycle all of the
-// vtkPVStreamingRepresentations shown within it through their set of pieces.
+// vtkPVStreamingRepresentations shown within it through their pieces.
 // Since the data is rendered one piece at a time, the entire data set
 // is never resident in RAM at once.
 // Different configurations render in iterative, prioritized and

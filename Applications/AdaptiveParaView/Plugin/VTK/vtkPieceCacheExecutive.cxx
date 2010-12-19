@@ -25,7 +25,7 @@
 
 vtkStandardNewMacro(vtkPieceCacheExecutive);
 
-#if 0
+#if 1
 #define DEBUGPRINT_CACHING(arg) arg;
 #else
 #define DEBUGPRINT_CACHING(arg) \
@@ -109,8 +109,11 @@ int vtkPieceCacheExecutive
         dataInfo->Get(vtkDataObject::DATA_NUMBER_OF_PIECES());
       int dataGhostLevel =
         dataInfo->Get(vtkDataObject::DATA_NUMBER_OF_GHOST_LEVELS());
-      double dataResolution =
-        dataInfo->Get(vtkDataObject::DATA_RESOLUTION());
+      double dataResolution = 1.0;
+      if (dataInfo->Has(vtkDataObject::DATA_RESOLUTION())) //TODO: hmm why is this now needed in PV?
+        {
+        dataResolution = dataInfo->Get(vtkDataObject::DATA_RESOLUTION());
+        }
       if (dataInfo->Get(vtkDataObject::DATA_EXTENT_TYPE()) ==
           VTK_PIECES_EXTENT && dataPiece == updatePiece &&
           dataNumberOfPieces == updateNumberOfPieces &&

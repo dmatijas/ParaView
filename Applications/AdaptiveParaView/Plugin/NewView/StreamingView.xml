@@ -1,6 +1,7 @@
 <ServerManagerConfiguration>
 
-  <ProxyGroup name="views">
+  <ProxyGroup
+      name="views">
     <StreamingViewProxy
         name="StreamingView"
         class="vtkPVStreamingView"
@@ -10,7 +11,8 @@
     </StreamingViewProxy>
   </ProxyGroup>
 
-  <ProxyGroup name="representations">
+  <ProxyGroup
+      name="representations">
     <StreamingRepresentationProxy
         name="StreamingRepresentation"
         class="vtkPVStreamingRepresentation"
@@ -19,6 +21,29 @@
         base_proxyname="GeometryRepresentation">
       <!-- proxy that sets up display pipeline which streams over pieces -->
     </StreamingRepresentationProxy>
+  </ProxyGroup>
+
+  <ProxyGroup
+      name="sources">
+    <SourceProxy
+        name="StreamingSource"
+        class="vtkStreamedMandelbrot"
+        label="Streamed Mandelbrot"
+        base_proxygroup="sources"
+        base_proxyname="ImageMandelbrotSource">
+
+      <IntVectorProperty
+         name="WholeExtent"
+         command="SetWholeExtent"
+         number_of_elements="6"
+         default_values="0 50 0 50 0 50" >
+        <IntRangeDomain name="range"/>
+        <Documentation>
+          The six values in the property indicate the X, Y, and Z extent of the output data. The first two numbers are the minimum and maximum X extent; the next two are the minimum and maximum Y extent; and the final two are the minimum and maximum Z extent. The numbers are inclusive, so values of 0, 250, 0, 250, 0, 0 indicate that the dimensions of the output will be 251 x 251 x 1.
+        </Documentation>
+      </IntVectorProperty>
+
+    </SourceProxy>
   </ProxyGroup>
 
 </ServerManagerConfiguration>

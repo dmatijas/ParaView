@@ -68,7 +68,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "vtkSMPropertyHelper.h"
 #include "vtkSMProxyManager.h"
 #include "vtkSMRepresentationProxy.h"
-
+#include "vtkStreamLibraryWrapper.h"
 
 //-----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkSMStreamingViewProxy);
@@ -94,18 +94,17 @@ void vtkSMStreamingViewProxy::PrintSelf(ostream& os, vtkIndent indent)
 //------------------------------------------------------------------------------
 void vtkSMStreamingViewProxy::CreateVTKObjects()
 {
-/*
   vtkProcessModule *pm = vtkProcessModule::GetProcessModule();
   vtkClientServerStream stream;
-  vtkClientServerID id = pm->NewStreamObject("vtkServerSideFactory", stream);
+  vtkClientServerID id = pm->NewStreamObject("vtkStreamLibraryWrapper", stream);
   stream << vtkClientServerStream::Invoke
-         << id << "EnableFactory"
+         << id << "EnableWrapping"
          << vtkClientServerStream::End;
   pm->DeleteStreamObject(id, stream);
   pm->SendStream(this->GetConnectionID(),
                  vtkProcessModule::CLIENT_AND_SERVERS,
                  stream);
-*/
+
   this->Superclass::CreateVTKObjects();
 }
 

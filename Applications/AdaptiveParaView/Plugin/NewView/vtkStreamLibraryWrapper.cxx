@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    StreamingView.cxx
+  Module:    vtkStreamLibraryWrapper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,7 @@
 /*=========================================================================
 
   Program:   VTK/ParaView Los Alamos National Laboratory Modules (PVLANL)
-  Module:    StreamingView.cxx
+  Module:    vtkStreamLibraryWrapper.cxx
 
 Copyright (c) 2007, Los Alamos National Security, LLC
 
@@ -59,61 +59,44 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =========================================================================*/
 
-#include "StreamingView.h"
+#include "vtkStreamLibraryWrapper.h"
+#include "vtkObjectFactory.h"
 
-#include <QString>
-#include <QTimer>
+#include "vtkClientServerInterpreter.h"
+#include "vtkProcessModule.h"
 
-#include <vtkSMProxy.h>
-#include <vtkSMRenderViewProxy.h>
-#include "vtkSMStreamingViewProxy.h"
+//This sets the CS wrapped classes up so ParaView can call them
+extern "C" void vtkStreamingCS_Initialize(vtkClientServerInterpreter *arlu);
 
-#include <pqServer.h>
-#include <pqApplicationCore.h>
+//----------------------------------------------------------------------------
+vtkStandardNewMacro(vtkStreamLibraryWrapper);
 
-//-----------------------------------------------------------------------------
-StreamingView::StreamingView(
-  const QString& viewType,
-  const QString& group,
-  const QString& name,
-  vtkSMViewProxy* viewProxy,
-  pqServer* server,
-  QObject* p)
-  : pqRenderView(viewType, group, name, viewProxy, server, p), Pass(0)
-{
-  cerr << "pqSV(" << this << ") ()" << endl;
-  QObject::connect(this, SIGNAL(endRender()),
-                   this, SLOT(scheduleNextPass()));
-}
+int vtkStreamLibraryWrapper::WrappingEnabled = 0;
 
-//-----------------------------------------------------------------------------
-StreamingView::~StreamingView()
+//----------------------------------------------------------------------------
+vtkStreamLibraryWrapper::vtkStreamLibraryWrapper()
 {
 }
 
-//-----------------------------------------------------------------------------
-void StreamingView::scheduleNextPass()
+//----------------------------------------------------------------------------
+vtkStreamLibraryWrapper::~vtkStreamLibraryWrapper()
 {
-//  cerr << "pqSV(" << this << ") POST RENDER " << this->Pass << endl;
-  vtkSMStreamingViewProxy *vp = vtkSMStreamingViewProxy::SafeDownCast
-    (this->getViewProxy());
-  if (!vp)
-    {
-    return;
-    }
+}
 
-  if (!vp->IsDisplayDone())// for testing || this->Pass<10)
+//----------------------------------------------------------------------------
+void vtkStreamLibraryWrapper::EnableWrapping()
+{
+  if (!vtkStreamLibraryWrapper::WrappingEnabled)
     {
-    //schedule next render pass
-    QTimer *t = new QTimer(this);
-    t->setSingleShot(true);
-    QObject::connect(t, SIGNAL(timeout()),
-                     this, SLOT(render()), Qt::QueuedConnection);
-    t->start();
-    this->Pass++;
+    vtkStreamLibraryWrapper::WrappingEnabled = 1;
+
+    //register the wrapped classes so ParaView can call them too
+    vtkProcessModule::InitializeInterpreter(vtkStreamingCS_Initialize);
     }
-  else
-    {
-    this->Pass = 0;
-  }
+}
+
+//----------------------------------------------------------------------------
+void vtkStreamLibraryWrapper::PrintSelf(ostream& os, vtkIndent indent)
+{
+  this->Superclass::PrintSelf(os,indent);
 }

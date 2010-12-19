@@ -79,6 +79,16 @@ public:
   vtkTypeMacro(vtkPVStreamingRepresentation, vtkPVCompositeRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  // Description:
+  // Overridden to pass to the internal pipeline which manages streaming
+  virtual void SetInputConnection(int port, vtkAlgorithmOutput* input);
+  virtual void SetInputConnection(vtkAlgorithmOutput* input);
+  virtual void AddInputConnection(int port, vtkAlgorithmOutput* input);
+  virtual void AddInputConnection(vtkAlgorithmOutput* input);
+  virtual void RemoveInputConnection(int port, vtkAlgorithmOutput* input);
+
+
+  virtual void Update();
 //BTX
 protected:
   vtkPVStreamingRepresentation();
@@ -88,6 +98,9 @@ private:
   vtkPVStreamingRepresentation
     (const vtkPVStreamingRepresentation&); // Not implemented
   void operator=(const vtkPVStreamingRepresentation&); // Not implemented
+
+  class Internals;
+  Internals *Internal;
 //ETX
 };
 
