@@ -60,17 +60,21 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 =========================================================================*/
 
 #include "vtkSMStreamingRepresentationProxy.h"
-#include "vtkObjectFactory.h"
+
+#include "vtkClientServerID.h"
 #include "vtkClientServerStream.h"
+#include "vtkObjectFactory.h"
+#include "vtkProcessModule.h"
+#include "vtkSMOutputPort.h"
 
-//-----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkSMStreamingRepresentationProxy);
-
 
 //-----------------------------------------------------------------------------
 vtkSMStreamingRepresentationProxy::vtkSMStreamingRepresentationProxy()
 {
   cerr << "SMSRP(" << this << ") ()" << endl;
+  this->PieceCache = NULL;
+  this->Harness = NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -82,4 +86,36 @@ vtkSMStreamingRepresentationProxy::~vtkSMStreamingRepresentationProxy()
 void vtkSMStreamingRepresentationProxy::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
+}
+
+//------------------------------------------------------------------------------
+void vtkSMStreamingRepresentationProxy::CreateVTKObjects()
+{
+  this->Superclass::CreateVTKObjects();
+}
+
+//------------------------------------------------------------------------------
+void vtkSMStreamingRepresentationProxy::AddInput
+  (unsigned int inputPort,
+   vtkSMSourceProxy *input,
+   unsigned int outputPort,
+   const char* method)
+{
+  cerr << "SMSRP("<< this << ") AddInput" << endl;
+
+  if (!this->ObjectsCreated)
+    {
+    this->PieceCache =
+      vtkSMSourceProxy::SafeDownCast(this->GetSubProxy("PieceCache"));
+
+    //Get hold of the pipeline control filter proxy
+    this->Harness =
+      vtkSMSourceProxy::SafeDownCast(this->GetSubProxy("Harness"));
+
+    this->Harness->AddInput(0, this->PieceCache, 0, "SetInputConnection");
+    }
+
+  this->PieceCache->AddInput(0, input, outputPort, method);
+
+  this->Superclass::AddInput(0, this->Harness, 0, "SetInputConnection");
 }

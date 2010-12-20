@@ -79,10 +79,24 @@ public:
                vtkSMPVRepresentationProxy);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  //Overridden to insert PCF and harness into the pipeline
+  virtual void AddInput(unsigned int inputPort,
+                        vtkSMSourceProxy* input,
+                        unsigned int outputPort,
+                        const char* method);
+  virtual void AddInput(vtkSMSourceProxy* input,
+                        const char* method)
+  {
+    this->AddInput(0, input, 0, method);
+  }
+
 //BTX
 protected:
   vtkSMStreamingRepresentationProxy();
   ~vtkSMStreamingRepresentationProxy();
+
+  //Overridden to insert PCF and harness into the pipeline
+  virtual void CreateVTKObjects();
 
 private:
 
@@ -90,6 +104,8 @@ private:
     (const vtkSMStreamingRepresentationProxy&); // Not implemented.
   void operator=(const vtkSMStreamingRepresentationProxy&); // Not implemented.
 
+  vtkSMSourceProxy *PieceCache;
+  vtkSMSourceProxy *Harness;
 //ETX
 };
 

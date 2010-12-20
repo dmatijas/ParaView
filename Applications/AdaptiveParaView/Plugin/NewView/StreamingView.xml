@@ -1,27 +1,5 @@
 <ServerManagerConfiguration>
 
-  <ProxyGroup
-      name="views">
-    <StreamingViewProxy
-        name="StreamingView"
-        class="vtkPVStreamingView"
-        processes="client|renderserver|dataserver"
-        base_proxygroup="views"
-        base_proxyname="RenderView">
-    </StreamingViewProxy>
-  </ProxyGroup>
-
-  <ProxyGroup
-      name="representations">
-    <StreamingRepresentationProxy
-        name="StreamingRepresentation"
-        class="vtkPVStreamingRepresentation"
-        processes="client|renderserver|dataserver"
-        base_proxygroup="representations"
-        base_proxyname="GeometryRepresentation">
-      <!-- proxy that sets up display pipeline which streams over pieces -->
-    </StreamingRepresentationProxy>
-  </ProxyGroup>
 
   <ProxyGroup
       name="sources">
@@ -44,6 +22,94 @@
       </IntVectorProperty>
 
     </SourceProxy>
+  </ProxyGroup>
+
+  <ProxyGroup
+      name="filters">
+
+    <SourceProxy
+        name="PieceCache"
+        class="vtkPieceCacheFilter"
+        executive="vtkPieceCacheExecutive">
+      <Documentation>
+        A cache to speed up streaming.
+      </Documentation>
+
+      <InputProperty
+          name="Input"
+          command="SetInputConnection">
+        <DataTypeDomain name="input_type">
+          <DataType value="vtkDataObject"/>
+        </DataTypeDomain>
+        <Documentation>
+          The input which is cached and passed through
+        </Documentation>
+      </InputProperty>
+
+      <Property name="EmptyCache" command="EmptyCache" />
+
+      <!-- End of PieceCache -->
+    </SourceProxy>
+
+
+    <SourceProxy
+        name="StreamingHarness"
+        class="vtkStreamingHarness">
+      <Documentation>
+        A cache to speed up streaming.
+      </Documentation>
+
+      <InputProperty
+          name="Input"
+          command="SetInputConnection">
+        <DataTypeDomain name="input_type">
+          <DataType value="vtkDataObject"/>
+        </DataTypeDomain>
+        <Documentation>
+          The input which we control the pipeline of.
+        </Documentation>
+      </InputProperty>
+
+      <!-- End of StreamingHarness -->
+    </SourceProxy>
+
+    <!-- End Filters -->
+  </ProxyGroup>
+
+  <ProxyGroup
+      name="views">
+    <StreamingViewProxy
+        name="StreamingView"
+        class="vtkPVStreamingView"
+        processes="client|renderserver|dataserver"
+        base_proxygroup="views"
+        base_proxyname="RenderView">
+    </StreamingViewProxy>
+  </ProxyGroup>
+
+  <ProxyGroup
+      name="representations">
+    <StreamingRepresentationProxy
+        name="StreamingRepresentation"
+        class="vtkPVStreamingRepresentation"
+        processes="client|renderserver|dataserver"
+        base_proxygroup="representations"
+        base_proxyname="GeometryRepresentation">
+      <!-- proxy that sets up display pipeline which streams over pieces -->
+
+      <SubProxy>
+        <Proxy name="PieceCache"
+          proxygroup="filters" proxyname="PieceCache">
+        </Proxy>
+      </SubProxy>
+
+      <SubProxy>
+        <Proxy name="Harness"
+          proxygroup="filters" proxyname="StreamingHarness">
+        </Proxy>
+      </SubProxy>
+
+    </StreamingRepresentationProxy>
   </ProxyGroup>
 
 </ServerManagerConfiguration>

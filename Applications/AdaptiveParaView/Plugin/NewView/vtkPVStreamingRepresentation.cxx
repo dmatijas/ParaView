@@ -62,9 +62,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "vtkPVStreamingRepresentation.h"
 #include "vtkObjectFactory.h"
 
-#include "vtkPieceCacheFilter.h"
-#include "vtkStreamingHarness.h"
-
 vtkStandardNewMacro(vtkPVStreamingRepresentation);
 
 class vtkPVStreamingRepresentation::Internals
@@ -72,25 +69,12 @@ class vtkPVStreamingRepresentation::Internals
 public:
   Internals()
   {
-    this->PCF = vtkPieceCacheFilter::New();
-    this->Harness = vtkStreamingHarness::New();
-    this->Harness->SetNumberOfPieces(10);
-    this->PVCR = vtkPVCompositeRepresentation::New();
-
-    this->Harness->SetInputConnection(0, this->PCF->GetOutputPort());
-    this->PVCR->SetInputConnection(0, this->Harness->GetOutputPort());
   }
 
   ~Internals()
   {
-    this->PVCR->Delete();
-    this->PCF->Delete();
-    this->Harness->Delete();
   }
 
-  vtkPVCompositeRepresentation *PVCR;
-  vtkPieceCacheFilter *PCF;
-  vtkStreamingHarness *Harness;
 };
 
 //----------------------------------------------------------------------------
@@ -110,68 +94,4 @@ vtkPVStreamingRepresentation::~vtkPVStreamingRepresentation()
 void vtkPVStreamingRepresentation::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
-}
-
-//----------------------------------------------------------------------------
-void vtkPVStreamingRepresentation::SetInputConnection
-  (int port, vtkAlgorithmOutput* input)
-{
-  if (port == 0)
-    {
-    this->Internal->PCF->SetInputConnection(port, input);
-    }
-  else
-    {
-    //this->Internal->PVCR->SetInputConnection(port, input);
-    }
-}
-
-//----------------------------------------------------------------------------
-void vtkPVStreamingRepresentation::SetInputConnection
-  (vtkAlgorithmOutput* input)
-{
-  this->Internal->PCF->SetInputConnection(input);
-}
-
-//----------------------------------------------------------------------------
-void vtkPVStreamingRepresentation::AddInputConnection
-  (int port, vtkAlgorithmOutput* input)
-{
-  if (port == 0)
-    {
-    this->Internal->PCF->AddInputConnection(port, input);
-    }
-  else
-    {
-    //this->Internal->PVCR->AddInputConnection(port, input);
-    }
-}
-
-//----------------------------------------------------------------------------
-void vtkPVStreamingRepresentation::AddInputConnection
-  (vtkAlgorithmOutput* input)
-{
-  this->Internal->PCF->AddInputConnection(input);
-}
-
-//----------------------------------------------------------------------------
-void vtkPVStreamingRepresentation::RemoveInputConnection
-  (int port, vtkAlgorithmOutput* input)
-{
-  if (port == 0)
-    {
-    this->Internal->PCF->RemoveInputConnection(port, input);
-    }
-  else
-    {
-    //this->Internal->PVCR->RemoveInputConnection(port, input);
-    }
-}
-
-//----------------------------------------------------------------------------
-void vtkPVStreamingRepresentation::Update()
-{
-  this->Internal->Harness->Update();
-  this->Internal->PVCR->Update();
-  this->Superclass::Update();
 }
