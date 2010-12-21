@@ -80,6 +80,14 @@ vtkSMStreamingRepresentationProxy::vtkSMStreamingRepresentationProxy()
 //-----------------------------------------------------------------------------
 vtkSMStreamingRepresentationProxy::~vtkSMStreamingRepresentationProxy()
 {
+  if (this->PieceCache)
+    {
+    this->PieceCache->Delete();
+    }
+  if (this->Harness)
+    {
+    this->Harness->Delete();
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -107,12 +115,31 @@ void vtkSMStreamingRepresentationProxy::AddInput
     {
     this->PieceCache =
       vtkSMSourceProxy::SafeDownCast(this->GetSubProxy("PieceCache"));
+    this->PieceCache->Register(this);
 
     //Get hold of the pipeline control filter proxy
     this->Harness =
       vtkSMSourceProxy::SafeDownCast(this->GetSubProxy("Harness"));
+    this->Harness->Register(this);
 
     this->Harness->AddInput(0, this->PieceCache, 0, "SetInputConnection");
+
+    vtkProcessModule *pm = vtkProcessModule::GetProcessModule();
+    vtkClientServerStream stream;
+    stream
+      << vtkClientServerStream::Invoke
+      << this->GetID()
+      << "SetPieceCache"
+      << this->PieceCache->GetID()
+      << vtkClientServerStream::End
+      << vtkClientServerStream::Invoke
+      << this->GetID()
+      << "SetHarness"
+      << this->Harness->GetID()
+      << vtkClientServerStream::End;
+    pm->SendStream(this->GetConnectionID(),
+                   vtkProcessModule::CLIENT_AND_SERVERS,
+                   stream);
     }
 
   this->PieceCache->AddInput(0, input, outputPort, method);

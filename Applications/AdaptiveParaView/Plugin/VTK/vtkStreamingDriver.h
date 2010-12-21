@@ -26,7 +26,6 @@
 
 #include "vtkObject.h"
 
-class Internals;
 class vtkCallbackCommand;
 class vtkCollection;
 class vtkRenderer;
@@ -71,8 +70,6 @@ protected:
   vtkStreamingDriver();
   ~vtkStreamingDriver();
 
-  Internals *Internal;
-
   // Description:
   // Driver calls this to ask for a render. If a render later function is
   // assigned, that is used, otherwise render is called directly.
@@ -92,6 +89,9 @@ protected:
 private:
   vtkStreamingDriver(const vtkStreamingDriver&);  // Not implemented.
   void operator=(const vtkStreamingDriver&);  // Not implemented.
+
+  class Internals;
+  Internals *Internal;
 };
 
 #endif

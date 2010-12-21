@@ -60,38 +60,116 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 =========================================================================*/
 
 #include "vtkPVStreamingRepresentation.h"
+
+#include "vtkStreamingHarness.h"
 #include "vtkObjectFactory.h"
+#include "vtkPieceCacheFilter.h"
+#include "vtkPVStreamingView.h"
+#include "vtkStreamingDriver.h"
 
 vtkStandardNewMacro(vtkPVStreamingRepresentation);
-
-class vtkPVStreamingRepresentation::Internals
-{
-public:
-  Internals()
-  {
-  }
-
-  ~Internals()
-  {
-  }
-
-};
 
 //----------------------------------------------------------------------------
 vtkPVStreamingRepresentation::vtkPVStreamingRepresentation()
 {
   cerr << "PVSR(" << this << ") ()" << endl;
-  this->Internal = new Internals;
+  this->PieceCache = NULL;
+  this->Harness = NULL;
 }
 
 //----------------------------------------------------------------------------
 vtkPVStreamingRepresentation::~vtkPVStreamingRepresentation()
 {
-  delete this->Internal;
+  this->SetPieceCache(NULL);
+  this->SetHarness(NULL);
 }
 
 //----------------------------------------------------------------------------
 void vtkPVStreamingRepresentation::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
+}
+
+//----------------------------------------------------------------------------
+void vtkPVStreamingRepresentation::SetPieceCache(vtkPieceCacheFilter *PCF)
+{
+  if (this->PieceCache == PCF)
+    {
+    return;
+    }
+  this->Modified();
+  if (this->PieceCache)
+    {
+    this->PieceCache->Delete();
+    }
+  this->PieceCache = PCF;
+  if (this->PieceCache)
+    {
+    this->PieceCache->Register(this);
+    }
+}
+
+//----------------------------------------------------------------------------
+void vtkPVStreamingRepresentation::SetHarness(vtkStreamingHarness *harness)
+{
+  if (this->Harness == harness)
+    {
+    return;
+    }
+  this->Modified();
+  if (this->Harness)
+    {
+    this->Harness->Delete();
+    }
+  this->Harness = harness;
+  if (this->Harness)
+    {
+    this->Harness->Register(this);
+    }
+}
+
+//------------------------------------------------------------------------------
+bool vtkPVStreamingRepresentation::AddToView(vtkView *view)
+{
+  vtkPVStreamingView *sView = vtkPVStreamingView::SafeDownCast(view);
+  if (!sView)
+    {
+    return false;
+    }
+  bool ret = this->Superclass::AddToView(view);
+  if (ret)
+    {
+    vtkStreamingDriver *sd = sView->GetStreamDriver();
+    if (!sd || !this->Harness)
+      {
+      cerr << "UH OH" << endl;
+      }
+    else
+      {
+      sd->AddHarness(this->Harness);
+      }
+    }
+  return ret;
+}
+
+//------------------------------------------------------------------------------
+bool vtkPVStreamingRepresentation::RemoveFromView(vtkView *view)
+{
+  vtkPVStreamingView *sView = vtkPVStreamingView::SafeDownCast(view);
+  if (!sView)
+    {
+    return false;
+    }
+
+  vtkStreamingDriver *sd = sView->GetStreamDriver();
+  if (!sd || !this->Harness)
+    {
+    cerr << "UH OH" << endl;
+    }
+  else
+    {
+    sd->RemoveHarness(this->Harness);
+    }
+
+  return this->Superclass::RemoveFromView(view);
 }

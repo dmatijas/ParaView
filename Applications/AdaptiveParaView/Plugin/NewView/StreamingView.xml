@@ -77,6 +77,14 @@
   </ProxyGroup>
 
   <ProxyGroup
+      name="utilities">
+    <Proxy
+        name="StreamDriver"
+        class="vtkIterativeStreamer">
+    </Proxy>
+  </ProxyGroup>
+
+  <ProxyGroup
       name="views">
     <StreamingViewProxy
         name="StreamingView"
@@ -84,6 +92,15 @@
         processes="client|renderserver|dataserver"
         base_proxygroup="views"
         base_proxyname="RenderView">
+
+      <SubProxy>
+        <Proxy
+            name="Driver"
+            proxygroup="utilities"
+            proxyname="StreamDriver">
+        </Proxy>
+      </SubProxy>
+
     </StreamingViewProxy>
   </ProxyGroup>
 

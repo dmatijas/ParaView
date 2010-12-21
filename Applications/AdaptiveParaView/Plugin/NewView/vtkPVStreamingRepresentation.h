@@ -70,6 +70,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "vtkPVCompositeRepresentation.h"
 
+class vtkPieceCacheFilter;
+class vtkStreamingHarness;
+
 class VTK_EXPORT vtkPVStreamingRepresentation
   : public vtkPVCompositeRepresentation
 {
@@ -79,18 +82,34 @@ public:
   vtkTypeMacro(vtkPVStreamingRepresentation, vtkPVCompositeRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  //Description:
+  //Access to the immediately upstream pipeline wrangling filters.
+  void SetPieceCache(vtkPieceCacheFilter *);
+  vtkGetObjectMacro(PieceCache, vtkPieceCacheFilter);
+  void SetHarness(vtkStreamingHarness *);
+  vtkGetObjectMacro(Harness, vtkStreamingHarness);
+
 //BTX
 protected:
   vtkPVStreamingRepresentation();
   ~vtkPVStreamingRepresentation();
 
+  // Description:
+  // Overridden to associate the streaming view's driver with this
+  // represention's harness.
+  virtual bool AddToView(vtkView*);
+
+  // Description:
+  // Overridded to release the association from the streaming view's driver
+  // and this represention's harness.
+  virtual bool RemoveFromView(vtkView*);
+
+  vtkStreamingHarness *Harness;
+  vtkPieceCacheFilter *PieceCache;
 private:
   vtkPVStreamingRepresentation
     (const vtkPVStreamingRepresentation&); // Not implemented
   void operator=(const vtkPVStreamingRepresentation&); // Not implemented
-
-  class Internals;
-  Internals *Internal;
 //ETX
 };
 

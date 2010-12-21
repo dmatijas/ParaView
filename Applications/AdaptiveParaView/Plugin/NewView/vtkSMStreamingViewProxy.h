@@ -98,6 +98,8 @@ protected:
   ~vtkSMStreamingViewProxy();
 
   virtual void CreateVTKObjects();
+
+  vtkSMProxy *Driver;
 private:
 
   vtkSMStreamingViewProxy(const vtkSMStreamingViewProxy&); // Not implemented.

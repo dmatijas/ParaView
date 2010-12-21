@@ -60,7 +60,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 =========================================================================*/
 
 #include "vtkPVStreamingView.h"
+
 #include "vtkObjectFactory.h"
+#include "vtkStreamingDriver.h"
 
 vtkStandardNewMacro(vtkPVStreamingView);
 
@@ -68,15 +70,38 @@ vtkStandardNewMacro(vtkPVStreamingView);
 vtkPVStreamingView::vtkPVStreamingView()
 {
   cerr << "PVSV(" << this << ") ()" << endl;
+  this->StreamDriver = NULL;
 }
 
 //----------------------------------------------------------------------------
 vtkPVStreamingView::~vtkPVStreamingView()
 {
+  this->SetStreamDriver(NULL);
 }
 
 //----------------------------------------------------------------------------
 void vtkPVStreamingView::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
+}
+
+//----------------------------------------------------------------------------
+void vtkPVStreamingView::SetStreamDriver(vtkStreamingDriver *nd)
+{
+  if (this->StreamDriver == nd)
+    {
+    return;
+    }
+  this->Modified();
+  if (this->StreamDriver)
+    {
+    this->StreamDriver->Delete();
+    }
+  this->StreamDriver = nd;
+  if (this->StreamDriver)
+    {
+    this->StreamDriver->Register(this);
+    this->StreamDriver->SetRenderWindow(this->GetRenderWindow());
+    this->StreamDriver->SetRenderer(this->GetRenderer());
+    }
 }

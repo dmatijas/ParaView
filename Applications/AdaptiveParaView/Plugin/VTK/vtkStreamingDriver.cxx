@@ -32,7 +32,7 @@
 //interface to schedule render callbacks at a later time
 //interface to progressor
 
-class Internals
+class vtkStreamingDriver::Internals
 {
 public:
   Internals(vtkStreamingDriver *owner)

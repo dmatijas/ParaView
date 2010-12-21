@@ -25,7 +25,6 @@
 
 #include "vtkStreamingDriver.h"
 
-class Internals;
 
 class VTK_EXPORT vtkPrioritizedStreamer : public vtkStreamingDriver
 {
@@ -49,11 +48,12 @@ protected:
   virtual void AdvanceEveryone();
   virtual void FinalizeEveryone();
 
-  Internals *Internal;
-
 private:
   vtkPrioritizedStreamer(const vtkPrioritizedStreamer&);  // Not implemented.
   void operator=(const vtkPrioritizedStreamer&);  // Not implemented.
+
+  class Internals;
+  Internals *Internal;
 
 //ETX
 };

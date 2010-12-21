@@ -52,11 +52,16 @@ IF (BUILD_AGAINST_PARAVIEW)
   SET(REALSRCS)
   SET(INST_SRCS)
   FOREACH(SRC
-      vtkStreamedMandelbrot.cxx
-      vtkPieceCacheFilter.cxx
+      vtkIterativeStreamer.cxx
+      vtkMultiResolutionStreamer.cxx
+      vtkPrioritizedStreamer.cxx
       vtkPieceCacheExecutive.cxx
+      vtkPieceCacheFilter.cxx
+      vtkPieceList.cxx
+      vtkStreamedMandelbrot.cxx
+      vtkStreamingDriver.cxx
       vtkStreamingHarness.cxx
-      vtkPieceList.cxx)
+      )
     GET_FILENAME_COMPONENT(src_name "${SRC}" NAME_WE)
     GET_FILENAME_COMPONENT(src_path "${SRC}" ABSOLUTE)
     GET_FILENAME_COMPONENT(src_path "${src_path}" PATH)

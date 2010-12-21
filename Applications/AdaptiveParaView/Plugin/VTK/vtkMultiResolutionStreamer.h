@@ -25,7 +25,6 @@
 
 #include "vtkStreamingDriver.h"
 
-class Internals;
 
 class VTK_EXPORT vtkMultiResolutionStreamer : public vtkStreamingDriver
 {
@@ -51,11 +50,12 @@ protected:
   virtual int Refine(vtkStreamingHarness *);
   virtual void Reap(vtkStreamingHarness *);
 
-  Internals *Internal;
-
 private:
   vtkMultiResolutionStreamer(const vtkMultiResolutionStreamer&);  // Not implemented.
   void operator=(const vtkMultiResolutionStreamer&);  // Not implemented.
+
+  class Internals;
+  Internals *Internal;
 
 //ETX
 };

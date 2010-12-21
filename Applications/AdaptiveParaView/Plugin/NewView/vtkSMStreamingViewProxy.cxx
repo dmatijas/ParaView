@@ -78,11 +78,16 @@ vtkStandardNewMacro(vtkSMStreamingViewProxy);
 vtkSMStreamingViewProxy::vtkSMStreamingViewProxy()
 {
   cerr << "SMSVP(" << this << ") ()" << endl;
+  this->Driver = NULL;
 }
 
 //-----------------------------------------------------------------------------
 vtkSMStreamingViewProxy::~vtkSMStreamingViewProxy()
 {
+  if (this->Driver)
+    {
+    this->Driver->Delete();
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -115,6 +120,24 @@ vtkSMRepresentationProxy* vtkSMStreamingViewProxy::CreateDefaultRepresentation(
   if (!source)
     {
     return 0;
+    }
+
+  if (!this->Driver)
+    {
+    vtkProcessModule *pm = vtkProcessModule::GetProcessModule();
+    vtkClientServerStream stream;
+
+    this->Driver = this->GetSubProxy("Driver");
+    this->Driver->Register(this);
+
+    stream << vtkClientServerStream::Invoke
+           << this->GetID()
+           << "SetStreamDriver"
+           << this->Driver->GetID()
+           << vtkClientServerStream::End;
+    pm->SendStream(this->GetConnectionID(),
+                   vtkProcessModule::CLIENT_AND_SERVERS,
+                   stream);
     }
 
   vtkSMProxyManager* pxm = vtkSMProxyManager::GetProxyManager();

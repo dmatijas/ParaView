@@ -72,6 +72,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "vtkPVRenderView.h"
 
+class vtkStreamingDriver;
+
 class VTK_EXPORT vtkPVStreamingView : public vtkPVRenderView
 {
   //*****************************************************************
@@ -80,10 +82,18 @@ public:
   vtkTypeMacro(vtkPVStreamingView, vtkPVRenderView);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  // Description:
+  // Specify the vtkTextActor to manage. If not specified, then one
+  // is automatically created.
+  void SetStreamDriver(vtkStreamingDriver *streamDriver);
+  vtkGetObjectMacro(StreamDriver,vtkStreamingDriver);
+
 //BTX
 protected:
   vtkPVStreamingView();
   ~vtkPVStreamingView();
+
+  vtkStreamingDriver *StreamDriver;
 
 private:
   vtkPVStreamingView(const vtkPVStreamingView&); // Not implemented

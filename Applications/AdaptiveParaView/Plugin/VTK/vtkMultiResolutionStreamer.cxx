@@ -26,7 +26,7 @@
 
 vtkStandardNewMacro(vtkMultiResolutionStreamer);
 
-class Internals
+class vtkMultiResolutionStreamer::Internals
 {
 public:
   Internals(vtkMultiResolutionStreamer *owner)

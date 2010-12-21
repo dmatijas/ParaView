@@ -25,7 +25,7 @@
 
 vtkStandardNewMacro(vtkPrioritizedStreamer);
 
-class Internals
+class vtkPrioritizedStreamer::Internals
 {
 public:
   Internals(vtkPrioritizedStreamer *owner)
