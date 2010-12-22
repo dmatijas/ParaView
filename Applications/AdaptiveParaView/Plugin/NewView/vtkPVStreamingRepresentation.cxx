@@ -72,7 +72,6 @@ vtkStandardNewMacro(vtkPVStreamingRepresentation);
 //----------------------------------------------------------------------------
 vtkPVStreamingRepresentation::vtkPVStreamingRepresentation()
 {
-  cerr << "PVSR(" << this << ") ()" << endl;
   this->PieceCache = NULL;
   this->Harness = NULL;
 }
@@ -140,11 +139,7 @@ bool vtkPVStreamingRepresentation::AddToView(vtkView *view)
   if (ret)
     {
     vtkStreamingDriver *sd = sView->GetStreamDriver();
-    if (!sd || !this->Harness)
-      {
-      cerr << "UH OH" << endl;
-      }
-    else
+    if (sd && this->Harness)
       {
       sd->AddHarness(this->Harness);
       }
@@ -162,11 +157,7 @@ bool vtkPVStreamingRepresentation::RemoveFromView(vtkView *view)
     }
 
   vtkStreamingDriver *sd = sView->GetStreamDriver();
-  if (!sd || !this->Harness)
-    {
-    cerr << "UH OH" << endl;
-    }
-  else
+  if (sd && this->Harness)
     {
     sd->RemoveHarness(this->Harness);
     }

@@ -81,7 +81,6 @@ StreamingView::StreamingView(
   QObject* p)
   : pqRenderView(viewType, group, name, viewProxy, server, p), Pass(0)
 {
-  cerr << "pqSV(" << this << ") ()" << endl;
   QObject::connect(this, SIGNAL(endRender()),
                    this, SLOT(scheduleNextPass()));
 }
@@ -94,7 +93,6 @@ StreamingView::~StreamingView()
 //-----------------------------------------------------------------------------
 void StreamingView::scheduleNextPass()
 {
-//  cerr << "pqSV(" << this << ") POST RENDER " << this->Pass << endl;
   vtkSMStreamingViewProxy *vp = vtkSMStreamingViewProxy::SafeDownCast
     (this->getViewProxy());
   if (!vp)
@@ -102,7 +100,7 @@ void StreamingView::scheduleNextPass()
     return;
     }
 
-  if (!vp->IsDisplayDone())// for testing || this->Pass<10)
+  if (!vp->IsDisplayDone())
     {
     //schedule next render pass
     QTimer *t = new QTimer(this);

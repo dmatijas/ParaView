@@ -61,9 +61,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // .NAME vtkPVStreamingRepresentation - a representation that causes its
 // child representations to stream
 // .SECTION Description
-// vtkPVStreamingRepresentation adds a piece cache filter and a
-// streaming harness into its own internal pipeline, so that all
-// representations contained by this representation will stream.
+// The servermanager makes sure that a vtkPVStreamingRepresentation
+// has a piece cache filter and a streaming harness before its own pipeline.
+// This class makes sure that those get connected to the streaming driver
+// in the View that shows this representation so that the driver can
+// stream it.
 
 #ifndef __vtkPVStreamingRepresentation_h
 #define __vtkPVStreamingRepresentation_h
@@ -106,6 +108,7 @@ protected:
 
   vtkStreamingHarness *Harness;
   vtkPieceCacheFilter *PieceCache;
+
 private:
   vtkPVStreamingRepresentation
     (const vtkPVStreamingRepresentation&); // Not implemented

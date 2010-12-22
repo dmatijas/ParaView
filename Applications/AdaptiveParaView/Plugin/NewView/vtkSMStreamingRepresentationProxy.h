@@ -58,7 +58,8 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =========================================================================*/
-// .NAME vtkStreamingRepresentationProxy - representation that renders in streaming fashion
+// .NAME vtkStreamingRepresentationProxy - representation that renders in
+// a streaming fashion
 // .SECTION Description
 // A Representation that sets up the display pipeline so that it iterates
 // to render. At no time is the entire dataset resident in memory. Different
@@ -79,7 +80,9 @@ public:
                vtkSMPVRepresentationProxy);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  //Overridden to insert PCF and harness into the pipeline
+  // Description:
+  // Overridded to insert the PCF and StreamHarness before the PVRep in the
+  // pipeline and to let the PVRep know about them.
   virtual void AddInput(unsigned int inputPort,
                         vtkSMSourceProxy* input,
                         unsigned int outputPort,
@@ -95,17 +98,14 @@ protected:
   vtkSMStreamingRepresentationProxy();
   ~vtkSMStreamingRepresentationProxy();
 
-  //Overridden to insert PCF and harness into the pipeline
-  virtual void CreateVTKObjects();
+  vtkSMSourceProxy *PieceCache;
+  vtkSMSourceProxy *Harness;
 
 private:
-
   vtkSMStreamingRepresentationProxy
     (const vtkSMStreamingRepresentationProxy&); // Not implemented.
   void operator=(const vtkSMStreamingRepresentationProxy&); // Not implemented.
 
-  vtkSMSourceProxy *PieceCache;
-  vtkSMSourceProxy *Harness;
 //ETX
 };
 

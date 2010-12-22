@@ -76,12 +76,16 @@ public:
   vtkTypeMacro(vtkStreamLibraryWrapper, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  // Description:
+  // Turn on the wrapped library
   void EnableWrapping();
 
 protected:
   vtkStreamLibraryWrapper();
   ~vtkStreamLibraryWrapper();
 
+  // Description:
+  // Prevents attempts to turn it on more than once.
   static int WrappingEnabled;
 
 private:

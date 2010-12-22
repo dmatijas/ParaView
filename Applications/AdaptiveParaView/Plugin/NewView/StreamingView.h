@@ -61,6 +61,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // .NAME pqMantaView - Qt interface to a Streaming View
 // .SECTION Description
 // This class is the ParaQ interface to the Streaming View infrastructure.
+// It provides the mechanism for the GUI to cause repreated renders.
 
 #ifndef _StreamingView_h
 #define _StreamingView_h
@@ -87,11 +88,12 @@ public:
   ~StreamingView();
 
 protected slots:
-  // whenever finish a render, check if more are needed and schedule one
+
+  /// Whenever we finish a render, check if more are needed and schedule one.
   void scheduleNextPass();
 
 protected:
-  int Pass;
+  int Pass; //for debugging
 
 private:
   StreamingView(const StreamingView&); // Not implemented.

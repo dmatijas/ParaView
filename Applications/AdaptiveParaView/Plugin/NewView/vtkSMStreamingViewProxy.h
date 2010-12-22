@@ -79,8 +79,8 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // Create a default representation for the given output port of source proxy.
-  // Returns a new proxy.
+  // Overrridded to create streaming representations and to give the PV
+  // Views access to their StreamingDrivers.
   virtual vtkSMRepresentationProxy* CreateDefaultRepresentation(
     vtkSMProxy*, int opport);
 
@@ -89,7 +89,8 @@ public:
   virtual bool IsSelectionAvailable() { return false; }
 
   // Description:
-  // This is a flag that controls when rendering can stop.
+  // Ask the PVViews if multipass rendering has finished, if not we mark
+  // them modified so that the next render executes their pipelines fully.
   bool IsDisplayDone();
 
 //BTX
@@ -97,9 +98,12 @@ protected:
   vtkSMStreamingViewProxy();
   ~vtkSMStreamingViewProxy();
 
+  // Description:
+  // Overridded to initialized the CS wrapped VTK streaming library.
   virtual void CreateVTKObjects();
 
   vtkSMProxy *Driver;
+
 private:
 
   vtkSMStreamingViewProxy(const vtkSMStreamingViewProxy&); // Not implemented.

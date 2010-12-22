@@ -75,7 +75,6 @@ void vtkPVStreamingViewRenderLaterFunction(void *instance)
 //----------------------------------------------------------------------------
 vtkPVStreamingView::vtkPVStreamingView()
 {
-  cerr << "PVSV(" << this << ") ()" << endl;
   this->StreamDriver = NULL;
   this->IsDisplayDone = 1;
 }

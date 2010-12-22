@@ -77,7 +77,6 @@ vtkStandardNewMacro(vtkSMStreamingViewProxy);
 //-----------------------------------------------------------------------------
 vtkSMStreamingViewProxy::vtkSMStreamingViewProxy()
 {
-  cerr << "SMSVP(" << this << ") ()" << endl;
   this->Driver = NULL;
 }
 

@@ -72,7 +72,6 @@ vtkStandardNewMacro(vtkSMStreamingRepresentationProxy);
 //-----------------------------------------------------------------------------
 vtkSMStreamingRepresentationProxy::vtkSMStreamingRepresentationProxy()
 {
-  cerr << "SMSRP(" << this << ") ()" << endl;
   this->PieceCache = NULL;
   this->Harness = NULL;
 }
@@ -97,20 +96,12 @@ void vtkSMStreamingRepresentationProxy::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //------------------------------------------------------------------------------
-void vtkSMStreamingRepresentationProxy::CreateVTKObjects()
-{
-  this->Superclass::CreateVTKObjects();
-}
-
-//------------------------------------------------------------------------------
 void vtkSMStreamingRepresentationProxy::AddInput
   (unsigned int inputPort,
    vtkSMSourceProxy *input,
    unsigned int outputPort,
    const char* method)
 {
-  cerr << "SMSRP("<< this << ") AddInput" << endl;
-
   if (!this->ObjectsCreated)
     {
     this->PieceCache =

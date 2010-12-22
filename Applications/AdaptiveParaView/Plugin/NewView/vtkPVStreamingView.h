@@ -64,7 +64,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // vtkPVStreamingRepresentations shown within it through their pieces.
 // Since the data is rendered one piece at a time, the entire data set
 // is never resident in RAM at once.
-// Different configurations render in iterative, prioritized and
+// Switching the Driver will make it render in iterative, prioritized and
 // multiresolution progressions.
 
 #ifndef __vtkPVStreamingView_h
@@ -83,20 +83,20 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // Specify the vtkTextActor to manage. If not specified, then one
-  // is automatically created.
+  // Specify the streaming algorithm.
   void SetStreamDriver(vtkStreamingDriver *streamDriver);
   vtkGetObjectMacro(StreamDriver,vtkStreamingDriver);
-
-  // Description:
-  // For internal use only.
-  // It provides the path for GUI rerenders.
-  void RenderSchedule();
 
   // Description:
   // A flag that signals when to continue/stop multipass rendering.
   vtkSetMacro(IsDisplayDone, int);
   vtkGetMacro(IsDisplayDone, int);
+
+  // Description:
+  // For internal use only.
+  // It provides a path for the Driver to set the flag that the GUI watches
+  // to cause repeated renders.
+  void RenderSchedule();
 
 //BTX
 protected:
