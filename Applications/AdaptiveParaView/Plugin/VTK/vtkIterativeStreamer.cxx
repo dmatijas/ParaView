@@ -67,7 +67,7 @@ void vtkIterativeStreamer::StartRenderEvent()
       rw->EraseOn();
 
       //and none but the last pass should swap back to front automatically
-      rw->SwapBuffersOff();
+      rw->SwapBuffersOff(); //comment this out to see it render each piece
       }
 
     int maxPiece = harness->GetNumberOfPieces();

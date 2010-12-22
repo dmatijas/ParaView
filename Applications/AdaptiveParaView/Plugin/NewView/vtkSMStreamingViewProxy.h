@@ -90,7 +90,7 @@ public:
 
   // Description:
   // This is a flag that controls when rendering can stop.
-  bool IsDisplayDone() { return true; }
+  bool IsDisplayDone();
 
 //BTX
 protected:

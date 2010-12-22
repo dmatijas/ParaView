@@ -66,11 +66,18 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 vtkStandardNewMacro(vtkPVStreamingView);
 
+void vtkPVStreamingViewRenderLaterFunction(void *instance)
+{
+  vtkPVStreamingView *self = static_cast<vtkPVStreamingView*>(instance);
+  self->RenderSchedule();
+}
+
 //----------------------------------------------------------------------------
 vtkPVStreamingView::vtkPVStreamingView()
 {
   cerr << "PVSV(" << this << ") ()" << endl;
   this->StreamDriver = NULL;
+  this->IsDisplayDone = 1;
 }
 
 //----------------------------------------------------------------------------
@@ -103,5 +110,21 @@ void vtkPVStreamingView::SetStreamDriver(vtkStreamingDriver *nd)
     this->StreamDriver->Register(this);
     this->StreamDriver->SetRenderWindow(this->GetRenderWindow());
     this->StreamDriver->SetRenderer(this->GetRenderer());
+    this->StreamDriver->AssignRenderLaterFunction
+      (vtkPVStreamingViewRenderLaterFunction, this);
     }
+}
+
+
+//----------------------------------------------------------------------------
+void vtkPVStreamingView::Render(bool interactive, bool skip_rendering)
+{
+  this->IsDisplayDone = 1;
+  this->Superclass::Render(interactive, skip_rendering);
+}
+
+//----------------------------------------------------------------------------
+void vtkPVStreamingView::RenderSchedule()
+{
+  this->IsDisplayDone = 0;
 }

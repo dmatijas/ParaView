@@ -59,7 +59,7 @@ public:
   // Assign a function that this driver can call to schedule eventual
   // render calls. This allows automatic streaming to work as part of
   // a GUI event loop so that it can be interruptable.
-  void AssignRenderLaterFunction(void (*function)(void));
+  void AssignRenderLaterFunction(void (*function)(void *), void *arg);
 
   // Description:
   // For internal use, window events call back here.

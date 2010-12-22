@@ -127,7 +127,7 @@ vtkSMRepresentationProxy* vtkSMStreamingViewProxy::CreateDefaultRepresentation(
     vtkProcessModule *pm = vtkProcessModule::GetProcessModule();
     vtkClientServerStream stream;
 
-    this->Driver = this->GetSubProxy("Driver");
+    this->Driver = this->GetSubProxy("StreamingDriver");
     this->Driver->Register(this);
 
     stream << vtkClientServerStream::Invoke
@@ -167,4 +167,28 @@ vtkSMRepresentationProxy* vtkSMStreamingViewProxy::CreateDefaultRepresentation(
     }
 
   return 0;
+}
+
+//------------------------------------------------------------------------------
+bool vtkSMStreamingViewProxy::IsDisplayDone()
+{
+  vtkSMPropertyHelper(this, "GetIsDisplayDone").UpdateValueFromServer();
+  int flag = vtkSMPropertyHelper(this, "GetIsDisplayDone").GetAsInt();
+  if (flag==1)
+    {
+    return true;
+    }
+
+  vtkSMPropertyHelper helper1(this, "Representations");
+  for (unsigned int cc=0; cc  < helper1.GetNumberOfElements(); cc++)
+    {
+    vtkSMRepresentationProxy* repr = vtkSMRepresentationProxy::SafeDownCast
+      (helper1.GetAsProxy(cc));
+    if (repr)
+      {
+      repr->MarkDirty(this);
+      }
+    }
+
+  return false;
 }

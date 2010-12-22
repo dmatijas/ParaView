@@ -36,7 +36,7 @@ vtkStreamingHarness::vtkStreamingHarness()
   cerr << "SH(" << this << ") ()" << endl;
   this->Pass = 0;
   this->Piece = 0;
-  this->NumberOfPieces = 2;
+  this->NumberOfPieces = 10;
   this->Resolution = 1.0;
   this->ForOther = false;
   this->PieceList1 = NULL;
@@ -124,7 +124,6 @@ int vtkStreamingHarness::RequestUpdateExtent(
 {
   if (!this->ForOther)
     {
-
     //get downstream numpasses
     vtkInformation *outInfo = outputVector->GetInformationObject(0);
     int P = outInfo->Get

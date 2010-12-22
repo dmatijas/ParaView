@@ -43,6 +43,7 @@ public:
     this->WindowWatcher = NULL;
     this->Harnesses = vtkCollection::New();
     this->RenderLaterFunction = NULL;
+    this->RenderLaterArgument = NULL;
 
     //auxilliary functionality, that help view sorting sublasses
     this->ViewSorter = vtkVisibilityPrioritizer::New();
@@ -65,7 +66,8 @@ public:
   vtkRenderWindow *RenderWindow;
   vtkCallbackCommand *WindowWatcher;
   vtkCollection *Harnesses;
-  void (*RenderLaterFunction) (void);
+  void (*RenderLaterFunction) (void *);
+  void *RenderLaterArgument;
 
   //auxilliary functionality, that help view sorting sublasses
   vtkVisibilityPrioritizer *ViewSorter;
@@ -89,9 +91,11 @@ static void VTKSD_RenderEvent(vtkObject *vtkNotUsed(caller),
 }
 
 //----------------------------------------------------------------------------
-void vtkStreamingDriver::AssignRenderLaterFunction(void (*foo)(void))
+void vtkStreamingDriver::AssignRenderLaterFunction(void (*foo)(void *),
+                                                   void*bar)
 {
   this->Internal->RenderLaterFunction = foo;
+  this->Internal->RenderLaterArgument = bar;
 }
 
 //----------------------------------------------------------------------------
@@ -218,7 +222,8 @@ void vtkStreamingDriver::RenderEventually()
 {
   if (this->Internal->RenderLaterFunction)
     {
-    this->Internal->RenderLaterFunction();
+    this->Internal->RenderLaterFunction
+      (this->Internal->RenderLaterArgument);
     return;
     }
 

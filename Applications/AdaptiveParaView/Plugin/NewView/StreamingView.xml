@@ -79,29 +79,17 @@
   <ProxyGroup
       name="utilities">
     <Proxy
-        name="StreamDriver"
+        name="IteratingDriver"
         class="vtkIterativeStreamer">
     </Proxy>
-  </ProxyGroup>
-
-  <ProxyGroup
-      name="views">
-    <StreamingViewProxy
-        name="StreamingView"
-        class="vtkPVStreamingView"
-        processes="client|renderserver|dataserver"
-        base_proxygroup="views"
-        base_proxyname="RenderView">
-
-      <SubProxy>
-        <Proxy
-            name="Driver"
-            proxygroup="utilities"
-            proxyname="StreamDriver">
-        </Proxy>
-      </SubProxy>
-
-    </StreamingViewProxy>
+    <Proxy
+        name="PrioritizingDriver"
+        class="vtkPrioritizedStreamer">
+    </Proxy>
+    <Proxy
+        name="AdaptiveDriver"
+        class="vtkMultiResolutionStreamer">
+    </Proxy>
   </ProxyGroup>
 
   <ProxyGroup
@@ -127,6 +115,35 @@
       </SubProxy>
 
     </StreamingRepresentationProxy>
+  </ProxyGroup>
+
+  <ProxyGroup
+      name="views">
+    <StreamingViewProxy
+        name="StreamingView"
+        class="vtkPVStreamingView"
+        processes="client|renderserver|dataserver"
+        base_proxygroup="views"
+        base_proxyname="RenderView">
+
+      <SubProxy>
+        <Proxy
+            name="StreamingDriver"
+            proxygroup="utilities"
+            proxyname="IteratingDriver">
+       <!-- proxyname="PrioritizingDriver"> -->
+       <!-- proxyname="AdaptiveDriver"> -->
+        </Proxy>
+      </SubProxy>
+
+     <IntVectorProperty
+       name="GetIsDisplayDone"
+       command="GetIsDisplayDone"
+       information_only="1">
+       <SimpleIntInformationHelper/>
+     </IntVectorProperty>
+
+    </StreamingViewProxy>
   </ProxyGroup>
 
 </ServerManagerConfiguration>

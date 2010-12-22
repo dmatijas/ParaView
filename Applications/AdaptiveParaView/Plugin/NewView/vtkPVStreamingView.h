@@ -88,10 +88,25 @@ public:
   void SetStreamDriver(vtkStreamingDriver *streamDriver);
   vtkGetObjectMacro(StreamDriver,vtkStreamingDriver);
 
+  // Description:
+  // For internal use only.
+  // It provides the path for GUI rerenders.
+  void RenderSchedule();
+
+  // Description:
+  // A flag that signals when to continue/stop multipass rendering.
+  vtkSetMacro(IsDisplayDone, int);
+  vtkGetMacro(IsDisplayDone, int);
+
 //BTX
 protected:
   vtkPVStreamingView();
   ~vtkPVStreamingView();
+
+  // Description:
+  // Overridden to set flag to participate in streamed rendering.
+  void Render(bool interactive, bool skip_rendering);
+  int IsDisplayDone;
 
   vtkStreamingDriver *StreamDriver;
 

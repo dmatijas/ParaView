@@ -400,7 +400,7 @@ protected:
 
   // Description:
   // Actual render method.
-  void Render(bool interactive, bool skip_rendering);
+  virtual void Render(bool interactive, bool skip_rendering);
 
   // Description:
   // Calls vtkView::REQUEST_INFORMATION() on all representations
