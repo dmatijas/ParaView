@@ -202,7 +202,9 @@ void vtkSMRenderViewProxy::SynchronizeCameraProperties()
       {
       continue;
       }
-    cur_property->Copy(info_property);
+//DDM this is resetting camera which changes Z, upsetting streaming.
+//    cur_property->Copy(info_property);
+
     //cur_property->UpdateLastPushedValues();
     }
   iter->Delete();

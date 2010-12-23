@@ -27,6 +27,7 @@ vtkStandardNewMacro(vtkIterativeStreamer);
 //----------------------------------------------------------------------------
 vtkIterativeStreamer::vtkIterativeStreamer()
 {
+  this->CameraMoved = true;
 }
 
 //----------------------------------------------------------------------------
@@ -54,14 +55,17 @@ void vtkIterativeStreamer::StartRenderEvent()
   vtkCollectionIterator *iter = harnesses->NewIterator();
   iter->InitTraversal();
   bool everyone_done = true;
-  bool CameraMoved = this->IsRestart();
+  //watch for camera movement and restart when that happens so we don't
+  //"streak"
+  this->CameraMoved = this->IsRestart();
+
   while(!iter->IsDoneWithTraversal())
     {
     vtkStreamingHarness *harness = vtkStreamingHarness::SafeDownCast
       (iter->GetCurrentObject());
     iter->GoToNextItem();
     int pieceNow = harness->GetPiece();
-    if (pieceNow <= 0 || CameraMoved)
+    if (pieceNow <= 0 || this->CameraMoved)
       {
       harness->SetPiece(0);
 
@@ -114,14 +118,16 @@ void vtkIterativeStreamer::EndRenderEvent()
     int maxPiece = harness->GetNumberOfPieces();
     int pieceNow = harness->GetPiece();
     int pieceNext = pieceNow;
-    if (pieceNow+1 < maxPiece)
+    if (pieceNow+1 < maxPiece && !this->CameraMoved)
+      //CameraMoved is here because we detect motion too late to reset pipeline
+      //and we end up missing the first pass's piece
       {
       everyone_done = false;
       pieceNext++;
       }
     harness->SetPiece(pieceNext);
     }
-
+  this->CameraMoved = false;
   if (everyone_done)
     {
     //we just drew the last frame everyone has to start over next time

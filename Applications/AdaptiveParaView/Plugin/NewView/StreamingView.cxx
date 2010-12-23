@@ -71,6 +71,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <pqServer.h>
 #include <pqApplicationCore.h>
 
+#include "vtkRenderWindow.h"
+#include "vtkWindowToImageFilter.h"
+#include "vtkPNGWriter.h"
+
 //-----------------------------------------------------------------------------
 StreamingView::StreamingView(
   const QString& viewType,
@@ -81,6 +85,8 @@ StreamingView::StreamingView(
   QObject* p)
   : pqRenderView(viewType, group, name, viewProxy, server, p), Pass(0)
 {
+  QObject::connect(this, SIGNAL(beginRender()),
+                   this, SLOT(watchPreRender()));
   QObject::connect(this, SIGNAL(endRender()),
                    this, SLOT(scheduleNextPass()));
 }
@@ -91,15 +97,55 @@ StreamingView::~StreamingView()
 }
 
 //-----------------------------------------------------------------------------
-void StreamingView::scheduleNextPass()
+void StreamingView::watchPreRender()
 {
+  //cerr << "PRE RENDER " << this->Pass << endl;
   vtkSMStreamingViewProxy *vp = vtkSMStreamingViewProxy::SafeDownCast
     (this->getViewProxy());
   if (!vp)
     {
     return;
     }
+  vp->PreRender();
+}
 
+//-----------------------------------------------------------------------------
+void StreamingView::scheduleNextPass()
+{
+  //cerr << "POST RENDER " << this->Pass << endl;
+  vtkSMStreamingViewProxy *vp = vtkSMStreamingViewProxy::SafeDownCast
+    (this->getViewProxy());
+  if (!vp)
+    {
+    return;
+    }
+/*
+  //save debug images of back and front buffer
+  vtkRenderWindow *rw = vp->GetRenderWindow();
+  vtkWindowToImageFilter *w2i = vtkWindowToImageFilter::New();
+  vtkPNGWriter *writer = vtkPNGWriter::New();
+  w2i->SetInput(rw);
+  w2i->ShouldRerenderOff();
+  w2i->ReadFrontBufferOff();
+  w2i->Update();
+  writer->SetInputConnection(w2i->GetOutputPort());
+  QString s("image_");
+  s.append(QString::number(this->Pass));
+  s.append("_back.png");
+  writer->SetFileName(s.toAscii());
+  writer->Write();
+
+  w2i->ReadFrontBufferOn();
+  w2i->Update();
+  s = "image_";
+  s.append(QString::number(this->Pass));
+  s.append("_front.png");
+  writer->SetFileName(s.toAscii());
+  writer->Write();
+
+  w2i->Delete();
+  writer->Delete();
+*/
   if (!vp->IsDisplayDone())
     {
     //schedule next render pass

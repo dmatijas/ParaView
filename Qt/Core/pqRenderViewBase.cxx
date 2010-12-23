@@ -174,7 +174,10 @@ QWidget* pqRenderViewBase::createWidget()
   // For now, we are doing this only on Apple because it can render
   // and capture a frame buffer even when it is obstructred by a
   // window. This does not work as well on other platforms.
-#if defined(__APPLE__)
+
+//DDM commented out because this prevents streaming from showing
+//latest image
+#if 0//defined(__APPLE__)
   vtkwidget->setAutomaticImageCacheEnabled(true);
 
   // help the QVTKWidget know when to clear the cache

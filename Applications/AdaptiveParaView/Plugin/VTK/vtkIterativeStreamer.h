@@ -36,8 +36,16 @@ protected:
   vtkIterativeStreamer();
   ~vtkIterativeStreamer();
 
+  //Description:
+  //Before each render, check and if needed do, initial pass setup
   virtual void StartRenderEvent();
+  //Description:
+  //After each render advanced to next pass. If last pass do last pass work.
   virtual void EndRenderEvent();
+
+  //Description:
+  //Helper to watch for camera motion and restart to first pass.
+  bool CameraMoved;
 
 private:
   vtkIterativeStreamer(const vtkIterativeStreamer&);  // Not implemented.

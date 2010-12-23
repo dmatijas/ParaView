@@ -89,6 +89,9 @@ public:
 
 protected slots:
 
+  /// Before we start a render, make sure streaming pipeline is ready
+  void watchPreRender();
+
   /// Whenever we finish a render, check if more are needed and schedule one.
   void scheduleNextPass();
 

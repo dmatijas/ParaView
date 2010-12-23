@@ -64,6 +64,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "vtkClientServerStream.h"
 
 #include "vtkProcessModule.h"
+#include "vtkSMStreamingRepresentationProxy.h"
 #include "vtkSMInputProperty.h"
 #include "vtkSMPropertyHelper.h"
 #include "vtkSMProxyManager.h"
@@ -169,6 +170,24 @@ vtkSMRepresentationProxy* vtkSMStreamingViewProxy::CreateDefaultRepresentation(
 }
 
 //------------------------------------------------------------------------------
+void vtkSMStreamingViewProxy::PreRender()
+{
+  vtkSMPropertyHelper helper1(this, "Representations");
+  for (unsigned int cc=0; cc  < helper1.GetNumberOfElements(); cc++)
+    {
+    vtkSMStreamingRepresentationProxy* repr =
+      vtkSMStreamingRepresentationProxy::SafeDownCast
+      (helper1.GetAsProxy(cc));
+    if (repr)
+      {
+      //make sure we update so that we get the up-to-date pipeline
+      //from the streaming harness
+      repr->MarkDirty(this);
+      }
+    }
+}
+
+//------------------------------------------------------------------------------
 bool vtkSMStreamingViewProxy::IsDisplayDone()
 {
   vtkSMPropertyHelper(this, "GetIsDisplayDone").UpdateValueFromServer();
@@ -176,17 +195,6 @@ bool vtkSMStreamingViewProxy::IsDisplayDone()
   if (flag==1)
     {
     return true;
-    }
-
-  vtkSMPropertyHelper helper1(this, "Representations");
-  for (unsigned int cc=0; cc  < helper1.GetNumberOfElements(); cc++)
-    {
-    vtkSMRepresentationProxy* repr = vtkSMRepresentationProxy::SafeDownCast
-      (helper1.GetAsProxy(cc));
-    if (repr)
-      {
-      repr->MarkDirty(this);
-      }
     }
 
   return false;
