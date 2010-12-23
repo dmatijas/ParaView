@@ -54,14 +54,17 @@ void vtkIterativeStreamer::StartRenderEvent()
   vtkCollectionIterator *iter = harnesses->NewIterator();
   iter->InitTraversal();
   bool everyone_done = true;
+  bool CameraMoved = this->IsRestart();
   while(!iter->IsDoneWithTraversal())
     {
     vtkStreamingHarness *harness = vtkStreamingHarness::SafeDownCast
       (iter->GetCurrentObject());
     iter->GoToNextItem();
     int pieceNow = harness->GetPiece();
-    if (pieceNow == 0)
+    if (pieceNow <= 0 || CameraMoved)
       {
+      harness->SetPiece(0);
+
       //first pass has to clear to start off
       ren->EraseOn();
       rw->EraseOn();

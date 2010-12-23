@@ -44,7 +44,6 @@ public:
     this->Harnesses = vtkCollection::New();
     this->RenderLaterFunction = NULL;
     this->RenderLaterArgument = NULL;
-
     //auxilliary functionality, that help view sorting sublasses
     this->ViewSorter = vtkVisibilityPrioritizer::New();
     this->CameraTime = 0;
@@ -237,53 +236,55 @@ void vtkStreamingDriver::RenderEventually()
 bool vtkStreamingDriver::IsRestart()
 {
   vtkRenderer *ren = this->GetRenderer();
-  if (ren)
+  if (!ren)
     {
-    vtkCamera * cam = ren->GetActiveCamera();
-    if (cam)
+    return false;
+    }
+
+  vtkCamera *cam = ren->GetActiveCamera();
+  if (!cam)
+    {
+    return false;
+    }
+
+  unsigned long mtime = cam->GetMTime();
+  if (mtime > this->Internal->CameraTime)
+    {
+    this->Internal->CameraTime = mtime;
+
+    double camState[9];
+    cam->GetPosition(&camState[0]);
+    cam->GetViewUp(&camState[3]);
+    cam->GetFocalPoint(&camState[6]);
+
+    //convert screen rectangle to world frustum
+    const double HALFEXT=1.0; //1.0 means all way to edge of screen
+    const double XMAX=HALFEXT;
+    const double XMIN=-HALFEXT;
+    const double YMAX=HALFEXT;
+    const double YMIN=-HALFEXT;
+    const double viewP[32] = {
+      XMIN, YMIN,  0.0, 1.0,
+      XMIN, YMIN,  1.0, 1.0,
+      XMIN, YMAX,  0.0, 1.0,
+      XMIN, YMAX,  1.0, 1.0,
+      XMAX, YMIN,  0.0, 1.0,
+      XMAX, YMIN,  1.0, 1.0,
+      XMAX, YMAX,  0.0, 1.0,
+      XMAX, YMAX,  1.0, 1.0
+    };
+    double frust[32];
+    memcpy(frust, viewP, 32*sizeof(double));
+    for (int index=0; index<8; index++)
       {
-      unsigned long mtime = cam->GetMTime();
-      if (mtime > this->Internal->CameraTime)
-        {
-        this->Internal->CameraTime = mtime;
-
-        double camState[9];
-        cam->GetPosition(&camState[0]);
-        cam->GetViewUp(&camState[3]);
-        cam->GetFocalPoint(&camState[6]);
-
-        this->Internal->ViewSorter->SetCameraState(camState);
-
-        //convert screen rectangle to world frustum
-        const double HALFEXT=1.0; /*1.0 means all way to edge of screen*/
-        const double XMAX=HALFEXT;
-        const double XMIN=-HALFEXT;
-        const double YMAX=HALFEXT;
-        const double YMIN=-HALFEXT;
-        const double viewP[32] = {
-          XMIN, YMIN,  0.0, 1.0,
-          XMIN, YMIN,  1.0, 1.0,
-          XMIN, YMAX,  0.0, 1.0,
-          XMIN, YMAX,  1.0, 1.0,
-          XMAX, YMIN,  0.0, 1.0,
-          XMAX, YMIN,  1.0, 1.0,
-          XMAX, YMAX,  0.0, 1.0,
-          XMAX, YMAX,  1.0, 1.0
-        };
-
-        double frust[32];
-        memcpy(frust, viewP, 32*sizeof(double));
-        for (int index=0; index<8; index++)
-          {
-          ren->ViewToWorld(frust[index*4+0],
-                           frust[index*4+1],
-                           frust[index*4+2]);
-          }
-
-        this->Internal->ViewSorter->SetFrustum(frust);
-        return true;
-        }
+      ren->ViewToWorld(frust[index*4+0],
+                       frust[index*4+1],
+                       frust[index*4+2]);
       }
+
+    this->Internal->ViewSorter->SetCameraState(camState);
+    this->Internal->ViewSorter->SetFrustum(frust);
+    return true;
     }
 
   return false;

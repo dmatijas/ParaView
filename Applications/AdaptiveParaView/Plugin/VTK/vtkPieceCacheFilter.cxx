@@ -27,7 +27,7 @@
 #include <vtkstd/vector>
 
 vtkStandardNewMacro(vtkPieceCacheFilter);
-#if 1
+#if 0
 
 #define DEBUGPRINT_CACHING(arg) arg;
 #define DEBUGPRINT_APPENDING(arg) arg;
@@ -162,7 +162,6 @@ int vtkPieceCacheFilter::RequestData(
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)
 {
-  cerr << "PCF(" << this << ") RD" << endl;
   //Fetch the data from the cache if possible and pass it on to the output.
   //Otherwise, save a copy of the input data, and pass it on to the output.
 

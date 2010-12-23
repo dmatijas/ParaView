@@ -33,10 +33,9 @@ vtkCxxSetObjectMacro(vtkStreamingHarness, CacheFilter, vtkPieceCacheFilter);
 //----------------------------------------------------------------------------
 vtkStreamingHarness::vtkStreamingHarness()
 {
-  cerr << "SH(" << this << ") ()" << endl;
   this->Pass = 0;
   this->Piece = 0;
-  this->NumberOfPieces = 10;
+  this->NumberOfPieces = 8;
   this->Resolution = 1.0;
   this->ForOther = false;
   this->PieceList1 = NULL;
@@ -48,7 +47,6 @@ vtkStreamingHarness::vtkStreamingHarness()
 //----------------------------------------------------------------------------
 vtkStreamingHarness::~vtkStreamingHarness()
 {
-  cerr << "~SH(" << this << ")" << endl;
   this->SetPieceList1(NULL);
   this->SetPieceList2(NULL);
   this->SetCacheFilter(NULL);
@@ -131,7 +129,8 @@ int vtkStreamingHarness::RequestUpdateExtent(
     int NP = outInfo->Get
     (vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
 
-    cerr << "P/NP " << P << "/" << NP << "->";
+    cerr << "HARNESS(" << this <<") RUE "
+         << "P/NP " << P << "/" << NP << "->";
     //split each downstream piece into many
     P = P * this->NumberOfPieces + this->Piece;
     NP = NP * this->NumberOfPieces;
@@ -163,7 +162,10 @@ int vtkStreamingHarness::RequestData(
   vtkDataObject* input = inInfo->Get(vtkDataObject::DATA_OBJECT());
   vtkDataObject* output = outInfo->Get(vtkDataObject::DATA_OBJECT());
   output->ShallowCopy(input);
-  cerr << "RD" << endl;
+  cerr << "HARNESS(" << this <<") RD "
+       << this->Piece << "/"
+       << this->NumberOfPieces << "@"
+       << this->Resolution  << endl;
   return 1;
 }
 

@@ -25,7 +25,7 @@
 
 vtkStandardNewMacro(vtkPieceCacheExecutive);
 
-#if 1
+#if 0
 #define DEBUGPRINT_CACHING(arg) arg;
 #else
 #define DEBUGPRINT_CACHING(arg) \
