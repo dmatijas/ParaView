@@ -79,16 +79,16 @@ int vtkStreamedMandelbrot::RequestInformation (
   double *Spacing;
   Spacing = outInfo->Get(vtkDataObject::SPACING());
 
-  int *WholeExtent;
-  WholeExtent = outInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT());
+  int *wholeExtent;
+  wholeExtent = outInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT());
 
   int sWholeExtent[6];
-  sWholeExtent[0] = WholeExtent[0];
-  sWholeExtent[1] = WholeExtent[1];
-  sWholeExtent[2] = WholeExtent[2];
-  sWholeExtent[3] = WholeExtent[3];
-  sWholeExtent[4] = WholeExtent[4];
-  sWholeExtent[5] = WholeExtent[5];
+  sWholeExtent[0] = wholeExtent[0];
+  sWholeExtent[1] = wholeExtent[1];
+  sWholeExtent[2] = wholeExtent[2];
+  sWholeExtent[3] = wholeExtent[3];
+  sWholeExtent[4] = wholeExtent[4];
+  sWholeExtent[5] = wholeExtent[5];
 
   double sSpacing[3];
   sSpacing[0] = Spacing[0];
@@ -100,7 +100,7 @@ int vtkStreamedMandelbrot::RequestInformation (
   DEBUGPRINT_RESOLUTION(
   cerr << "PRE GRID\t";
   {for (int i = 0; i < 3; i++) cerr << Spacing[i] << " ";}
-  {for (int i = 0; i < 6; i++) cerr << WholeExtent[i] << " ";}
+  {for (int i = 0; i < 6; i++) cerr << wholeExtent[i] << " ";}
   cerr << endl;
   );
 
@@ -180,7 +180,7 @@ int vtkStreamedMandelbrot::RequestInformation (
   outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_BOUNDING_BOX(),
                bounds, 6);
 
-  return 1;
+  return ret;
 
 }
 

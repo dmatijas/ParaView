@@ -6,15 +6,18 @@
     <SourceProxy
         name="StreamingSource"
         class="vtkStreamedMandelbrot"
-        label="Streamed Mandelbrot"
-        base_proxygroup="sources"
-        base_proxyname="ImageMandelbrotSource">
+        label="Streamed Mandelbrot">
 
+      <Documentation
+        long_help="Streamed version of ImageMandelbrot"
+        short_help="Streamed Mandelbrot">
+        See documentation of ImageMandebrot.
+      </Documentation>
       <IntVectorProperty
          name="WholeExtent"
          command="SetWholeExtent"
          number_of_elements="6"
-         default_values="0 50 0 50 0 50" >
+         default_values="0 100 0 100 0 100" >
         <IntRangeDomain name="range"/>
         <Documentation>
           The six values in the property indicate the X, Y, and Z extent of the output data. The first two numbers are the minimum and maximum X extent; the next two are the minimum and maximum Y extent; and the final two are the minimum and maximum Z extent. The numbers are inclusive, so values of 0, 250, 0, 250, 0, 0 indicate that the dimensions of the output will be 251 x 251 x 1.
@@ -130,7 +133,8 @@
         <Proxy
             name="StreamingDriver"
             proxygroup="utilities"
-            proxyname="IteratingDriver">
+            proxyname="PrioritizingDriver">
+       <!-- proxyname="IteratingDriver"> -->
        <!-- proxyname="PrioritizingDriver"> -->
        <!-- proxyname="AdaptiveDriver"> -->
         </Proxy>

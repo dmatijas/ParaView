@@ -32,6 +32,7 @@ public:
   {
     this->Owner = owner;
     this->FirstPass = true;
+    this->CameraMoved = true;
   }
   ~Internals()
   {
@@ -39,6 +40,8 @@ public:
 
   vtkPrioritizedStreamer *Owner;
   bool FirstPass;
+  bool CameraMoved;
+
 };
 
 //----------------------------------------------------------------------------
@@ -189,7 +192,6 @@ void vtkPrioritizedStreamer::AdvanceEveryone()
 
   vtkCollectionIterator *iter = harnesses->NewIterator();
   iter->InitTraversal();
-  bool everyone_done = true;
   while(!iter->IsDoneWithTraversal())
     {
     vtkStreamingHarness *harness = vtkStreamingHarness::SafeDownCast
@@ -223,6 +225,34 @@ void vtkPrioritizedStreamer::AdvanceEveryone()
 //----------------------------------------------------------------------------
 void vtkPrioritizedStreamer::FinalizeEveryone()
 {
+  vtkCollection *harnesses = this->GetHarnesses();
+  if (!harnesses)
+    {
+    return;
+    }
+
+  vtkCollectionIterator *iter = harnesses->NewIterator();
+  iter->InitTraversal();
+  while(!iter->IsDoneWithTraversal())
+    {
+    //get a hold of the pipeline for this object
+    vtkStreamingHarness *harness = vtkStreamingHarness::SafeDownCast
+      (iter->GetCurrentObject());
+    iter->GoToNextItem();
+
+    int passNext = 0;
+    harness->SetPass(passNext);
+    //map that to an absolute piece number
+    int pieceNext = passNext;
+    vtkPieceList *pl = harness->GetPieceList1();
+    if (pl)
+      {
+      pieceNext = pl->GetPiece(passNext).GetPiece();
+      }
+    //cerr << "PASS " << passNext << " PIECE " << pieceNext << endl;
+    harness->SetPiece(pieceNext);
+    }
+  iter->Delete();
   return;
 }
 
@@ -237,7 +267,9 @@ void vtkPrioritizedStreamer::StartRenderEvent()
     return;
     }
 
-  if (this->IsRestart() || this->IsFirstPass())
+  this->Internal->CameraMoved = this->IsRestart();
+
+  if (this->Internal->CameraMoved || this->IsFirstPass())
     {
     //start off by clearing the screen
     ren->EraseOn();
@@ -245,13 +277,11 @@ void vtkPrioritizedStreamer::StartRenderEvent()
 
     //and telling all the harnesses to get ready
     this->ResetEveryone();
-
-    //don't swap back to front automatically, only show what we've
-    //drawn when the entire domain is covered
-    rw->SwapBuffersOff();
-    //TODO:Except for diagnostic mode where it is helpful to see
-    //everything as it is drawn
     }
+
+  //don't swap back to front automatically, only show what we've
+  //drawn when the entire domain is covered
+  rw->SwapBuffersOff(); //comment this out to see each piece rendered
 
   this->Internal->FirstPass = false;
 }
@@ -274,7 +304,7 @@ void vtkPrioritizedStreamer::EndRenderEvent()
 
   this->AdvanceEveryone();
 
-  if (this->IsEveryoneDone())
+  if (this->IsEveryoneDone() || this->Internal->CameraMoved)
     {
     //we just drew the last frame everyone has to start over next time
     this->FinalizeEveryone();

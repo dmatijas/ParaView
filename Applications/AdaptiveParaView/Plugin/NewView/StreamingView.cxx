@@ -119,7 +119,8 @@ void StreamingView::scheduleNextPass()
     {
     return;
     }
-/*
+
+#if 0
   //save debug images of back and front buffer
   vtkRenderWindow *rw = vp->GetRenderWindow();
   vtkWindowToImageFilter *w2i = vtkWindowToImageFilter::New();
@@ -129,7 +130,7 @@ void StreamingView::scheduleNextPass()
   w2i->ReadFrontBufferOff();
   w2i->Update();
   writer->SetInputConnection(w2i->GetOutputPort());
-  QString s("image_");
+  QString s("debugimgs/image_");
   s.append(QString::number(this->Pass));
   s.append("_back.png");
   writer->SetFileName(s.toAscii());
@@ -137,7 +138,7 @@ void StreamingView::scheduleNextPass()
 
   w2i->ReadFrontBufferOn();
   w2i->Update();
-  s = "image_";
+  s = "debugimgs/image_";
   s.append(QString::number(this->Pass));
   s.append("_front.png");
   writer->SetFileName(s.toAscii());
@@ -145,7 +146,8 @@ void StreamingView::scheduleNextPass()
 
   w2i->Delete();
   writer->Delete();
-*/
+#endif
+
   if (!vp->IsDisplayDone())
     {
     //schedule next render pass
