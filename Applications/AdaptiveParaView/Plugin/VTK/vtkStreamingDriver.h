@@ -62,6 +62,13 @@ public:
   void AssignRenderLaterFunction(void (*function)(void *), void *arg);
 
   // Description:
+  // Sometimes, as in ParaView, window events happen too late.
+  // Before assigning a render window, set these to true (the default is false)
+  // to take over and drive the progression yourself.
+  vtkSetMacro(ManualStart, bool);
+  vtkSetMacro(ManualFinish, bool);
+
+  // Description:
   // For internal use, window events call back here.
   virtual void StartRenderEvent() = 0;
   virtual void EndRenderEvent() = 0;
@@ -85,6 +92,9 @@ protected:
   // Must call Is Restart prior to calling this.
   // This is common to prioritized subclasses, so I've placed it here
   double CalculateViewPriority(double *bbox);
+
+  bool ManualStart;
+  bool ManualFinish;
 
 private:
   vtkStreamingDriver(const vtkStreamingDriver&);  // Not implemented.

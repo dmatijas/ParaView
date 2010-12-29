@@ -33,18 +33,21 @@ public:
   {
     this->Owner = owner;
     this->WendDone = true;
+    this->CameraMoved = true;
   }
   ~Internals()
   {
   }
   vtkMultiResolutionStreamer *Owner;
   bool WendDone;
+  bool CameraMoved;
 };
 
 //----------------------------------------------------------------------------
 vtkMultiResolutionStreamer::vtkMultiResolutionStreamer()
 {
   this->Internal = new Internals(this);
+  //this->Pass = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -137,7 +140,7 @@ bool vtkMultiResolutionStreamer::IsEveryoneDone()
 }
 
 //----------------------------------------------------------------------------
-void vtkMultiResolutionStreamer::PrepareFirstPass(bool forCamera)
+void vtkMultiResolutionStreamer::PrepareFirstPass()
 {
   vtkCollection *harnesses = this->GetHarnesses();
   if (!harnesses)
@@ -210,11 +213,13 @@ void vtkMultiResolutionStreamer::PrepareFirstPass(bool forCamera)
         (p, np, res,
          pbbox, gConf, aMin, aMax, aConf);
       double gPri = this->CalculateViewPriority(pbbox);
-      //cerr << "CHECKED VPRI OF " << p << "/" << np << "@" << res
-      //<< " = " << gPri << endl;
+      /*
+      cerr << "CHECKED VPRI OF " << p << "/" << np << "@" << res
+      << " = " << gPri << endl;
+      */
       piece.SetViewPriority(gPri);
 
-      if (forCamera)
+      if (this->Internal->CameraMoved)
         {
         //TODO: this whole forCamera and reapedflag business is a workaround
         //for the way refining/reaping can by cyclic and not terminate.
@@ -228,7 +233,7 @@ void vtkMultiResolutionStreamer::PrepareFirstPass(bool forCamera)
     //sort them
     ToDo->SortPriorities();
     //cerr << "NUM PIECES " << ToDo->GetNumberOfPieces() << endl;
-
+    //ToDo->Print();
    }
 
   iter->Delete();
@@ -296,7 +301,6 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
     vtkPiece piece = NextFrame->PopPiece();
     double res = piece.GetResolution();
     double priority = piece.GetPriority();
-    double mdr = 1.0;
     bool reaped = piece.GetReapedFlag();
     if (!reaped &&
         priority > 0.0 &&
@@ -326,13 +330,11 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
     int p = piece.GetPiece();
     int np = piece.GetNumPieces();
     double res = piece.GetResolution();
-
     /*
     cerr << "SPLIT "
          << p << "/" << np
          << " -> ";
     */
-
     //compute next resolution to request for it
     double resolution = res + res_delta;
     if (resolution > 1.0)
@@ -425,14 +427,12 @@ void vtkMultiResolutionStreamer::Reap(vtkStreamingHarness *harness)
           piece.SetResolution(res);
           piece.SetPipelinePriority(0.0);
           piece.SetReapedFlag(true);
-
           /*
           cerr << "REAP "
                << p << "&" << p2 << "/" << np
                << " -> "
                << p/2 << "/" << np/2 << "@" << res << endl;
           */
-
           merged->AddPiece(piece);
           toMerge->RemovePiece(j);
           found = true;
@@ -474,6 +474,8 @@ void vtkMultiResolutionStreamer::Reap(vtkStreamingHarness *harness)
 //----------------------------------------------------------------------------
 void vtkMultiResolutionStreamer::StartRenderEvent()
 {
+  //cerr << "SR " << this->Pass << endl;
+
   vtkRenderer *ren = this->GetRenderer();
   vtkRenderWindow *rw = this->GetRenderWindow();
   if (!ren || !rw)
@@ -481,21 +483,23 @@ void vtkMultiResolutionStreamer::StartRenderEvent()
     return;
     }
 
-  bool forCamera = this->IsRestart();
-  if (forCamera || this->IsFirstPass())
+  this->Internal->CameraMoved = this->IsRestart();
+  if (this->Internal->CameraMoved || this->IsFirstPass())
     {
+    //cerr << "RESTART" << endl;
+    //this->Pass = 0;
+
     //start off by clearing the screen
     ren->EraseOn();
     rw->EraseOn();
 
     //and telling all the harnesses to get ready
-    this->PrepareFirstPass(forCamera);
+    this->PrepareFirstPass();
 
     //don't swap back to front automatically, only show what we've
     //drawn when the entire domain is covered
-    rw->SwapBuffersOff();
-    //TODO:Except for diagnostic mode where it is helpful to see
-    //everything as it is drawn
+    rw->SwapBuffersOff(); //comment this out to see it draw each piece
+
     }
 
   //ask everyone to choose the next piece to draw
@@ -515,6 +519,9 @@ void vtkMultiResolutionStreamer::EndRenderEvent()
     return;
     }
 
+  //cerr << "ER " << this->Pass << endl;
+  //this->Pass++;
+
   //after first pass all subsequent renders can not clear
   //otherwise we erase the partial results we drew before
   ren->EraseOff();
@@ -522,7 +529,7 @@ void vtkMultiResolutionStreamer::EndRenderEvent()
 
  if (this->IsEveryoneDone())
     {
-    //cerr << "EVERYONE DONE" << endl;
+    //cerr << "ALL DONE" << endl;
     //next pass should start with clear screen
     this->Internal->WendDone = true;
 
@@ -532,8 +539,9 @@ void vtkMultiResolutionStreamer::EndRenderEvent()
     }
   else
     {
-    if (this->IsWendDone())
+    if (this->IsWendDone() || this->Internal->CameraMoved)
       {
+      //cerr << "WEND DONE" << endl;
       //cerr << "START NEXT WEND" << endl;
       //next pass should start with clear screen
       this->Internal->WendDone = true;

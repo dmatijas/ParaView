@@ -75,7 +75,8 @@ void vtkStreamingHarness::SetResolution(double newRes)
     this->Modified();
 
     //TODO: GetOutput should not be necessary, but it is
-    vtkDataObject *output = this->GetOutput();
+    //vtkDataObject *output =
+    this->GetOutput();
 
     //tell the pipeline what resolution level to work at
     vtkInformationVector **inVec =
@@ -170,7 +171,7 @@ int vtkStreamingHarness::RequestData(
 
 //----------------------------------------------------------------------------
 double vtkStreamingHarness::ComputePriority(
-  int Piece, int NumPieces, double Resolution)
+  int piece, int NumPieces, double resolution)
 {
   //TODO: Can I do this without changing the pipeline's state and setting
   //modified flags everywhere?
@@ -189,9 +190,9 @@ double vtkStreamingHarness::ComputePriority(
   double oldResolution = sddp->GetUpdateResolution(outInfo);
 
   //change to new setting
-  sddp->SetUpdatePiece(outInfo, Piece);
+  sddp->SetUpdatePiece(outInfo, piece);
   sddp->SetUpdateNumberOfPieces(outInfo, NumPieces);
-  sddp->SetUpdateResolution(outInfo, Resolution);
+  sddp->SetUpdateResolution(outInfo, resolution);
 
   //ask the pipeline to compute the priority
   double result = sddp->ComputePriority(0);
@@ -208,7 +209,7 @@ double vtkStreamingHarness::ComputePriority(
 
 //----------------------------------------------------------------------------
 void vtkStreamingHarness::ComputeMetaInformation(
-  int Piece, int NumPieces, double Resolution,
+  int piece, int NumPieces, double resolution,
   double bounds[6], double &gconfidence,
   double &min, double &max, double &aconfidence)
 {
@@ -239,12 +240,13 @@ void vtkStreamingHarness::ComputeMetaInformation(
   double oldResolution = sddp->GetUpdateResolution(outInfo);
 
   //change to new setting
-  sddp->SetUpdatePiece(outInfo, Piece);
+  sddp->SetUpdatePiece(outInfo, piece);
   sddp->SetUpdateNumberOfPieces(outInfo, NumPieces);
-  sddp->SetUpdateResolution(outInfo, Resolution);
+  sddp->SetUpdateResolution(outInfo, resolution);
 
   //ask the pipeline to compute the priority and thus forward meta info
-  double result = sddp->ComputePriority(0);
+  //double result =
+  sddp->ComputePriority(0);
 
   // compute the priority for this UE
   vtkInformationVector **inVec =

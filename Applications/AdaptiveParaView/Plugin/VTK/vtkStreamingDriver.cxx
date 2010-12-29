@@ -101,6 +101,8 @@ void vtkStreamingDriver::AssignRenderLaterFunction(void (*foo)(void *),
 vtkStreamingDriver::vtkStreamingDriver()
 {
   this->Internal = new Internals(this);
+  this->ManualStart = false;
+  this->ManualFinish = false;
 }
 
 //----------------------------------------------------------------------------
@@ -147,8 +149,14 @@ void vtkStreamingDriver::SetRenderWindow(vtkRenderWindow *rw)
   vtkCallbackCommand *cbc = vtkCallbackCommand::New();
   cbc->SetCallback(VTKSD_RenderEvent);
   cbc->SetClientData((void*)this);
-  rw->AddObserver(vtkCommand::StartEvent,cbc);
-  rw->AddObserver(vtkCommand::EndEvent,cbc);
+  if (!this->ManualStart)
+    {
+    rw->AddObserver(vtkCommand::StartEvent,cbc);
+    }
+  if (!this->ManualFinish)
+    {
+    rw->AddObserver(vtkCommand::EndEvent,cbc);
+    }
   this->Internal->WindowWatcher = cbc;
 }
 
@@ -250,6 +258,7 @@ bool vtkStreamingDriver::IsRestart()
   unsigned long mtime = cam->GetMTime();
   if (mtime > this->Internal->CameraTime)
     {
+    //cerr << "CAM MOVED" << endl;
     this->Internal->CameraTime = mtime;
 
     double camState[9];

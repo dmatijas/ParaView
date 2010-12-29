@@ -88,6 +88,7 @@ public:
   vtkGetObjectMacro(StreamDriver,vtkStreamingDriver);
 
   // Description:
+  // For internal use only.
   // A flag that signals when to continue/stop multipass rendering.
   vtkSetMacro(IsDisplayDone, int);
   vtkGetMacro(IsDisplayDone, int);

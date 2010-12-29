@@ -91,6 +91,10 @@ public:
   void SetHarness(vtkStreamingHarness *);
   vtkGetObjectMacro(Harness, vtkStreamingHarness);
 
+  // Description:
+  // Overridded to make sure that the upstream filters flow when we do
+  void MarkModified();
+
 //BTX
 protected:
   vtkPVStreamingRepresentation();

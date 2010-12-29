@@ -61,11 +61,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "vtkPVStreamingRepresentation.h"
 
-#include "vtkStreamingHarness.h"
 #include "vtkObjectFactory.h"
 #include "vtkPieceCacheFilter.h"
 #include "vtkPVStreamingView.h"
 #include "vtkStreamingDriver.h"
+#include "vtkStreamingHarness.h"
 
 vtkStandardNewMacro(vtkPVStreamingRepresentation);
 
@@ -163,4 +163,14 @@ bool vtkPVStreamingRepresentation::RemoveFromView(vtkView *view)
     }
 
   return this->Superclass::RemoveFromView(view);
+}
+
+//----------------------------------------------------------------------------
+void vtkPVStreamingRepresentation::MarkModified()
+{
+  this->Superclass::MarkModified();
+  if (this->Harness)
+    {
+    this->Harness->Modified();
+    }
 }

@@ -45,7 +45,7 @@ protected:
   virtual bool IsWendDone();
   virtual bool IsEveryoneDone();
 
-  virtual void PrepareFirstPass(bool forCamera);
+  virtual void PrepareFirstPass();
   virtual void ChooseNextPieces();
   virtual int Refine(vtkStreamingHarness *);
   virtual void Reap(vtkStreamingHarness *);

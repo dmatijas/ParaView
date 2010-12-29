@@ -90,7 +90,7 @@
         class="vtkPrioritizedStreamer">
     </Proxy>
     <Proxy
-        name="AdaptiveDriver"
+        name="MultiResolutionDriver"
         class="vtkMultiResolutionStreamer">
     </Proxy>
   </ProxyGroup>
@@ -133,10 +133,10 @@
         <Proxy
             name="StreamingDriver"
             proxygroup="utilities"
-            proxyname="PrioritizingDriver">
+            proxyname="MultiResolutionDriver">
        <!-- proxyname="IteratingDriver"> -->
        <!-- proxyname="PrioritizingDriver"> -->
-       <!-- proxyname="AdaptiveDriver"> -->
+       <!-- proxyname="MultiResolutionDriver"> -->
         </Proxy>
       </SubProxy>
 

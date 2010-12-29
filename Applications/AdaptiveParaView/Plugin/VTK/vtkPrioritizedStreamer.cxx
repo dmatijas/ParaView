@@ -48,6 +48,7 @@ public:
 vtkPrioritizedStreamer::vtkPrioritizedStreamer()
 {
   this->Internal = new Internals(this);
+  //this->Pass = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -92,8 +93,8 @@ bool vtkPrioritizedStreamer::IsEveryoneDone()
 
     //check if anyone hasn't reached the last necessary and possible pass
     int passNow = next->GetPass();
-    int maxPiece = next->GetNumberOfPieces();
-    if (passNow < maxPiece)
+    int maxPass = next->GetNumberOfPieces();
+    if (passNow < maxPass)
       {
       vtkPieceList *pl = next->GetPieceList1();
       if (pl)
@@ -199,17 +200,17 @@ void vtkPrioritizedStreamer::AdvanceEveryone()
     iter->GoToNextItem();
 
     //increment to the next pass
-    int maxPiece = harness->GetNumberOfPieces();
+    int maxPass = harness->GetNumberOfPieces();
     int passNow = harness->GetPass();
     int passNext = passNow;
-    if (passNow < maxPiece)
+    if (passNow < maxPass)
       {
       passNext++;
       }
     harness->SetPass(passNext);
 
     //map that to an absolute piece number
-    int pieceNext = passNext;
+    int pieceNext = (passNext<maxPass?passNext:(maxPass-1));
     vtkPieceList *pl = harness->GetPieceList1();
     if (pl)
       {
@@ -259,6 +260,8 @@ void vtkPrioritizedStreamer::FinalizeEveryone()
 //----------------------------------------------------------------------------
 void vtkPrioritizedStreamer::StartRenderEvent()
 {
+  //cerr << "SR " << this->Pass << endl;
+
   vtkCollection *harnesses = this->GetHarnesses();
   vtkRenderer *ren = this->GetRenderer();
   vtkRenderWindow *rw = this->GetRenderWindow();
@@ -271,6 +274,9 @@ void vtkPrioritizedStreamer::StartRenderEvent()
 
   if (this->Internal->CameraMoved || this->IsFirstPass())
     {
+    //cerr << "RESTART" << endl;
+    //this->Pass = 0;
+
     //start off by clearing the screen
     ren->EraseOn();
     rw->EraseOn();
@@ -289,6 +295,9 @@ void vtkPrioritizedStreamer::StartRenderEvent()
 //----------------------------------------------------------------------------
 void vtkPrioritizedStreamer::EndRenderEvent()
 {
+  //cerr << "ER " << this->Pass << endl;
+  //this->Pass++;
+
   vtkCollection *harnesses = this->GetHarnesses();
   vtkRenderer *ren = this->GetRenderer();
   vtkRenderWindow *rw = this->GetRenderWindow();
@@ -306,6 +315,8 @@ void vtkPrioritizedStreamer::EndRenderEvent()
 
   if (this->IsEveryoneDone() || this->Internal->CameraMoved)
     {
+    //cerr << "ALL DONE" << endl;
+
     //we just drew the last frame everyone has to start over next time
     this->FinalizeEveryone();
 

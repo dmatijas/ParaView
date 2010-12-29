@@ -62,6 +62,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "vtkPVStreamingView.h"
 
 #include "vtkObjectFactory.h"
+#include "vtkPVStreamingRepresentation.h"
 #include "vtkStreamingDriver.h"
 
 vtkStandardNewMacro(vtkPVStreamingView);
@@ -107,6 +108,8 @@ void vtkPVStreamingView::SetStreamDriver(vtkStreamingDriver *nd)
   if (this->StreamDriver)
     {
     this->StreamDriver->Register(this);
+    this->StreamDriver->SetManualStart(true);
+    this->StreamDriver->SetManualFinish(true);
     this->StreamDriver->SetRenderWindow(this->GetRenderWindow());
     this->StreamDriver->SetRenderer(this->GetRenderer());
     this->StreamDriver->AssignRenderLaterFunction
@@ -114,12 +117,37 @@ void vtkPVStreamingView::SetStreamDriver(vtkStreamingDriver *nd)
     }
 }
 
-
 //----------------------------------------------------------------------------
 void vtkPVStreamingView::Render(bool interactive, bool skip_rendering)
 {
   this->IsDisplayDone = 1;
+
+  if (this->StreamDriver)
+    {
+    //figure out what piece to show now
+    this->StreamDriver->StartRenderEvent();
+
+    //be sure to update pipeline far enough to get it
+    int num_reprs = this->GetNumberOfRepresentations();
+    for (int cc=0; cc < num_reprs; cc++)
+      {
+      vtkDataRepresentation* repr = this->GetRepresentation(cc);
+      vtkPVStreamingRepresentation* pvrepr =
+        vtkPVStreamingRepresentation::SafeDownCast(repr);
+      if (pvrepr)
+        {
+        pvrepr->MarkModified();
+        }
+      }
+    }
+
   this->Superclass::Render(interactive, skip_rendering);
+
+  if (this->StreamDriver)
+    {
+    //figure out what to do next
+    this->StreamDriver->EndRenderEvent();
+    }
 }
 
 //----------------------------------------------------------------------------
