@@ -284,11 +284,6 @@ void vtkSMOutputPort::GatherDataInformation()
     << 1
     << vtkClientServerStream::End;
 
-  stream
-    << vtkClientServerStream::Invoke
-    << infoHelper << "ConditionallyUpdate"
-    << vtkClientServerStream::End;
-
   pm->SendStream(this->ConnectionID, this->Servers, stream);
 
   //gather the data information for that piece

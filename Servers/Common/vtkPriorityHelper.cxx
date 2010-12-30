@@ -37,7 +37,7 @@ vtkPriorityHelper::vtkPriorityHelper()
   this->Offset = 0;
   this->NumPieces = 0;
   this->NumPasses = 0;
-  this->EnableCulling = 1;
+  this->EnableCulling = 0;
   this->EnableStreamMessages = 0;
 }
 

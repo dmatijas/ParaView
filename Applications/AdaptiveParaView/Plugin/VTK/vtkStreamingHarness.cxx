@@ -146,6 +146,13 @@ int vtkStreamingHarness::RequestUpdateExtent(
     inInfo->Set
       (vtkStreamingDemandDrivenPipeline::UPDATE_RESOLUTION(),
        this->Resolution);
+
+    static int emptyExtent[6] = {0,-1,0,-1,0,-1};
+    inInfo->Set
+      (vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT(), emptyExtent, 6);
+    inInfo->Set
+      (vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT_INITIALIZED(), 0);
+
     }
   return 1;
 }

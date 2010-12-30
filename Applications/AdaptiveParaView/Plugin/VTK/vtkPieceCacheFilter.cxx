@@ -208,8 +208,7 @@ int vtkPieceCacheFilter::RequestData(
       vtkDataObject::DATA_NUMBER_OF_PIECES());
     int dataGhosts = dataInfo->Get(
       vtkDataObject::DATA_NUMBER_OF_GHOST_LEVELS());
-    double dataResolution = dataInfo->Get(
-      vtkDataObject::DATA_RESOLUTION());
+    double dataResolution = dataInfo->Get(vtkDataObject::DATA_RESOLUTION());
 
     if (dataPiece == updatePiece &&
         dataPieces == updatePieces &&
@@ -277,6 +276,17 @@ int vtkPieceCacheFilter::RequestData(
     vtkInformation* dataInfo = inData->GetInformation();
     vtkInformation* cpyInfo = cpy->GetInformation();
     cpyInfo->Copy(dataInfo);
+
+    //not getting resolution at all so all searches are failing
+    //double dataResolution = dataInfo->Get(vtkDataObject::DATA_RESOLUTION());
+    cpyInfo->Set(vtkDataObject::DATA_RESOLUTION(), updateResolution);
+
+    //if we are replacing something, free it.
+    if (pos != this->Cache.end())
+      {
+      pos->second.second->Delete();
+      this->Cache.erase(pos);
+      }
 
     this->Cache[index] =
       vtkstd::pair<unsigned long, vtkDataSet *>

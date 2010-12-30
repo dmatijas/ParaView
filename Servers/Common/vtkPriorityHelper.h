@@ -43,7 +43,7 @@ public:
                            int ghostLevel,
                            int save);
   
-  virtual double ComputePriority();
+  double ComputePriority();
 
   vtkDataObject *ConditionallyGetDataObject();
   void ConditionallyUpdate();
