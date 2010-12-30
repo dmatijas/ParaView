@@ -33,6 +33,7 @@ public:
     this->Owner = owner;
     this->FirstPass = true;
     this->CameraMoved = true;
+    this->DebugPass = 0;
   }
   ~Internals()
   {
@@ -41,14 +42,13 @@ public:
   vtkPrioritizedStreamer *Owner;
   bool FirstPass;
   bool CameraMoved;
-
+  int DebugPass;  //used solely for debug messages
 };
 
 //----------------------------------------------------------------------------
 vtkPrioritizedStreamer::vtkPrioritizedStreamer()
 {
   this->Internal = new Internals(this);
-  //this->Pass = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -260,7 +260,7 @@ void vtkPrioritizedStreamer::FinalizeEveryone()
 //----------------------------------------------------------------------------
 void vtkPrioritizedStreamer::StartRenderEvent()
 {
-  //cerr << "SR " << this->Pass << endl;
+  cerr << "SR " << this->Internal->DebugPass << endl;
 
   vtkCollection *harnesses = this->GetHarnesses();
   vtkRenderer *ren = this->GetRenderer();
@@ -274,8 +274,8 @@ void vtkPrioritizedStreamer::StartRenderEvent()
 
   if (this->Internal->CameraMoved || this->IsFirstPass())
     {
-    //cerr << "RESTART" << endl;
-    //this->Pass = 0;
+    cerr << "RESTART" << endl;
+    this->Internal->DebugPass = 0;
 
     //start off by clearing the screen
     ren->EraseOn();
@@ -295,8 +295,8 @@ void vtkPrioritizedStreamer::StartRenderEvent()
 //----------------------------------------------------------------------------
 void vtkPrioritizedStreamer::EndRenderEvent()
 {
-  //cerr << "ER " << this->Pass << endl;
-  //this->Pass++;
+  cerr << "ER " << this->Internal->DebugPass << endl;
+  this->Internal->DebugPass++;
 
   vtkCollection *harnesses = this->GetHarnesses();
   vtkRenderer *ren = this->GetRenderer();
@@ -315,7 +315,7 @@ void vtkPrioritizedStreamer::EndRenderEvent()
 
   if (this->IsEveryoneDone() || this->Internal->CameraMoved)
     {
-    //cerr << "ALL DONE" << endl;
+    cerr << "ALL DONE" << endl;
 
     //we just drew the last frame everyone has to start over next time
     this->FinalizeEveryone();

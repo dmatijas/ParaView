@@ -130,7 +130,7 @@ void StreamingView::scheduleNextPass()
   w2i->ReadFrontBufferOff();
   w2i->Update();
   writer->SetInputConnection(w2i->GetOutputPort());
-  QString s("debugimgs/image_");
+  QString s("/Users/demarle/Desktop/debugimgs/image_");
   s.append(QString::number(this->Pass));
   s.append("_back.png");
   writer->SetFileName(s.toAscii());
@@ -138,7 +138,7 @@ void StreamingView::scheduleNextPass()
 
   w2i->ReadFrontBufferOn();
   w2i->Update();
-  s = "debugimgs/image_";
+  s = "/Users/demarle/Desktop/debugimgs/image_";
   s.append(QString::number(this->Pass));
   s.append("_front.png");
   writer->SetFileName(s.toAscii());

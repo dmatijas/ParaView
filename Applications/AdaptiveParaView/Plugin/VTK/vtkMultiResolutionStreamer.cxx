@@ -34,6 +34,7 @@ public:
     this->Owner = owner;
     this->WendDone = true;
     this->CameraMoved = true;
+    this->DebugPass = 0;
   }
   ~Internals()
   {
@@ -41,13 +42,13 @@ public:
   vtkMultiResolutionStreamer *Owner;
   bool WendDone;
   bool CameraMoved;
+  int DebugPass; //used solely for debug messages
 };
 
 //----------------------------------------------------------------------------
 vtkMultiResolutionStreamer::vtkMultiResolutionStreamer()
 {
   this->Internal = new Internals(this);
-  //this->Pass = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -288,7 +289,7 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
 {
   //TODO: maxHeight must be common to both reap and refine and
   //should be setable
-  int maxHeight = 5;
+  int maxHeight = 4;
   double res_delta = (1.0/maxHeight);
 
   vtkPieceList *ToDo = harness->GetPieceList1();
@@ -318,7 +319,7 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
   //loop through the splittable pieces, and split some of them
   int numSplit = 0;
   //TODO: maxSplits should be setable
-  int maxSplits = 2;
+  int maxSplits = 4;
   //TODO: Degree could be variable
   int degree = 2;
   for (;
@@ -383,7 +384,7 @@ void vtkMultiResolutionStreamer::Reap(vtkStreamingHarness *harness)
 
   //TODO: maxHeight must be common to both reap and refine and
   //should be setable
-  int maxHeight = 5;
+  int maxHeight = 4;
   double res_delta = (1.0/maxHeight);
 
   vtkPieceList *toMerge = vtkPieceList::New();
@@ -474,7 +475,7 @@ void vtkMultiResolutionStreamer::Reap(vtkStreamingHarness *harness)
 //----------------------------------------------------------------------------
 void vtkMultiResolutionStreamer::StartRenderEvent()
 {
-  //cerr << "SR " << this->Pass << endl;
+  cerr << "SR " << this->Internal->DebugPass << endl;
 
   vtkRenderer *ren = this->GetRenderer();
   vtkRenderWindow *rw = this->GetRenderWindow();
@@ -486,8 +487,8 @@ void vtkMultiResolutionStreamer::StartRenderEvent()
   this->Internal->CameraMoved = this->IsRestart();
   if (this->Internal->CameraMoved || this->IsFirstPass())
     {
-    //cerr << "RESTART" << endl;
-    //this->Pass = 0;
+    cerr << "RESTART" << endl;
+    this->Internal->DebugPass = 0;
 
     //start off by clearing the screen
     ren->EraseOn();
@@ -519,8 +520,8 @@ void vtkMultiResolutionStreamer::EndRenderEvent()
     return;
     }
 
-  //cerr << "ER " << this->Pass << endl;
-  //this->Pass++;
+  cerr << "ER " << this->Internal->DebugPass << endl;
+  this->Internal->DebugPass++;
 
   //after first pass all subsequent renders can not clear
   //otherwise we erase the partial results we drew before
@@ -529,7 +530,7 @@ void vtkMultiResolutionStreamer::EndRenderEvent()
 
  if (this->IsEveryoneDone())
     {
-    //cerr << "ALL DONE" << endl;
+    cerr << "ALL DONE" << endl;
     //next pass should start with clear screen
     this->Internal->WendDone = true;
 
@@ -541,8 +542,7 @@ void vtkMultiResolutionStreamer::EndRenderEvent()
     {
     if (this->IsWendDone() || this->Internal->CameraMoved)
       {
-      //cerr << "WEND DONE" << endl;
-      //cerr << "START NEXT WEND" << endl;
+      cerr << "WEND DONE" << endl;
       //next pass should start with clear screen
       this->Internal->WendDone = true;
 
