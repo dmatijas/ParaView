@@ -253,8 +253,61 @@ void vtkSMOutputPort::GatherDataInformation()
   vtkProcessModule* pm = vtkProcessModule::GetProcessModule();
   pm->SendPrepareProgress(this->ConnectionID);
   this->DataInformation->Initialize();
+
+#if 1
+  cerr << "STREAMED GATHER INFO" << endl;
+  vtkClientServerStream stream;
+
+  vtkClientServerID infoHelper =
+    pm->NewStreamObject("vtkPriorityHelper", stream);
+
+  stream
+    << vtkClientServerStream::Invoke
+    << infoHelper << "SetInputConnection" << this->GetID()
+    << vtkClientServerStream::End;
+
+  stream
+    << vtkClientServerStream::Invoke
+    << pm->GetProcessModuleID() << "GetPartitionId"
+    << vtkClientServerStream::End;
+
+  stream
+    << vtkClientServerStream::Invoke
+    << infoHelper
+    << "SetSplitUpdateExtent"
+    << this->PortIndex
+    << vtkClientServerStream::LastResult
+    << 0
+    << pm->GetNumberOfPartitions(this->ConnectionID)
+    << 8
+    << 0
+    << 1
+    << vtkClientServerStream::End;
+
+  stream
+    << vtkClientServerStream::Invoke
+    << infoHelper << "ConditionallyUpdate"
+    << vtkClientServerStream::End;
+
+  pm->SendStream(this->ConnectionID, this->Servers, stream);
+
+  //gather the data information for that piece
+  vtkPVDataInformation *di = vtkPVDataInformation::New();
+  di->Initialize();
+  pm->GatherInformation(this->ConnectionID, this->Servers,
+                        di,
+                        infoHelper);
+
+  //merge it in
+  this->DataInformation->AddInformation(di);
+
+  di->Delete();
+  pm->DeleteStreamObject(infoHelper, stream);
+
+#else
   pm->GatherInformation(this->ConnectionID, this->Servers,
                         this->DataInformation, this->GetID());
+#endif
 
   this->DataInformationValid = true;
 
@@ -702,6 +755,53 @@ void vtkSMOutputPort::UpdatePipelineInternal(double time,
          << this->GetProducerID() << "UpdateInformation"
          << vtkClientServerStream::End;
 
+#if 1
+  vtkClientServerID infoHelper =
+    pm->NewStreamObject("vtkPriorityHelper", stream);
+
+  stream
+    << vtkClientServerStream::Invoke
+    << infoHelper << "SetInputConnection" << this->GetID()
+    << vtkClientServerStream::End;
+
+  stream
+    << vtkClientServerStream::Invoke
+    << pm->GetProcessModuleID() << "GetPartitionId"
+    << vtkClientServerStream::End;
+
+  stream
+    << vtkClientServerStream::Invoke
+    << infoHelper << "SetSplitUpdateExtent"
+    << this->PortIndex
+    << vtkClientServerStream::LastResult
+    << 0
+    << pm->GetNumberOfPartitions(this->ConnectionID)
+    << 8
+    << 0
+    << 1
+    << vtkClientServerStream::End;
+
+  stream << vtkClientServerStream::Invoke
+         << this->GetProducerID() << "UpdateInformation"
+         << vtkClientServerStream::End;
+
+  if (doTime)
+    {
+    stream
+      << vtkClientServerStream::Invoke
+      << this->GetExecutiveID() << "SetUpdateTimeStep"
+      << this->PortIndex << time
+      << vtkClientServerStream::End;
+    }
+
+  stream
+    << vtkClientServerStream::Invoke
+    << infoHelper << "ConditionallyUpdate"
+    << vtkClientServerStream::End;
+
+  pm->DeleteStreamObject(infoHelper, stream);
+
+#else
   stream << vtkClientServerStream::Invoke
          << pm->GetProcessModuleID() << "GetPartitionId"
          << vtkClientServerStream::End
@@ -723,9 +823,12 @@ void vtkSMOutputPort::UpdatePipelineInternal(double time,
          << this->GetProducerID() << "Update"
          << vtkClientServerStream::End;
 
+#endif
+
   pm->SendPrepareProgress(this->ConnectionID);
   pm->SendStream(this->ConnectionID, this->Servers, stream);
   pm->SendCleanupPendingProgress(this->ConnectionID);
+
 }
 
 //----------------------------------------------------------------------------
