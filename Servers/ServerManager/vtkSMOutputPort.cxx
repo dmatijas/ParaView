@@ -275,13 +275,12 @@ void vtkSMOutputPort::GatherDataInformation()
     << vtkClientServerStream::Invoke
     << infoHelper
     << "SetSplitUpdateExtent"
-    << this->PortIndex
-    << vtkClientServerStream::LastResult
-    << 0
-    << pm->GetNumberOfPartitions(this->ConnectionID)
-    << 8
-    << 0
-    << 1
+    << this->PortIndex //algorithm's output port
+    << vtkClientServerStream::LastResult //processor
+    << pm->GetNumberOfPartitions(this->ConnectionID) //numprocessors
+    << 0 //pass
+    << 1 //number of passes
+    << 0.0 //resolution
     << vtkClientServerStream::End;
 
   pm->SendStream(this->ConnectionID, this->Servers, stream);
@@ -766,14 +765,14 @@ void vtkSMOutputPort::UpdatePipelineInternal(double time,
 
   stream
     << vtkClientServerStream::Invoke
-    << infoHelper << "SetSplitUpdateExtent"
-    << this->PortIndex
-    << vtkClientServerStream::LastResult
-    << 0
-    << pm->GetNumberOfPartitions(this->ConnectionID)
-    << 8
-    << 0
-    << 1
+    << infoHelper
+    << "SetSplitUpdateExtent"
+    << this->PortIndex //algorithm's output port
+    << vtkClientServerStream::LastResult //processor
+    << pm->GetNumberOfPartitions(this->ConnectionID) //numprocessors
+    << 0 //pass
+    << 1 //number of passes
+    << 0.0 //resolution
     << vtkClientServerStream::End;
 
   stream << vtkClientServerStream::Invoke
@@ -791,7 +790,7 @@ void vtkSMOutputPort::UpdatePipelineInternal(double time,
 
   stream
     << vtkClientServerStream::Invoke
-    << infoHelper << "ConditionallyUpdate"
+    << infoHelper << "Update"
     << vtkClientServerStream::End;
 
   pm->DeleteStreamObject(infoHelper, stream);
