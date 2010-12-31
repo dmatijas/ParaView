@@ -71,9 +71,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <pqServer.h>
 #include <pqApplicationCore.h>
 
-#include "vtkRenderWindow.h"
-#include "vtkWindowToImageFilter.h"
 #include "vtkPNGWriter.h"
+#include "vtkRenderWindow.h"
+#include "vtkSMOutputPort.h"
+#include "vtkWindowToImageFilter.h"
 
 //-----------------------------------------------------------------------------
 StreamingView::StreamingView(
@@ -93,6 +94,10 @@ StreamingView::StreamingView(
   //we manage front buffer swapping, and have to do a series of renders to fill
   //it, so don't let the app try to cache the front buffer
   this->AllowCaching = false;
+
+  //prevent paraview from updatine whole extent to gather info
+  vtkSMOutputPort::SetUseStreaming(true);
+  vtkSMOutputPort::SetDefaultPiece(0,1,0.0);
 }
 
 //-----------------------------------------------------------------------------
