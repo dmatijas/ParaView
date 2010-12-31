@@ -140,6 +140,7 @@ pqRenderViewBase::pqRenderViewBase(
 {
   this->Internal = new pqRenderViewBase::pqInternal();
   this->InteractiveDelayUpdateTimer = new QTimer(this);
+  this->AllowCaching = true;
 }
 
 //-----------------------------------------------------------------------------
@@ -175,15 +176,16 @@ QWidget* pqRenderViewBase::createWidget()
   // and capture a frame buffer even when it is obstructred by a
   // window. This does not work as well on other platforms.
 
-//DDM commented out because this prevents streaming from showing
-//latest image
-#if 0//defined(__APPLE__)
-  vtkwidget->setAutomaticImageCacheEnabled(true);
+#if 1//defined(__APPLE__)
+  if (this->AllowCaching)
+    {
+    vtkwidget->setAutomaticImageCacheEnabled(true);
 
-  // help the QVTKWidget know when to clear the cache
-  this->getConnector()->Connect(
-    this->getProxy(), vtkCommand::ModifiedEvent,
-    vtkwidget, SLOT(markCachedImageAsDirty()));
+    // help the QVTKWidget know when to clear the cache
+    this->getConnector()->Connect(
+      this->getProxy(), vtkCommand::ModifiedEvent,
+      vtkwidget, SLOT(markCachedImageAsDirty()));
+    }
 #endif
 
   return vtkwidget;

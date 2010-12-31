@@ -89,6 +89,10 @@ StreamingView::StreamingView(
                    this, SLOT(watchPreRender()));
   QObject::connect(this, SIGNAL(endRender()),
                    this, SLOT(scheduleNextPass()));
+
+  //we manage front buffer swapping, and have to do a series of renders to fill
+  //it, so don't let the app try to cache the front buffer
+  this->AllowCaching = false;
 }
 
 //-----------------------------------------------------------------------------
