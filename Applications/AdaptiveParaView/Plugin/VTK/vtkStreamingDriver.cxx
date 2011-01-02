@@ -241,7 +241,7 @@ void vtkStreamingDriver::RenderEventually()
 }
 
 //----------------------------------------------------------------------------
-bool vtkStreamingDriver::IsRestart()
+bool vtkStreamingDriver::HasCameraMoved()
 {
   vtkRenderer *ren = this->GetRenderer();
   if (!ren)
@@ -267,7 +267,7 @@ bool vtkStreamingDriver::IsRestart()
     cam->GetFocalPoint(&camState[6]);
 
     //convert screen rectangle to world frustum
-    const double HALFEXT=1.0; //1.0 means all way to edge of screen
+    const double HALFEXT=0.5; //1.0 means all way to edge of screen
     const double XMAX=HALFEXT;
     const double XMIN=-HALFEXT;
     const double YMAX=HALFEXT;

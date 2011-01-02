@@ -23,6 +23,9 @@
 #include "vtkStreamingDriver.h"
 #include "vtkStreamingHarness.h"
 
+#define DEBUGPRINT_PASSES( arg ) ;
+#define DEBUGPRINT_PRIORITY( arg ) ;
+
 vtkStandardNewMacro(vtkPrioritizedStreamer);
 
 class vtkPrioritizedStreamer::Internals
@@ -31,8 +34,7 @@ public:
   Internals(vtkPrioritizedStreamer *owner)
   {
     this->Owner = owner;
-    this->FirstPass = true;
-    this->CameraMoved = true;
+    this->StartOver = true;
     this->DebugPass = 0;
   }
   ~Internals()
@@ -40,8 +42,7 @@ public:
   }
 
   vtkPrioritizedStreamer *Owner;
-  bool FirstPass;
-  bool CameraMoved;
+  bool StartOver;
   int DebugPass;  //used solely for debug messages
 };
 
@@ -61,58 +62,6 @@ vtkPrioritizedStreamer::~vtkPrioritizedStreamer()
 void vtkPrioritizedStreamer::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
-}
-
-//----------------------------------------------------------------------------
-bool vtkPrioritizedStreamer::IsFirstPass()
-{
-  if (this->Internal->FirstPass)
-    {
-    return true;
-    }
-  return false;
-}
-
-//----------------------------------------------------------------------------
-bool vtkPrioritizedStreamer::IsEveryoneDone()
-{
-  vtkCollection *harnesses = this->GetHarnesses();
-  if (!harnesses)
-    {
-    return true;
-    }
-
-  bool everyone_done = true;
-  vtkCollectionIterator *iter = harnesses->NewIterator();
-  iter->InitTraversal();
-  while(!iter->IsDoneWithTraversal())
-    {
-    vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
-      (iter->GetCurrentObject());
-    iter->GoToNextItem();
-
-    //check if anyone hasn't reached the last necessary and possible pass
-    int passNow = next->GetPass();
-    int maxPass = next->GetNumberOfPieces();
-    if (passNow < maxPass)
-      {
-      vtkPieceList *pl = next->GetPieceList1();
-      if (pl)
-        {
-        double priority = pl->GetPiece(passNow).GetPriority();
-        if (priority == 0.0)
-          {
-          //if this object finished early, don't keep going just for it's sake
-          continue;
-          }
-        }
-      everyone_done = false;
-      break;
-      }
-    }
-  iter->Delete();
-
-  return everyone_done;
 }
 
 //----------------------------------------------------------------------------
@@ -157,7 +106,16 @@ void vtkPrioritizedStreamer::ResetEveryone()
       p.SetPiece(i);
       p.SetNumPieces(max);
       p.SetResolution(1.0);
-      p.SetPipelinePriority(harness->ComputePriority(i,max,1.0));
+      double priority = harness->ComputePriority(i,max,1.0);
+      DEBUGPRINT_PRIORITY
+        (
+         if (!priority)
+           {
+           cerr << "CHECKED PPRI OF " << i << "/" << max << "@" << 1.0
+                << " = " << priority << endl;
+           }
+         );
+      p.SetPipelinePriority(priority);
 
       double pbbox[6];
       double gConf = 1.0;
@@ -168,16 +126,34 @@ void vtkPrioritizedStreamer::ResetEveryone()
         (i, max, 1.0,
          pbbox, gConf, aMin, aMax, aConf);
       double gPri = this->CalculateViewPriority(pbbox);
+      DEBUGPRINT_PRIORITY
+        (
+         if (true || !gPri)
+           {
+           cerr << "CHECKED VPRI OF " << i << "/" << max << "@" << 1.0
+                << " [" << pbbox[0] << "," << pbbox[1] << " "
+                << pbbox[2] << "," << pbbox[3] << " "
+                << pbbox[4] << "," << pbbox[5] << "]"
+                << " = " << gPri << endl;
+           }
+         );
       p.SetViewPriority(gPri);
 
       pl->AddPiece(p);
       }
     pl->SortPriorities();
+    //pl->Print();
 
     //convert pass number to absolute piece number
     int pieceNext = pl->GetPiece(0).GetPiece();
-    //cerr << "PASS " << 0 << " PIECE " << pieceNext << endl;
+    DEBUGPRINT_PRIORITY
+      (
+       cerr << harness << " P0 PASS " << 0 << " PIECE " << pieceNext << endl;
+       );
     harness->SetPiece(pieceNext);
+    //this is a hack
+    harness->SetPass(-1);
+    //but I can't get the first piece to show consistently without it
     }
   iter->Delete();
 }
@@ -209,123 +185,146 @@ void vtkPrioritizedStreamer::AdvanceEveryone()
       }
     harness->SetPass(passNext);
 
-    //map that to an absolute piece number
-    int pieceNext = (passNext<maxPass?passNext:(maxPass-1));
+    //map that to an absolute piece number, but don't got beyond end
     vtkPieceList *pl = harness->GetPieceList1();
-    if (pl)
+    double priority = pl->GetPiece(passNext).GetPriority();
+    if (priority)
       {
-      pieceNext = pl->GetPiece(passNext).GetPiece();
+      int pieceNext = pl->GetPiece(passNext).GetPiece();
+      DEBUGPRINT_PRIORITY
+        (
+         cerr <<harness<<" NP PASS "<<passNext<<" PIECE "<<pieceNext<<endl;
+         );
+      harness->SetPiece(pieceNext);
       }
-    //cerr << "PASS " << passNext << " PIECE " << pieceNext << endl;
-    harness->SetPiece(pieceNext);
    }
 
   iter->Delete();
 }
 
 //----------------------------------------------------------------------------
-void vtkPrioritizedStreamer::FinalizeEveryone()
+bool vtkPrioritizedStreamer::IsEveryoneDone()
 {
   vtkCollection *harnesses = this->GetHarnesses();
   if (!harnesses)
     {
-    return;
+    return true;
     }
 
+  bool everyone_done = true;
   vtkCollectionIterator *iter = harnesses->NewIterator();
   iter->InitTraversal();
   while(!iter->IsDoneWithTraversal())
     {
-    //get a hold of the pipeline for this object
-    vtkStreamingHarness *harness = vtkStreamingHarness::SafeDownCast
+    vtkStreamingHarness *next = vtkStreamingHarness::SafeDownCast
       (iter->GetCurrentObject());
     iter->GoToNextItem();
 
-    int passNext = 0;
-    harness->SetPass(passNext);
-    //map that to an absolute piece number
-    int pieceNext = passNext;
-    vtkPieceList *pl = harness->GetPieceList1();
-    if (pl)
+    //check if anyone hasn't drawn the last necessary pass
+    int passNow = next->GetPass();
+    int maxPass = next->GetNumberOfPieces();
+    if (passNow <= maxPass-2)
       {
-      pieceNext = pl->GetPiece(passNext).GetPiece();
+      vtkPieceList *pl = next->GetPieceList1();
+      if (pl)
+        {
+        double priority = pl->GetPiece(passNow+1).GetPriority();
+        if (priority == 0.0)
+          {
+          //if this object finished early, don't keep going just for it's sake
+          continue;
+          }
+        }
+      everyone_done = false;
+      break;
       }
-    //cerr << "PASS " << passNext << " PIECE " << pieceNext << endl;
-    harness->SetPiece(pieceNext);
     }
   iter->Delete();
-  return;
+
+  return everyone_done;
 }
 
 //----------------------------------------------------------------------------
 void vtkPrioritizedStreamer::StartRenderEvent()
 {
-  cerr << "SR " << this->Internal->DebugPass << endl;
+  DEBUGPRINT_PASSES
+    (
+     cerr << "SR " << this->Internal->DebugPass << endl;
+     );
 
-  vtkCollection *harnesses = this->GetHarnesses();
   vtkRenderer *ren = this->GetRenderer();
   vtkRenderWindow *rw = this->GetRenderWindow();
-  if (!harnesses || !ren || !rw)
+  if (!ren || !rw)
     {
     return;
     }
 
-  this->Internal->CameraMoved = this->IsRestart();
-
-  if (this->Internal->CameraMoved || this->IsFirstPass())
+  if (this->HasCameraMoved() || this->Internal->StartOver)
     {
-    cerr << "RESTART" << endl;
-    this->Internal->DebugPass = 0;
+    DEBUGPRINT_PASSES
+      (
+       cerr << "RESTART" << endl;
+       this->Internal->DebugPass = 0;
+       );
 
-    //start off by clearing the screen
+    //show whatever we partially drew before the camera moved
+    rw->SwapBuffersOn();
+    rw->Frame();
+
+    //start off initial pass by clearing the screen
     ren->EraseOn();
     rw->EraseOn();
 
-    //and telling all the harnesses to get ready
+    //compute priority of subsequent passes
+    //set pipeline to show the most important one this pass
     this->ResetEveryone();
     }
+  else
+    {
+    //subsequent passes pick next less important piece each pass
+    this->AdvanceEveryone();
+    }
 
-  //don't swap back to front automatically, only show what we've
-  //drawn when the entire domain is covered
+  //don't swap back to front automatically
+  //only update the screen once the last piece is drawn
   rw->SwapBuffersOff(); //comment this out to see each piece rendered
 
-  this->Internal->FirstPass = false;
+  this->Internal->StartOver = false;
 }
 
 //----------------------------------------------------------------------------
 void vtkPrioritizedStreamer::EndRenderEvent()
 {
-  cerr << "ER " << this->Internal->DebugPass << endl;
-  this->Internal->DebugPass++;
+  DEBUGPRINT_PASSES
+    (
+     cerr << "ER " << this->Internal->DebugPass << endl;
+     this->Internal->DebugPass++;
+     );
 
-  vtkCollection *harnesses = this->GetHarnesses();
   vtkRenderer *ren = this->GetRenderer();
   vtkRenderWindow *rw = this->GetRenderWindow();
-  if (!harnesses || !ren || !rw)
+  if (!ren || !rw)
     {
     return;
     }
 
-  //after first pass all subsequent renders can not clear
-  //otherwise we erase the partial results we drew before
+  //don't clear the screen, keep adding to what we already drew
   ren->EraseOff();
   rw->EraseOff();
 
-  this->AdvanceEveryone();
-
-  if (this->IsEveryoneDone() || this->Internal->CameraMoved)
+  if (this->IsEveryoneDone()) //stop when there are no more non culled pieces
     {
-    cerr << "ALL DONE" << endl;
+    DEBUGPRINT_PASSES
+      (
+       cerr << "ALL DONE" << endl;
+       );
 
-    //we just drew the last frame everyone has to start over next time
-    this->FinalizeEveryone();
+    //we just drew the last frame, everyone has to start over next time
+    this->Internal->StartOver = true;
 
     //bring back buffer forward to show what we drew
     rw->SwapBuffersOn();
     rw->Frame();
-
-    //and mark that the next render should start over
-    this->Internal->FirstPass = true;
     }
   else
     {

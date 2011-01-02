@@ -115,6 +115,35 @@ void StreamingView::watchPreRender()
     {
     return;
     }
+
+#if 0
+  //save debug images of back and front buffer
+  vtkRenderWindow *rw = vp->GetRenderWindow();
+  vtkWindowToImageFilter *w2i = vtkWindowToImageFilter::New();
+  vtkPNGWriter *writer = vtkPNGWriter::New();
+  w2i->SetInput(rw);
+  w2i->ShouldRerenderOff();
+  w2i->ReadFrontBufferOff();
+  w2i->Update();
+  writer->SetInputConnection(w2i->GetOutputPort());
+  QString s("/Users/demarle/Desktop/debugimgs/image_");
+  s.append(QString::number(this->Pass));
+  s.append("_0.png");
+  writer->SetFileName(s.toAscii());
+  writer->Write();
+
+  w2i->ReadFrontBufferOn();
+  w2i->Update();
+  s = "/Users/demarle/Desktop/debugimgs/image_";
+  s.append(QString::number(this->Pass));
+  s.append("_1.png");
+  writer->SetFileName(s.toAscii());
+  writer->Write();
+
+  w2i->Delete();
+  writer->Delete();
+#endif
+
   vp->PreRender();
 }
 
@@ -141,7 +170,7 @@ void StreamingView::scheduleNextPass()
   writer->SetInputConnection(w2i->GetOutputPort());
   QString s("/Users/demarle/Desktop/debugimgs/image_");
   s.append(QString::number(this->Pass));
-  s.append("_back.png");
+  s.append("_2.png");
   writer->SetFileName(s.toAscii());
   writer->Write();
 
@@ -149,7 +178,7 @@ void StreamingView::scheduleNextPass()
   w2i->Update();
   s = "/Users/demarle/Desktop/debugimgs/image_";
   s.append(QString::number(this->Pass));
-  s.append("_front.png");
+  s.append("_3.png");
   writer->SetFileName(s.toAscii());
   writer->Write();
 
@@ -165,10 +194,10 @@ void StreamingView::scheduleNextPass()
     QObject::connect(t, SIGNAL(timeout()),
                      this, SLOT(render()), Qt::QueuedConnection);
     t->start();
-    this->Pass++;
     }
   else
     {
-    this->Pass = 0;
-  }
+    //this->Pass = 0;
+    }
+  this->Pass++;
 }

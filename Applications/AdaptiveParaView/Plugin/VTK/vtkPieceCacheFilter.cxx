@@ -26,33 +26,16 @@
 
 #include <vtkstd/vector>
 
+#define DEBUGPRINT_CACHING(arg) ;
+#define DEBUGPRINT_APPENDING(arg) ;
+
 vtkStandardNewMacro(vtkPieceCacheFilter);
-#if 0
-
-#define DEBUGPRINT_CACHING(arg) arg;
-#define DEBUGPRINT_APPENDING(arg) arg;
-
-#else
-
-#define DEBUGPRINT_CACHING(arg) \
-  if (!this->Silenced && vtkAdaptiveOptions::GetEnableStreamMessages())\
-    { \
-      arg;\
-    }
-#define DEBUGPRINT_APPENDING(arg) \
-  if (!this->Silenced && vtkAdaptiveOptions::GetEnableStreamMessages())\
-    { \
-      arg;\
-    }
-
-#endif
 
 //----------------------------------------------------------------------------
 vtkPieceCacheFilter::vtkPieceCacheFilter()
 {
   this->CacheSize = -1;
   this->GetInformation()->Set(vtkAlgorithm::PRESERVES_DATASET(), 1);
-  this->Silenced = 0;
   this->AppendFilter = vtkAppendPolyData::New();
   this->AppendFilter->UserManagedInputsOn();
   this->AppendResult = NULL;
@@ -100,9 +83,7 @@ void vtkPieceCacheFilter::SetCacheSize(int size)
 //----------------------------------------------------------------------------
 void vtkPieceCacheFilter::EmptyCache()
 {
-  DEBUGPRINT_CACHING(
-  cerr << "PCF(" << this << ") Empty cache" << endl;
-                     );
+  DEBUGPRINT_CACHING(cerr << "PCF(" << this << ") Empty cache" << endl;);
 
   CacheType::iterator pos;
   for (pos = this->Cache.begin(); pos != this->Cache.end(); )
@@ -133,22 +114,23 @@ vtkDataSet * vtkPieceCacheFilter::GetPiece(int pieceNum )
 //----------------------------------------------------------------------------
 void vtkPieceCacheFilter::DeletePiece(int pieceNum )
 {
-  DEBUGPRINT_APPENDING(
-  cerr << "PCF(" << this << ") Delete piece "
-  << this->ComputePiece(pieceNum) << "/"
-  << this->ComputeNumberOfPieces(pieceNum);
-                     );
+  DEBUGPRINT_APPENDING
+    (
+     cerr << "PCF(" << this << ") Delete piece "
+     << this->ComputePiece(pieceNum) << "/"
+     << this->ComputeNumberOfPieces(pieceNum);
+     );
 
   CacheType::iterator pos = this->Cache.find(pieceNum);
   if (pos != this->Cache.end())
     {
-    DEBUGPRINT_CACHING(
-                       vtkDataSet* ds = pos->second.second;
-                       vtkInformation* dataInfo = ds->GetInformation();
-                       double dataResolution = dataInfo->Get(
-                          vtkDataObject::DATA_RESOLUTION());
-                       cerr << "@" << dataResolution;
-                     );
+    DEBUGPRINT_CACHING
+      (
+       vtkDataSet* ds = pos->second.second;
+       vtkInformation* dataInfo = ds->GetInformation();
+       double dataResolution = dataInfo->Get(vtkDataObject::DATA_RESOLUTION());
+       cerr << "@" << dataResolution;
+       );
     pos->second.second->Delete();
     this->Cache.erase(pos);
     }
@@ -187,14 +169,15 @@ int vtkPieceCacheFilter::RequestData(
 
 
   int index = this->ComputeIndex(updatePiece, updatePieces);
-  DEBUGPRINT_CACHING(
-  cerr << "PCF(" << this << ") Looking for "
-       << updatePiece << "/"
-       << updatePieces << "+"
-       << updateGhosts << "@"
-       << updateResolution << " in slot "
-       << index << endl;
-                     );
+  DEBUGPRINT_CACHING
+    (
+     cerr << "PCF(" << this << ") Looking for "
+     << updatePiece << "/"
+     << updatePieces << "+"
+     << updateGhosts << "@"
+     << updateResolution << " in slot "
+     << index << endl;
+     );
 
   CacheType::iterator pos = this->Cache.find(index);
   bool found = false;
@@ -216,45 +199,48 @@ int vtkPieceCacheFilter::RequestData(
         dataResolution >= updateResolution)
       {
       found = true;
-      DEBUGPRINT_CACHING(
-      cerr << "PCF(" << this << ") found match @ " << dataResolution << endl;
-                         );
+      DEBUGPRINT_CACHING
+        (
+         cerr << "PCF(" << this << ") found match @ " << dataResolution << endl;
+         );
       }
     else
       {
-      DEBUGPRINT_CACHING(
-      cerr << "PCF(" << this << ") but found "
-           << dataPiece << "/"
-           << dataPieces << "+"
-           << dataGhosts << "@"
-           << dataResolution << endl;
-                         );
+      DEBUGPRINT_CACHING
+        (
+         cerr << "PCF(" << this << ") but found "
+         << dataPiece << "/"
+         << dataPieces << "+"
+         << dataGhosts << "@"
+         << dataResolution << endl;
+         );
       }
     }
   else
     {
-    DEBUGPRINT_CACHING(
-    cerr << "PCF(" << this << ") Cache miss for piece "
-    << updatePiece << "/" << updatePieces << "@" << updateResolution << endl;
-
-                       );
+    DEBUGPRINT_CACHING
+      (
+       cerr << "PCF(" << this << ") Cache miss for piece "
+       << updatePiece << "/" << updatePieces << "@" << updateResolution << endl;
+       );
     }
 
   if (found)
     {
-    DEBUGPRINT_CACHING(
-    cerr << "PCF(" << this << ") Cache hit for piece "
-    << updatePiece << "/" << updatePieces << "@" << updateResolution << endl;
-
-                       );
+    DEBUGPRINT_CACHING
+      (
+       cerr << "PCF(" << this << ") Cache hit for piece "
+       << updatePiece << "/" << updatePieces << "@" << updateResolution << endl;
+       );
 
     // update the m time in the cache
     pos->second.first = outData->GetUpdateTime();
 
     //pass the cached data onward
-    DEBUGPRINT_CACHING(
-    cerr << "PCF(" << this << ") returning cached result" << endl;
-                      );
+    DEBUGPRINT_CACHING
+      (
+       cerr << "PCF(" << this << ") returning cached result" << endl;
+       );
 
     outData->ShallowCopy(pos->second.second);
     return 1;
@@ -264,12 +250,13 @@ int vtkPieceCacheFilter::RequestData(
   if ((this->CacheSize < 0 ||
       this->Cache.size() < static_cast<unsigned long>(this->CacheSize)))
     {
-    DEBUGPRINT_CACHING(
-    cerr << "PCF(" << this
-    << ") Cache insert of piece "
-    << updatePiece << "/" << updatePieces << "@" << updateResolution << " in slot "
-    << index << endl;
-                      );
+    DEBUGPRINT_CACHING
+      (
+       cerr << "PCF(" << this
+       << ") Cache insert of piece "
+       << updatePiece << "/" << updatePieces << "@" << updateResolution
+       << " in slot " << index << endl;
+       );
 
     vtkDataSet *cpy = inData->NewInstance();
     cpy->ShallowCopy(inData);
@@ -294,11 +281,12 @@ int vtkPieceCacheFilter::RequestData(
     }
   else
     {
-    DEBUGPRINT_CACHING(
-    cerr << "PCF(" << this << ") Cache full. Piece "
-    << updatePiece << "/" << updatePieces << "@" << updateResolution
-    << " could not be saved" << endl;
-                       );
+    DEBUGPRINT_CACHING
+      (
+       cerr << "PCF(" << this << ") Cache full. Piece "
+       << updatePiece << "/" << updatePieces << "@" << updateResolution
+       << " could not be saved" << endl;
+       );
     }
 
   outData->ShallowCopy(inData);
@@ -314,18 +302,23 @@ bool vtkPieceCacheFilter::InCache(int p, int np, double r)
     {
     vtkInformation* dataInfo = ds->GetInformation();
     double dataResolution = dataInfo->Get(vtkDataObject::DATA_RESOLUTION());
-    DEBUGPRINT_APPENDING(
-      vtkPolyData *content = vtkPolyData::SafeDownCast(ds);
-      cerr << "PCF(" << this << ") InCache(" << p << "/" << np << "@" << r << "->" << dataResolution << ") " << (dataResolution>=r?"T":"F") << " NPTS=" << (content?content->GetNumberOfPoints():-1)<< endl;
-                         );
+    DEBUGPRINT_APPENDING
+      (
+       vtkPolyData *content = vtkPolyData::SafeDownCast(ds);
+       cerr << "PCF(" << this << ") InCache(" << p << "/" << np << "@" << r
+       << "->" << dataResolution << ") " << (dataResolution>=r?"T":"F")
+       << " NPTS=" << (content?content->GetNumberOfPoints():-1)<< endl;
+       );
     if (dataResolution >= r)
       {
       return true;
       }
     }
-  DEBUGPRINT_APPENDING(
-    cerr << "PCF(" << this << ") InCache(" << p << "/" << np << "@" << r << ") " << "F" << endl;
-    );
+  DEBUGPRINT_APPENDING
+    (
+     cerr << "PCF(" << this << ") InCache(" << p << "/" << np << "@"
+     << r << ") " << "F" << endl;
+     );
 
   return false;
 }
@@ -341,9 +334,12 @@ bool vtkPieceCacheFilter::InAppend(int p, int np, double r)
     dataResolution = pos->second;
     }
 
-  DEBUGPRINT_APPENDING(
-    cerr << "PCF(" << this << ") InAppend(" << p << "/" << np << "@" << r << "->" << dataResolution << ") " << (dataResolution>=r?"T":"F") << endl;
-  );
+  DEBUGPRINT_APPENDING
+    (
+     cerr << "PCF(" << this << ") InAppend(" << p << "/" << np << "@"
+     << r << "->" << dataResolution << ") " << (dataResolution>=r?"T":"F")
+     << endl;
+     );
 
   return dataResolution >= r;
 }
@@ -351,17 +347,21 @@ bool vtkPieceCacheFilter::InAppend(int p, int np, double r)
 //-----------------------------------------------------------------------------
 vtkPolyData *vtkPieceCacheFilter::GetAppendedData()
 {
-  DEBUGPRINT_APPENDING(
-    cerr << "PCF(" << this << ") GetAppendedData " << this->AppendResult << endl;
-    );
+  DEBUGPRINT_APPENDING
+    (
+     cerr << "PCF(" << this << ") GetAppendedData " << this->AppendResult
+     << endl;
+     );
   return this->AppendResult;
 }
 
 //-----------------------------------------------------------------------------
 void vtkPieceCacheFilter::AppendPieces()
 {
-  DEBUGPRINT_APPENDING(
-    cerr << "PCF(" << this << ") Append " << this->Cache.size() << " Pieces" << endl;
+  DEBUGPRINT_APPENDING
+    (
+     cerr << "PCF(" << this << ") Append " << this->Cache.size() << " Pieces"
+     << endl;
     );
 
   this->ClearAppendTable();
@@ -398,9 +398,12 @@ void vtkPieceCacheFilter::AppendPieces()
 
       this->AppendTable[index] = dataResolution;
 
-      DEBUGPRINT_APPENDING(
-        cerr << "Appending "<< cnt << " " << dataPiece << "/" << dataPieces << "@" << dataResolution << " " << content->GetNumberOfPoints() << endl;
-        );
+      DEBUGPRINT_APPENDING
+        (
+         cerr << "Appending "<< cnt << " " << dataPiece << "/" << dataPieces
+         << "@" << dataResolution << " " << content->GetNumberOfPoints()
+         << endl;
+         );
       }
     pos++;
     }
@@ -410,19 +413,18 @@ void vtkPieceCacheFilter::AppendPieces()
   this->AppendResult = vtkPolyData::New();
   this->AppendResult->ShallowCopy(this->AppendFilter->GetOutput());
 
-  DEBUGPRINT_APPENDING(
+  DEBUGPRINT_APPENDING
+    (
     cerr << "PCF("<<this<<") Appended "
     << this->AppendResult->GetNumberOfPoints()
     << " verts" << endl;
-  );
+     );
 }
 
 //----------------------------------------------------------------------------
 void vtkPieceCacheFilter::ClearAppendTable()
 {
-  DEBUGPRINT_APPENDING(
-  cerr << "PCF(" << this << ") ClearAppendTable" << endl;
-  );
+  DEBUGPRINT_APPENDING(cerr << "PCF(" << this << ") ClearAppendTable" << endl;);
 
   //clear appended result content records
   AppendIndex::iterator pos;

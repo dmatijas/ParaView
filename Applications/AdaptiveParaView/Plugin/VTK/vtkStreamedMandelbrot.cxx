@@ -293,9 +293,9 @@ int vtkStreamedMandelbrot::RequestData(
     (vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
   int NP = outInfo->Get
     (vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
-  double RES = outInfo->Get
-    (vtkStreamingDemandDrivenPipeline::UPDATE_RESOLUTION());
-  cerr << "RD " << P << "/" << NP << "@" << RES << endl;
+  //double RES = outInfo->Get
+  //  (vtkStreamingDemandDrivenPipeline::UPDATE_RESOLUTION());
+  //cerr << "RD " << P << "/" << NP << "@" << RES << endl;
 
   DEBUGPRINT_METAINFORMATION
     (

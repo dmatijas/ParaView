@@ -9,8 +9,7 @@
 #include <sstream>
 #include <iostream>
 
-#define LOG(arg) ;
-//cerr << arg;
+#define LOG(arg) cerr << arg;
 /*
   {\
   std::ostringstream stream;\

@@ -133,7 +133,7 @@
         <Proxy
             name="StreamingDriver"
             proxygroup="utilities"
-            proxyname="MultiResolutionDriver">
+            proxyname="PrioritizingDriver">
        <!-- proxyname="IteratingDriver"> -->
        <!-- proxyname="PrioritizingDriver"> -->
        <!-- proxyname="MultiResolutionDriver"> -->

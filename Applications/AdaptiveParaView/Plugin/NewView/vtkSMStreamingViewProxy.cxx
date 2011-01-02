@@ -182,7 +182,7 @@ void vtkSMStreamingViewProxy::PreRender()
       {
       //make sure we update so that we get the up-to-date pipeline
       //from the streaming harness
-      repr->MarkDirty(this);
+      //repr->MarkDirty(this);
       }
     }
 }

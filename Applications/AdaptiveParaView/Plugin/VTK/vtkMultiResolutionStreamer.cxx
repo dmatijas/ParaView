@@ -24,6 +24,10 @@
 #include "vtkStreamingDriver.h"
 #include "vtkStreamingHarness.h"
 
+#define DEBUGPRINT_PASSES( arg ) ;
+#define DEBUGPRINT_PRIORITY( arg ) arg ;
+#define DEBUGPRINT_REFINE( arg ) arg ;
+
 vtkStandardNewMacro(vtkMultiResolutionStreamer);
 
 class vtkMultiResolutionStreamer::Internals
@@ -196,13 +200,14 @@ void vtkMultiResolutionStreamer::PrepareFirstPass()
       int np = piece.GetNumPieces();
       double res = piece.GetResolution();
       double priority = harness->ComputePriority(p, np, res);
-      /*
-      if (!priority)
-        {
-        cerr << "CHECKED PPRI OF " << p << "/" << np << "@" << res
-             << " = " << priority << endl;
-        }
-      */
+      DEBUGPRINT_PRIORITY
+        (
+         if (!priority)
+           {
+           cerr << "CHECKED PPRI OF " << p << "/" << np << "@" << res
+                << " = " << priority << endl;
+           }
+         );
       piece.SetPipelinePriority(priority);
 
       double pbbox[6];
@@ -214,10 +219,14 @@ void vtkMultiResolutionStreamer::PrepareFirstPass()
         (p, np, res,
          pbbox, gConf, aMin, aMax, aConf);
       double gPri = this->CalculateViewPriority(pbbox);
-      /*
-      cerr << "CHECKED VPRI OF " << p << "/" << np << "@" << res
-      << " = " << gPri << endl;
-      */
+      DEBUGPRINT_PRIORITY
+        (
+         if (!gPri)
+           {
+           cerr << "CHECKED VPRI OF " << p << "/" << np << "@" << res
+                << " = " << gPri << endl;
+           }
+         );
       piece.SetViewPriority(gPri);
 
       if (this->Internal->CameraMoved)
@@ -265,9 +274,12 @@ void vtkMultiResolutionStreamer::ChooseNextPieces()
       NextFrame->AddPiece(p);
       //adjust pipeline to draw the chosen piece
       /*
-      cerr << "CHOSE "
-           << p.GetPiece() << "/" << p.GetNumPieces()
-           << "@" << p.GetResolution() << endl;
+      DEBUGPRINT_PRIORITY
+        (
+         cerr << "CHOSE "
+         << p.GetPiece() << "/" << p.GetNumPieces()
+         << "@" << p.GetResolution() << endl;
+         );
       */
       harness->SetPiece(p.GetPiece());
       harness->SetNumberOfPieces(p.GetNumPieces());
@@ -295,6 +307,12 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
   vtkPieceList *ToDo = harness->GetPieceList1();
   vtkPieceList *NextFrame = harness->GetPieceList2();
   vtkPieceList *ToSplit = vtkPieceList::New();
+
+  cerr << "PRE REFINE:" << endl;
+  cerr << "TODO:" << endl;
+  ToDo->Print();
+  cerr << "NEXT:" << endl;
+  NextFrame->Print();
 
   int numSplittable = 0;
   while (NextFrame->GetNumberOfPieces() != 0)
@@ -331,11 +349,14 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
     int p = piece.GetPiece();
     int np = piece.GetNumPieces();
     double res = piece.GetResolution();
-    /*
-    cerr << "SPLIT "
-         << p << "/" << np
-         << " -> ";
-    */
+
+    DEBUGPRINT_REFINE
+      (
+       cerr << "SPLIT "
+       << p << "/" << np
+       << " -> ";
+       );
+
     //compute next resolution to request for it
     double resolution = res + res_delta;
     if (resolution > 1.0)
@@ -354,16 +375,31 @@ int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
       pA.SetNumPieces(nrNP);
       pA.SetResolution(resolution);
 
-      //cerr << nrA << "/" << nrNP << "@" << resolution << " & ";
+      DEBUGPRINT_REFINE
+        (
+         cerr
+         << nrA << "/" << nrNP << "@" << resolution
+         << (child<degree-1?" & ":"");
+         );
+
       ToDo->AddPiece(pA);
       }
 
-    //cerr << endl;
+    DEBUGPRINT_REFINE
+      (
+       cerr << endl;
+       );
     }
 
   //put any pieces we did not split back into next wend
   ToDo->MergePieceList(ToSplit);
   ToSplit->Delete();
+
+  cerr << "POST REFINE:" << endl;
+  cerr << "TODO:" << endl;
+  ToDo->Print();
+  cerr << "NEXT:" << endl;
+  NextFrame->Print();
 
   return numSplit;
 }
@@ -381,6 +417,10 @@ void vtkMultiResolutionStreamer::Reap(vtkStreamingHarness *harness)
     {
     return;
     }
+
+  cerr << "PRE REAP:" << endl;
+  cerr << "TODO:" << endl;
+  ToDo->Print();
 
   //TODO: maxHeight must be common to both reap and refine and
   //should be setable
@@ -428,12 +468,15 @@ void vtkMultiResolutionStreamer::Reap(vtkStreamingHarness *harness)
           piece.SetResolution(res);
           piece.SetPipelinePriority(0.0);
           piece.SetReapedFlag(true);
-          /*
-          cerr << "REAP "
-               << p << "&" << p2 << "/" << np
-               << " -> "
-               << p/2 << "/" << np/2 << "@" << res << endl;
-          */
+
+          DEBUGPRINT_REFINE
+            (
+             cerr << "REAP "
+             << p << "&" << p2 << "/" << np
+             << " -> "
+             << p/2 << "/" << np/2 << "@" << res << endl;
+             );
+
           merged->AddPiece(piece);
           toMerge->RemovePiece(j);
           found = true;
@@ -470,12 +513,19 @@ void vtkMultiResolutionStreamer::Reap(vtkStreamingHarness *harness)
   ToDo->MergePieceList(toMerge);
   toMerge->Delete();
   merged->Delete();
+
+  cerr << "POST REAP:" << endl;
+  cerr << "TODO:" << endl;
+  ToDo->Print();
 }
 
 //----------------------------------------------------------------------------
 void vtkMultiResolutionStreamer::StartRenderEvent()
 {
-  cerr << "SR " << this->Internal->DebugPass << endl;
+  DEBUGPRINT_PASSES
+    (
+     cerr << "SR " << this->Internal->DebugPass << endl;
+     );
 
   vtkRenderer *ren = this->GetRenderer();
   vtkRenderWindow *rw = this->GetRenderWindow();
@@ -484,11 +534,14 @@ void vtkMultiResolutionStreamer::StartRenderEvent()
     return;
     }
 
-  this->Internal->CameraMoved = this->IsRestart();
+  this->Internal->CameraMoved = this->HasCameraMoved();
   if (this->Internal->CameraMoved || this->IsFirstPass())
     {
-    cerr << "RESTART" << endl;
-    this->Internal->DebugPass = 0;
+    DEBUGPRINT_PASSES
+      (
+       cerr << "RESTART" << endl;
+       this->Internal->DebugPass = 0;
+       );
 
     //start off by clearing the screen
     ren->EraseOn();
@@ -520,17 +573,23 @@ void vtkMultiResolutionStreamer::EndRenderEvent()
     return;
     }
 
-  cerr << "ER " << this->Internal->DebugPass << endl;
-  this->Internal->DebugPass++;
+  DEBUGPRINT_PASSES
+    (
+     cerr << "ER " << this->Internal->DebugPass << endl;
+     this->Internal->DebugPass++;
+     );
 
   //after first pass all subsequent renders can not clear
   //otherwise we erase the partial results we drew before
   ren->EraseOff();
   rw->EraseOff();
 
- if (this->IsEveryoneDone())
+  if (this->IsEveryoneDone())
     {
-    cerr << "ALL DONE" << endl;
+    //DEBUGPRINT_PASSES
+    //(
+       cerr << "ALL DONE" << endl;
+       // );
     //next pass should start with clear screen
     this->Internal->WendDone = true;
 
@@ -542,7 +601,10 @@ void vtkMultiResolutionStreamer::EndRenderEvent()
     {
     if (this->IsWendDone() || this->Internal->CameraMoved)
       {
-      cerr << "WEND DONE" << endl;
+      //DEBUGPRINT_PASSES
+      //  (
+         cerr << "WEND DONE" << endl;
+         //   );
       //next pass should start with clear screen
       this->Internal->WendDone = true;
 

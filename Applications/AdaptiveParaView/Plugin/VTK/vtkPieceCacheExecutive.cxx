@@ -23,18 +23,9 @@
 #include "vtkPieceCacheFilter.h"
 #include "vtkAdaptiveOptions.h"
 
-vtkStandardNewMacro(vtkPieceCacheExecutive);
+#define DEBUGPRINT_CACHING(arg) ;
 
-#if 0
-#define DEBUGPRINT_CACHING(arg) arg;
-#else
-#define DEBUGPRINT_CACHING(arg) \
-  if (!vtkPieceCacheFilter::SafeDownCast(this->GetAlgorithm())->GetSilenced()\
-      && vtkAdaptiveOptions::GetEnableStreamMessages())\
-    {\
-      arg;\
-    }
-#endif
+vtkStandardNewMacro(vtkPieceCacheExecutive);
 
 //----------------------------------------------------------------------------
 vtkPieceCacheExecutive
@@ -110,7 +101,8 @@ int vtkPieceCacheExecutive
       int dataGhostLevel =
         dataInfo->Get(vtkDataObject::DATA_NUMBER_OF_GHOST_LEVELS());
       double dataResolution = 1.0;
-      if (dataInfo->Has(vtkDataObject::DATA_RESOLUTION())) //TODO: hmm why is this now needed in PV?
+      if (dataInfo->Has(vtkDataObject::DATA_RESOLUTION()))
+        //TODO: hmm why is this now needed in PV?
         {
         dataResolution = dataInfo->Get(vtkDataObject::DATA_RESOLUTION());
         }
@@ -127,39 +119,42 @@ int vtkPieceCacheExecutive
           // we have a match
           // Give the cached result to the requester
           dso->ShallowCopy(ds);
-          DEBUGPRINT_CACHING(
-          cerr << "PCE(" << this << ") cache hit piece "
-               << updatePiece << "/"
-               << updateNumberOfPieces << "@"
-               << updateResolution << " DR=" << dataResolution << " in slot "
-          << index << endl;
-          );
+          DEBUGPRINT_CACHING
+            (
+             cerr << "PCE(" << this << ") cache hit piece "
+             << updatePiece << "/"
+             << updateNumberOfPieces << "@"
+             << updateResolution << " DR=" << dataResolution << " in slot "
+             << index << endl;
+             );
           //pipeline request can terminate now, yeah!
           return 0;
           }
         }
       else
         {
-        DEBUGPRINT_CACHING(
-        cerr << "PCE(" << this << ") miss, cached has wrong extent" << endl;
-        cerr << dataInfo->Get(vtkDataObject::DATA_EXTENT_TYPE()) << "!="
-             <<  VTK_PIECES_EXTENT << "||"
-             << dataPiece << "/" << dataNumberOfPieces << "!="
-             << updatePiece << "/" << updateNumberOfPieces << "||"
-             << dataGhostLevel << "!=" << updateGhostLevel << "||"
-             << dataResolution << "!=" << updateResolution << endl;
-        );
+        DEBUGPRINT_CACHING
+          (
+           cerr << "PCE(" << this << ") miss, cached has wrong extent" << endl;
+           cerr << dataInfo->Get(vtkDataObject::DATA_EXTENT_TYPE()) << "!="
+           <<  VTK_PIECES_EXTENT << "||"
+           << dataPiece << "/" << dataNumberOfPieces << "!="
+           << updatePiece << "/" << updateNumberOfPieces << "||"
+           << dataGhostLevel << "!=" << updateGhostLevel << "||"
+           << dataResolution << "!=" << updateResolution << endl;
+           );
         myPCF->DeletePiece(index);
         }
       }
     else
       {
-      DEBUGPRINT_CACHING(
-      cerr << "PCE(" << this << ") miss, nothing cached for "
-           << updatePiece << "/"
-           << updateNumberOfPieces << "@"
-           << updateResolution << endl;
-                         );
+      DEBUGPRINT_CACHING
+        (
+         cerr << "PCE(" << this << ") miss, nothing cached for "
+         << updatePiece << "/"
+         << updateNumberOfPieces << "@"
+         << updateResolution << endl;
+         );
       if (updatePiece >= updateNumberOfPieces)
         {
         vtkErrorMacro("Requested an invalid piece, something is badly wrong");
@@ -200,9 +195,10 @@ int vtkPieceCacheExecutive
           // we have a match
           // Give the cached result to the requester
           dso->ShallowCopy(ds);
-          DEBUGPRINT_CACHING(
-            cerr << "PCE(" << this << ") SD cache hit " << updatePiece << endl;
-            );
+          DEBUGPRINT_CACHING
+            (
+             cerr << "PCE(" << this << ") SD cache hit " << updatePiece << endl;
+             );
           //pipeline request can terminate now, yeah!
           return 0;
           }
@@ -211,8 +207,9 @@ int vtkPieceCacheExecutive
     }
 
   // We do need to execute
-  DEBUGPRINT_CACHING(
-  cerr << "PCE(" << this << ") cache miss " << updatePiece << endl;
-                     );
+  DEBUGPRINT_CACHING
+    (
+     cerr << "PCE(" << this << ") cache miss " << updatePiece << endl;
+     );
   return 1;
 }

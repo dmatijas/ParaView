@@ -41,12 +41,9 @@ protected:
   virtual void StartRenderEvent();
   virtual void EndRenderEvent();
 
-  virtual bool IsFirstPass();
-  virtual bool IsEveryoneDone();
-
   virtual void ResetEveryone();
   virtual void AdvanceEveryone();
-  virtual void FinalizeEveryone();
+  virtual bool IsEveryoneDone();
 
 private:
   vtkPrioritizedStreamer(const vtkPrioritizedStreamer&);  // Not implemented.

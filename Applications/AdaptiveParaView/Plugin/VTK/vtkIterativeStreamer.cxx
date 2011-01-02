@@ -57,7 +57,7 @@ void vtkIterativeStreamer::StartRenderEvent()
   bool everyone_done = true;
   //watch for camera movement and restart when that happens so we don't
   //"streak"
-  this->CameraMoved = this->IsRestart();
+  this->CameraMoved = this->HasCameraMoved();
 
   while(!iter->IsDoneWithTraversal())
     {

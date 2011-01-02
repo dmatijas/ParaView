@@ -85,7 +85,7 @@ protected:
   // Description:
   // Determines if camera has changed AND sets up for view prioritization
   // This is common to prioritized subclasses, so I've placed it here
-  virtual bool IsRestart();
+  virtual bool HasCameraMoved();
 
   // Description
   // Determines view priority of an object relative to camera frustum

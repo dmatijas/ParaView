@@ -102,12 +102,6 @@ public:
   //and was stored with at least the requested resolution.
   bool InAppend(int piece, int numpieces, double res);
 
-  //Description:
-  //For debugging to selectively silence diagnostic messages.
-  vtkSetMacro(Silenced, int);
-  vtkGetMacro(Silenced, int);
-  vtkBooleanMacro(Silenced, int);
-
 protected:
   vtkPieceCacheFilter();
   ~vtkPieceCacheFilter();
@@ -147,7 +141,6 @@ protected:
 //ETX
 
   int CacheSize;
-  int Silenced;
   vtkAppendPolyData *AppendFilter;
   vtkPolyData *AppendResult;
 

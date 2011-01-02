@@ -260,7 +260,6 @@ void vtkSMOutputPort::GatherDataInformation()
 
   if (vtkSMOutputPort::UseStreaming)
     {
-    cerr << "USE STREAMING" << endl;
     vtkClientServerStream stream;
     vtkClientServerID infoHelper =
     pm->NewStreamObject("vtkPriorityHelper", stream);

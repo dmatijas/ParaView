@@ -35,7 +35,7 @@ vtkStreamingHarness::vtkStreamingHarness()
 {
   this->Pass = 0;
   this->Piece = 0;
-  this->NumberOfPieces = 8;
+  this->NumberOfPieces = 32;
   this->Resolution = 1.0;
   this->ForOther = false;
   this->PieceList1 = NULL;
@@ -130,12 +130,12 @@ int vtkStreamingHarness::RequestUpdateExtent(
     int NP = outInfo->Get
     (vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
 
-    cerr << "HARNESS(" << this <<") RUE "
-         << "P/NP " << P << "/" << NP << "->";
+    //cerr << "HARNESS(" << this <<") RUE "
+    //     << "P/NP " << P << "/" << NP << "->";
     //split each downstream piece into many
     P = P * this->NumberOfPieces + this->Piece;
     NP = NP * this->NumberOfPieces;
-    cerr << "P/NP " << P << "/" << NP << endl;
+    //cerr << "P/NP " << P << "/" << NP << endl;
 
     //send the adjusted piece at my resolution upstream
     vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
