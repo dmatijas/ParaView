@@ -289,6 +289,7 @@ void vtkPrioritizedStreamer::StartRenderEvent()
   //only update the screen once the last piece is drawn
   rw->SwapBuffersOff(); //comment this out to see each piece rendered
 
+  //assume that we are not done covering all the domains
   this->Internal->StartOver = false;
 }
 

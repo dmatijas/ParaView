@@ -154,28 +154,27 @@ void vtkPieceList::SortPriorities()
 void vtkPieceList::Print()
 {
   int np = this->GetNumberOfPieces();
-  LOG("PL(" << this << "):" << np << " \n[";);
+  cerr << "PL(" << this << "):" << np << " \n[";
   for (int i = 0; i < np; i++)
     {
-    LOG(
-    "{"
-    << this->GetPiece(i).GetProcessor() << ":"
-    << this->GetPiece(i).GetPiece() << "/"
-    << this->GetPiece(i).GetNumPieces() << "@"
-    << this->GetPiece(i).GetResolution() << "->["
-    << this->GetPiece(i).GetBounds()[0] << "-"
-    << this->GetPiece(i).GetBounds()[1] << ","
-    << this->GetPiece(i).GetBounds()[2] << "-"
-    << this->GetPiece(i).GetBounds()[3] << ","
-    << this->GetPiece(i).GetBounds()[4] << "-"
-    << this->GetPiece(i).GetBounds()[5] << "]=("
-    << this->GetPiece(i).GetPipelinePriority() << " "
-    << this->GetPiece(i).GetViewPriority() << " "
-    << this->GetPiece(i).GetCachedPriority() << ")"
-    << "},\n";);
+    cerr
+      << "{"
+      << this->GetPiece(i).GetProcessor() << ":"
+      << this->GetPiece(i).GetPiece() << "/"
+      << this->GetPiece(i).GetNumPieces() << "@"
+      << this->GetPiece(i).GetResolution() << "->["
+      << this->GetPiece(i).GetBounds()[0] << "-"
+      << this->GetPiece(i).GetBounds()[1] << ","
+      << this->GetPiece(i).GetBounds()[2] << "-"
+      << this->GetPiece(i).GetBounds()[3] << ","
+      << this->GetPiece(i).GetBounds()[4] << "-"
+      << this->GetPiece(i).GetBounds()[5] << "]=("
+      << this->GetPiece(i).GetPipelinePriority() << " "
+      << this->GetPiece(i).GetViewPriority() << " "
+      << this->GetPiece(i).GetCachedPriority() << ")"
+      << "},\n";
     }
-
-  LOG("]" << endl;);
+  cerr << "]" << endl;
 }
 
 //----------------------------------------------------------------------------

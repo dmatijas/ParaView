@@ -15,16 +15,17 @@
 // .NAME vtkMultiResolutionStreamer - streams pieces with increasing refinement
 // .SECTION Description
 // Besides rendering pieces in a most to least important order, this streamer
-// also continuosly increases the resolution of the pieces it draws. That is
-// it draws the entire domain at a low level of resolution, then clears the screen
-// and redraws the domain with one or more of the original pieces split and
-// refined at a higher level of resolution.
+// also continuously increases the resolution of the pieces it draws. That is,
+// it draws the entire domain at a low level of resolution, then clears the
+// screen and redraws the domain with one or more of the original pieces
+// split and refined at a higher level of resolution. Groups of unimportant
+// pieces, for instance those offscreen are merged back together into a lower
+// resolution whole.
 
 #ifndef __vtkMultiResolutionStreamer_h
 #define __vtkMultiResolutionStreamer_h
 
 #include "vtkStreamingDriver.h"
-
 
 class VTK_EXPORT vtkMultiResolutionStreamer : public vtkStreamingDriver
 {
@@ -41,7 +42,6 @@ protected:
   virtual void StartRenderEvent();
   virtual void EndRenderEvent();
 
-  virtual bool IsFirstPass();
   virtual bool IsWendDone();
   virtual bool IsEveryoneDone();
 
