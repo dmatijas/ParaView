@@ -108,6 +108,7 @@ StreamingView::~StreamingView()
 //-----------------------------------------------------------------------------
 void StreamingView::watchPreRender()
 {
+#if 0
   //cerr << "PRE RENDER " << this->Pass << endl;
   vtkSMStreamingViewProxy *vp = vtkSMStreamingViewProxy::SafeDownCast
     (this->getViewProxy());
@@ -116,7 +117,6 @@ void StreamingView::watchPreRender()
     return;
     }
 
-#if 0
   //save debug images of back and front buffer
   vtkRenderWindow *rw = vp->GetRenderWindow();
   vtkWindowToImageFilter *w2i = vtkWindowToImageFilter::New();
@@ -143,8 +143,6 @@ void StreamingView::watchPreRender()
   w2i->Delete();
   writer->Delete();
 #endif
-
-  vp->PreRender();
 }
 
 //-----------------------------------------------------------------------------

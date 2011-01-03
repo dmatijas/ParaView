@@ -123,16 +123,16 @@ bool vtkMultiResolutionStreamer::IsEveryoneDone()
       break;
       }
 
-     if (harness->GetNoneToRefine() == false)
-       {
-       everyone_completely_done = false;
-       break;
-       }
-     }
+    if (harness->GetNoneToRefine() == false)
+      {
+      everyone_completely_done = false;
+      break;
+      }
+    }
    iter->Delete();
 
    return everyone_completely_done;
- }
+}
 
  //----------------------------------------------------------------------------
  void vtkMultiResolutionStreamer::PrepareFirstPass()
@@ -234,6 +234,61 @@ bool vtkMultiResolutionStreamer::IsEveryoneDone()
      ToDo->SortPriorities();
      //cerr << "NUM PIECES " << ToDo->GetNumberOfPieces() << endl;
      //ToDo->Print();
+
+#if 0
+     //debug code to made sure domain is not overcovered
+     if (true)
+       {
+       vtkPieceList *pl = vtkPieceList::New();
+       pl->CopyPieceList(ToDo);
+
+       while (pl->GetNumberOfPieces()>0)
+         {
+         vtkPiece piece = pl->PopPiece();
+         int p = piece.GetPiece();
+         int np = piece.GetNumPieces();
+         //look for a piece that can be merged with it
+         for (int j = 0; j < pl->GetNumberOfPieces(); j++)
+           {
+           vtkPiece other = pl->GetPiece(j);
+           int p2 = other.GetPiece();
+           int np2 = other.GetNumPieces();
+           //cerr << p << "/" << np << " vs " << p2 << "/" << np2 << endl;
+           if (p == p2 && np == np2)
+             {
+              cerr << "SAME" << endl;
+             }
+           if (np < np2)
+             {
+             int ratio = np2/np;
+             int base = p * ratio;
+             int top = (p+1) * ratio;
+             for (int i = base; i < top; i++)
+               {
+               if (p2 == i)
+                 {
+                 cerr << "CHILD" << endl;
+                 }
+               }
+             }
+           if (np > np2)
+             {
+             int ratio = np/np2;
+             int base = p2 * ratio;
+             int top = (p2+1) * ratio;
+             for (int i = base; i < top; i++)
+               {
+               if (p == i)
+                 {
+                 cerr << "CHILD" << endl;
+                 }
+               }
+             }
+           }
+         }
+       pl->Delete();
+       }
+#endif
     }
 
    iter->Delete();
@@ -601,7 +656,7 @@ void vtkMultiResolutionStreamer::EndRenderEvent()
     }
   else
     {
-    if (this->IsWendDone() || this->Internal->CameraMoved)
+    if (this->IsWendDone())// || this->Internal->CameraMoved)
       {
       DEBUGPRINT_PASSES
         (

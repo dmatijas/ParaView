@@ -90,11 +90,6 @@ public:
 
 
   // Description:
-  // Ask the PVReps to bring their streamed pipelines up-to-date before
-  // rendering
-  void PreRender();
-
-  // Description:
   // Ask the PVViews if multipass rendering has finished, if not we mark
   // them modified so that the next render executes their pipelines fully.
   bool IsDisplayDone();

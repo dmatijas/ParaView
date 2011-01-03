@@ -170,24 +170,6 @@ vtkSMRepresentationProxy* vtkSMStreamingViewProxy::CreateDefaultRepresentation(
 }
 
 //------------------------------------------------------------------------------
-void vtkSMStreamingViewProxy::PreRender()
-{
-  vtkSMPropertyHelper helper1(this, "Representations");
-  for (unsigned int cc=0; cc  < helper1.GetNumberOfElements(); cc++)
-    {
-    vtkSMStreamingRepresentationProxy* repr =
-      vtkSMStreamingRepresentationProxy::SafeDownCast
-      (helper1.GetAsProxy(cc));
-    if (repr)
-      {
-      //make sure we update so that we get the up-to-date pipeline
-      //from the streaming harness
-      //repr->MarkDirty(this);
-      }
-    }
-}
-
-//------------------------------------------------------------------------------
 bool vtkSMStreamingViewProxy::IsDisplayDone()
 {
   vtkSMPropertyHelper(this, "GetIsDisplayDone").UpdateValueFromServer();
