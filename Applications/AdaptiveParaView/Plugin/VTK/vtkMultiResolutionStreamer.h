@@ -43,7 +43,7 @@ protected:
   virtual void EndRenderEvent();
 
   virtual bool IsWendDone();
-  virtual bool IsEveryoneDone();
+  virtual bool IsCompletelyDone();
 
   virtual void PrepareFirstPass();
   virtual void ChooseNextPieces();

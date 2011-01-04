@@ -129,11 +129,10 @@ void vtkSMStreamingRepresentationProxy::AddInput
       << this->Harness->GetID()
       << vtkClientServerStream::End;
     pm->SendStream(this->GetConnectionID(),
-                   vtkProcessModule::CLIENT_AND_SERVERS,
+                   vtkProcessModule::SERVERS,
                    stream);
     }
 
   this->PieceCache->AddInput(0, input, outputPort, method);
-
   this->Superclass::AddInput(0, this->Harness, 0, "SetInputConnection");
 }

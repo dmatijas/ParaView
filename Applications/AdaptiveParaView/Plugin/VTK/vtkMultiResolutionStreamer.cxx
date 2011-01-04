@@ -99,7 +99,7 @@ bool vtkMultiResolutionStreamer::IsWendDone()
 }
 
 //----------------------------------------------------------------------------
-bool vtkMultiResolutionStreamer::IsEveryoneDone()
+bool vtkMultiResolutionStreamer::IsCompletelyDone()
 {
   vtkCollection *harnesses = this->GetHarnesses();
   if (!harnesses)
@@ -640,7 +640,7 @@ void vtkMultiResolutionStreamer::EndRenderEvent()
   ren->EraseOff();
   rw->EraseOff();
 
-  if (this->IsEveryoneDone())
+  if (this->IsCompletelyDone())
     {
     DEBUGPRINT_PASSES
       (

@@ -83,15 +83,18 @@
       name="utilities">
     <Proxy
         name="IteratingDriver"
-        class="vtkIterativeStreamer">
+        class="vtkIterativeStreamer"
+        processes="client|renderserver|dataserver">
     </Proxy>
     <Proxy
         name="PrioritizingDriver"
-        class="vtkPrioritizedStreamer">
+        class="vtkPrioritizedStreamer"
+        processes="client|renderserver|dataserver">
     </Proxy>
     <Proxy
         name="MultiResolutionDriver"
-        class="vtkMultiResolutionStreamer">
+        class="vtkMultiResolutionStreamer"
+        processes="client|renderserver|dataserver">
     </Proxy>
   </ProxyGroup>
 
@@ -133,7 +136,7 @@
         <Proxy
             name="StreamingDriver"
             proxygroup="utilities"
-            proxyname="MultiResolutionDriver">
+            proxyname="IteratingDriver">
        <!-- proxyname="IteratingDriver"> -->
        <!-- proxyname="PrioritizingDriver"> -->
        <!-- proxyname="MultiResolutionDriver"> -->
