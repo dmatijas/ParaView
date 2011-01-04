@@ -23,7 +23,7 @@
 class vtkGridSampler1;
 class vtkMetaInfoDatabase;
 
-class VTK_IMAGING_EXPORT vtkStreamedMandelbrot : public vtkImageMandelbrotSource
+class VTK_EXPORT vtkStreamedMandelbrot : public vtkImageMandelbrotSource
 {
 public:
   static vtkStreamedMandelbrot *New();

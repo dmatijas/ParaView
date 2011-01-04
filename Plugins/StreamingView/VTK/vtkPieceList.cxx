@@ -1,22 +1,10 @@
 #include "vtkPieceList.h"
 #include "vtkObjectFactory.h"
-#include "vtkPiece.h"
-#include "vtkstd/vector"
-#include "vtkstd/algorithm"
+
+#include <vtksys/stl/algorithm>
+#include <vtksys/stl/vector>
 #include <vtksys/ios/sstream>
 
-#include <string.h>
-#include <sstream>
-#include <iostream>
-
-#define LOG(arg) cerr << arg;
-/*
-  {\
-  std::ostringstream stream;\
-  stream << arg;\
-  vtkStreamingOptions::Log(stream.str().c_str());\
-  }
-*/
 vtkStandardNewMacro(vtkPieceList);
 
 //////////////////////////////////////////////////////////////////////////////
@@ -35,7 +23,7 @@ public:
     delete[] this->SerializeBuffer;
     }
   }
-  vtkstd::vector<vtkPiece> Pieces;
+  vtksys_stl::vector<vtkPiece> Pieces;
   char *SerializeBuffer;
   int BufferSize;
 };
@@ -54,16 +42,16 @@ public:
 //----------------------------------------------------------------------------
 vtkPieceList::vtkPieceList()
 {
+  cerr << "PL(" <<this<< ") create" << endl;
   this->Internals = new vtkInternals;
-  //cerr << "PL(" <<this<< ") create" << endl;
 }
 
 //----------------------------------------------------------------------------
 vtkPieceList::~vtkPieceList()
 {
+  cerr << "PL(" <<this<< ") delete" << endl;
   this->Clear();
   delete this->Internals;
-  //cerr << "PL(" <<this<< ") delete" << endl;
 }
 
 //----------------------------------------------------------------------------
@@ -145,9 +133,9 @@ int vtkPieceList::GetNumberNonZeroPriority()
 //------------------------------------------------------------------------------
 void vtkPieceList::SortPriorities()
 {
-  vtkstd::sort(this->Internals->Pieces.begin(),
-       this->Internals->Pieces.end(),
-       vtkPieceListByPriority());
+  vtksys_stl::sort(this->Internals->Pieces.begin(),
+                   this->Internals->Pieces.end(),
+                   vtkPieceListByPriority());
 }
 
 //-----------------------------------------------------------------------------
@@ -323,8 +311,8 @@ void vtkPieceList::PrintSerializedList()
   char *buffer;
   int len;
   this->GetSerializedList(&buffer, &len);
-  LOG("LEN = " << len << endl;);
-  LOG(buffer << endl;);
+  cerr << "LEN = " << len << endl;
+  cerr << buffer << endl;
 }
 
 //------------------------------------------------------------------------------

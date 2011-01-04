@@ -86,6 +86,9 @@ public:
   vtkGetObjectMacro(PieceList1, vtkPieceList);
   void SetPieceList2(vtkPieceList *);
   vtkGetObjectMacro(PieceList2, vtkPieceList);
+
+  //Description:
+  //A helper to help terminate refinement.
   vtkSetMacro(NoneToRefine, bool);
   vtkGetMacro(NoneToRefine, bool);
 

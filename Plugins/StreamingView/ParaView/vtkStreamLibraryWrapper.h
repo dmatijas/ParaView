@@ -69,7 +69,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "vtkObject.h"
 
-class vtkStreamLibraryWrapper : public vtkObject
+class VTK_EXPORT vtkStreamLibraryWrapper : public vtkObject
 {
 public:
   static vtkStreamLibraryWrapper* New();
