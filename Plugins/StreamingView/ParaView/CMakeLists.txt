@@ -16,14 +16,31 @@ IF(PARAVIEW_BUILD_QT_GUI)
   INCLUDE(${QT_USE_FILE})
 
   QT4_WRAP_CPP(MOC_SRCS
+    IteratingView.h
+    PrioritizingView.h
+    RefiningView.h
     StreamingView.h
     )
 
-  ADD_PARAVIEW_VIEW_MODULE( VIEW_IFACE VIEW_IFACE_SRCS
-    VIEW_TYPE StreamingView
-    VIEW_NAME StreamingView
+  ADD_PARAVIEW_VIEW_MODULE( VIEW1_IFACE VIEW1_IFACE_SRCS
+    VIEW_TYPE IteratingView
+    VIEW_NAME IteratingView
     VIEW_XML_GROUP views
-    VIEW_XML_NAME Streaming
+    VIEW_XML_NAME IteratingView
+    )
+
+  ADD_PARAVIEW_VIEW_MODULE( VIEW2_IFACE VIEW2_IFACE_SRCS
+    VIEW_TYPE PrioritizingView
+    VIEW_NAME PrioritizingView
+    VIEW_XML_GROUP views
+    VIEW_XML_NAME PrioritizingView
+    )
+
+  ADD_PARAVIEW_VIEW_MODULE( VIEW3_IFACE VIEW3_IFACE_SRCS
+    VIEW_TYPE RefiningView
+    VIEW_NAME RefiningView
+    VIEW_XML_GROUP views
+    VIEW_XML_NAME RefiningView
     )
 
 ENDIF()
@@ -41,11 +58,18 @@ add_paraview_plugin(
   SERVER_MANAGER_XML
     StreamingView.xml
   GUI_INTERFACES
-    ${VIEW_IFACE}
+    ${VIEW1_IFACE}
+    ${VIEW2_IFACE}
+    ${VIEW3_IFACE}
   GUI_SOURCES
     ${MOC_SRCS}
-    ${VIEW_IFACE_SRCS}
+    ${VIEW1_IFACE_SRCS}
+    ${VIEW2_IFACE_SRCS}
+    ${VIEW3_IFACE_SRCS}
     StreamingView.cxx
+    IteratingView.cxx
+    PrioritizingView.cxx
+    RefiningView.cxx
 )
 
 #TARGET_LINK_LIBRARIES ( StreamingView vtkStreaming )

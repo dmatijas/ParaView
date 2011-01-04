@@ -97,7 +97,6 @@ StreamingView::StreamingView(
 
   //prevent paraview from updatine whole extent to gather info
   vtkSMOutputPort::SetUseStreaming(true);
-  vtkSMOutputPort::SetDefaultPiece(0,1,0.0);
 }
 
 //-----------------------------------------------------------------------------

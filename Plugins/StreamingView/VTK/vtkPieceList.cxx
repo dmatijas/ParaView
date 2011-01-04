@@ -42,14 +42,14 @@ public:
 //----------------------------------------------------------------------------
 vtkPieceList::vtkPieceList()
 {
-  cerr << "PL(" <<this<< ") create" << endl;
+  //cerr << "PL(" <<this<< ") create" << endl;
   this->Internals = new vtkInternals;
 }
 
 //----------------------------------------------------------------------------
 vtkPieceList::~vtkPieceList()
 {
-  cerr << "PL(" <<this<< ") delete" << endl;
+  //cerr << "PL(" <<this<< ") delete" << endl;
   this->Clear();
   delete this->Internals;
 }

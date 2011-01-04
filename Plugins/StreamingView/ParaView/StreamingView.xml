@@ -125,23 +125,13 @@
 
   <ProxyGroup
       name="views">
+
     <StreamingViewProxy
-        name="StreamingView"
+        name="StreamingViewBase"
         class="vtkPVStreamingView"
         processes="client|renderserver|dataserver"
         base_proxygroup="views"
         base_proxyname="RenderView">
-
-      <SubProxy>
-        <Proxy
-            name="StreamingDriver"
-            proxygroup="utilities"
-            proxyname="IteratingDriver">
-       <!-- proxyname="IteratingDriver"> -->
-       <!-- proxyname="PrioritizingDriver"> -->
-       <!-- proxyname="MultiResolutionDriver"> -->
-        </Proxy>
-      </SubProxy>
 
      <IntVectorProperty
        name="GetIsDisplayDone"
@@ -149,7 +139,51 @@
        information_only="1">
        <SimpleIntInformationHelper/>
      </IntVectorProperty>
+    </StreamingViewProxy>
 
+    <StreamingViewProxy
+        name="IteratingView"
+        class="vtkPVStreamingView"
+        processes="client|renderserver|dataserver"
+        base_proxygroup="views"
+        base_proxyname="StreamingViewBase">
+      <SubProxy>
+        <Proxy
+            name="StreamingDriver"
+            proxygroup="utilities"
+            proxyname="IteratingDriver">
+        </Proxy>
+      </SubProxy>
+    </StreamingViewProxy>
+
+    <StreamingViewProxy
+        name="PrioritizingView"
+        class="vtkPVStreamingView"
+        processes="client|renderserver|dataserver"
+        base_proxygroup="views"
+        base_proxyname="StreamingViewBase">
+      <SubProxy>
+        <Proxy
+            name="StreamingDriver"
+            proxygroup="utilities"
+            proxyname="PrioritizingDriver">
+        </Proxy>
+      </SubProxy>
+    </StreamingViewProxy>
+
+    <StreamingViewProxy
+        name="RefiningView"
+        class="vtkPVStreamingView"
+        processes="client|renderserver|dataserver"
+        base_proxygroup="views"
+        base_proxyname="StreamingViewBase">
+      <SubProxy>
+        <Proxy
+            name="StreamingDriver"
+            proxygroup="utilities"
+            proxyname="MultiResolutionDriver">
+        </Proxy>
+      </SubProxy>
     </StreamingViewProxy>
   </ProxyGroup>
 
