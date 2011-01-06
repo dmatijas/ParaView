@@ -31,6 +31,22 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
   static vtkIterativeStreamer *New();
 
+  //Description:
+  //A command to halt streaming as soon as possible.
+  void StopStreaming();
+
+  //Description:
+  //Controls the number of pieces all harness shown by this driver
+  //break their data into. Default is 32.
+  void SetNumberOfPasses(int);
+  vtkGetMacro(NumberOfPasses, int);
+
+  //Description:
+  //Controls the number of pieces all harness shown by this driver
+  //break their data into. Default is -1, meaning unlimited.
+  vtkSetMacro(LastPass, int);
+  vtkGetMacro(LastPass, int);
+
 //BTX
 protected:
   vtkIterativeStreamer();
@@ -47,6 +63,8 @@ protected:
   //Helper to watch for camera motion and restart to first pass.
   bool CameraMoved;
 
+  int NumberOfPasses;
+  int LastPass;
 private:
   vtkIterativeStreamer(const vtkIterativeStreamer&);  // Not implemented.
   void operator=(const vtkIterativeStreamer&);  // Not implemented.

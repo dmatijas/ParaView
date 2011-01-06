@@ -1,11 +1,11 @@
 /*=========================================================================
 
-  Program:   ParaView
-  Module:    vtkSMStreamingViewProxy.h
+  Program:   Visualization Toolkit
+  Module:    pqStreamingControls.h
 
-  Copyright (c) Kitware, Inc.
+  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
-  See Copyright.txt or http://www.paraview.org/HTML/Copyright.html for details.
+  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -15,7 +15,7 @@
 /*=========================================================================
 
   Program:   VTK/ParaView Los Alamos National Laboratory Modules (PVLANL)
-  Module:    vtkSMStreamingViewProxy.h
+  Module:    pqStreamingControls.h
 
 Copyright (c) 2007, Los Alamos National Security, LLC
 
@@ -58,66 +58,51 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =========================================================================*/
-// .NAME vtkSMStreamingViewProxy - paraview control of a view that renders
-// in a streaming fashion
+// .NAME pqStreamingControls - GUI panel to drive streaming
 // .SECTION Description
-// vtkSMStreamingViewProxy controls vtkPVStreamingView instances which
-// do the actual multi-pass rendering.
+// This class provides a panel that controls streaming in the currently active
+// view. It also has controls pertaining to the currently active
+// representation within that view.
 
-#ifndef __vtkSMStreamingViewProxy_h
-#define __vtkSMStreamingViewProxy_h
+#ifndef __pqStreamingControls_h
+#define __pqStreamingControls_h
 
-#include "vtkSMRenderViewProxy.h"
+#include <QDockWidget>
 
-class vtkSMRepresentationProxy;
+class vtkSMStreamingRepresentationProxy;
+class pqDataRepresentation;
+class pqPipelineSource;
+class StreamingView;
 
-class VTK_EXPORT vtkSMStreamingViewProxy : public vtkSMRenderViewProxy
+class pqStreamingControls : public QDockWidget
 {
+  Q_OBJECT
 public:
-  static vtkSMStreamingViewProxy* New();
-  vtkTypeMacro(vtkSMStreamingViewProxy, vtkSMRenderViewProxy);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  pqStreamingControls(QWidget* p=0);
+  virtual ~pqStreamingControls();
 
-  // Description:
-  // Overrridded to create streaming representations and to give the PV
-  // Views access to their StreamingDrivers.
-  virtual vtkSMRepresentationProxy* CreateDefaultRepresentation(
-    vtkSMProxy*, int opport);
+public slots:
 
-  // Description:
-  // Disable surface selection since it conflicts with multipass rendering.
-  virtual bool IsSelectionAvailable() { return false; }
+  // events fired by the widgets on the GUI
+  void onStop();
+  void onRefine();
+  void onCoarsen();
+  void onRestartRefinement();
 
-  // Description:
-  // Ask the PVViews if multipass rendering has finished, if not we mark
-  // them modified so that the next render executes their pipelines fully.
-  bool IsDisplayDone();
+private slots:
 
-  // TODO:
-  // Allow direct access to the driver proxy to avoid messy exposed
-  // properties in the XML. Problem is this is assigned only after something is shown.
-  //vtkSMProxy *GetDriver() { return this->Driver; };
-
-//BTX
-protected:
-  vtkSMStreamingViewProxy();
-  ~vtkSMStreamingViewProxy();
-
-  // Description:
-  // Overridded to initialized the CS wrapped VTK streaming library.
-  virtual void CreateVTKObjects();
-
-  // Description:
-  // The entity that drives streaming.
-  vtkSMProxy *Driver;
+  //change widgets and behavior to reflect the currently active
+  //representation and view
+  void updateTrackedView();
+  void updateTrackedRepresentation();
+  void connectToRepresentation(pqPipelineSource*, pqDataRepresentation*);
 
 private:
+  vtkSMStreamingRepresentationProxy *currentRep;
+  StreamingView *currentView;
 
-  vtkSMStreamingViewProxy(const vtkSMStreamingViewProxy&); // Not implemented.
-  void operator=(const vtkSMStreamingViewProxy&); // Not implemented.
-
-//ETX
+  class pqInternals;
+  pqInternals *Internals;
 };
 
-
-#endif
+#endif // __pqStreamingControls_h

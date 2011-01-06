@@ -1,11 +1,11 @@
 /*=========================================================================
 
-  Program:   ParaView
-  Module:    vtkSMStreamingViewProxy.h
+  Program:   Visualization Toolkit
+  Module:    RefiningView.h
 
-  Copyright (c) Kitware, Inc.
+  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
-  See Copyright.txt or http://www.paraview.org/HTML/Copyright.html for details.
+  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -15,7 +15,7 @@
 /*=========================================================================
 
   Program:   VTK/ParaView Los Alamos National Laboratory Modules (PVLANL)
-  Module:    vtkSMStreamingViewProxy.h
+  Module:    RefiningView.h
 
 Copyright (c) 2007, Los Alamos National Security, LLC
 
@@ -58,66 +58,34 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =========================================================================*/
-// .NAME vtkSMStreamingViewProxy - paraview control of a view that renders
-// in a streaming fashion
+// .NAME RefiningView - Qt interface to a Refining View
 // .SECTION Description
-// vtkSMStreamingViewProxy controls vtkPVStreamingView instances which
-// do the actual multi-pass rendering.
+// This class is the ParaQ interface to the Refining View infrastructure.
+// It provides the mechanism for the GUI to cause repreated renders.
 
-#ifndef __vtkSMStreamingViewProxy_h
-#define __vtkSMStreamingViewProxy_h
+#ifndef _RefiningView_h
+#define _RefiningView_h
 
-#include "vtkSMRenderViewProxy.h"
+#include "StreamingView.h"
 
-class vtkSMRepresentationProxy;
-
-class VTK_EXPORT vtkSMStreamingViewProxy : public vtkSMRenderViewProxy
+class RefiningView : public StreamingView
 {
+  Q_OBJECT
+  typedef StreamingView Superclass;
 public:
-  static vtkSMStreamingViewProxy* New();
-  vtkTypeMacro(vtkSMStreamingViewProxy, vtkSMRenderViewProxy);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  static QString refiningViewType() { return "RefiningView"; }
+  static QString refiningviewTypeName() { return "RefiningView"; }
 
-  // Description:
-  // Overrridded to create streaming representations and to give the PV
-  // Views access to their StreamingDrivers.
-  virtual vtkSMRepresentationProxy* CreateDefaultRepresentation(
-    vtkSMProxy*, int opport);
-
-  // Description:
-  // Disable surface selection since it conflicts with multipass rendering.
-  virtual bool IsSelectionAvailable() { return false; }
-
-  // Description:
-  // Ask the PVViews if multipass rendering has finished, if not we mark
-  // them modified so that the next render executes their pipelines fully.
-  bool IsDisplayDone();
-
-  // TODO:
-  // Allow direct access to the driver proxy to avoid messy exposed
-  // properties in the XML. Problem is this is assigned only after something is shown.
-  //vtkSMProxy *GetDriver() { return this->Driver; };
-
-//BTX
-protected:
-  vtkSMStreamingViewProxy();
-  ~vtkSMStreamingViewProxy();
-
-  // Description:
-  // Overridded to initialized the CS wrapped VTK streaming library.
-  virtual void CreateVTKObjects();
-
-  // Description:
-  // The entity that drives streaming.
-  vtkSMProxy *Driver;
-
-private:
-
-  vtkSMStreamingViewProxy(const vtkSMStreamingViewProxy&); // Not implemented.
-  void operator=(const vtkSMStreamingViewProxy&); // Not implemented.
-
-//ETX
+  /// constructor takes a bunch of init stuff and must have this signature to
+  /// satisfy pqView
+  RefiningView(
+         const QString& viewtype,
+         const QString& group,
+         const QString& name,
+         vtkSMViewProxy* viewmodule,
+         pqServer* server,
+         QObject* p);
+  ~RefiningView() {};
 };
 
-
-#endif
+#endif // _RefiningView_h

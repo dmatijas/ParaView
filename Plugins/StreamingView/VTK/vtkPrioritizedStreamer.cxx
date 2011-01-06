@@ -50,6 +50,10 @@ public:
 vtkPrioritizedStreamer::vtkPrioritizedStreamer()
 {
   this->Internal = new Internals(this);
+  this->NumberOfPasses = 32;
+  this->LastPass = -1;
+  this->PipelinePrioritization = 1;
+  this->ViewPrioritization = 1;
 }
 
 //----------------------------------------------------------------------------
@@ -106,7 +110,11 @@ void vtkPrioritizedStreamer::ResetEveryone()
       p.SetPiece(i);
       p.SetNumPieces(max);
       p.SetResolution(1.0);
-      double priority = harness->ComputePriority(i,max,1.0);
+      double priority = 1.0;
+      if (this->PipelinePrioritization)
+        {
+        priority = harness->ComputePriority(i,max,1.0);
+        }
       DEBUGPRINT_PRIORITY
         (
          if (!priority)
@@ -125,7 +133,11 @@ void vtkPrioritizedStreamer::ResetEveryone()
       harness->ComputeMetaInformation
         (i, max, 1.0,
          pbbox, gConf, aMin, aMax, aConf);
-      double gPri = this->CalculateViewPriority(pbbox);
+      double gPri = 1.0;
+      if (this->ViewPrioritization)
+        {
+        gPri = this->CalculateViewPriority(pbbox);
+        }
       DEBUGPRINT_PRIORITY
         (
          if (true || !gPri)
@@ -332,4 +344,35 @@ void vtkPrioritizedStreamer::EndRenderEvent()
     //we haven't finished yet so schedule the next pass
     this->RenderEventually();
     }
+}
+
+//------------------------------------------------------------------------------
+void vtkPrioritizedStreamer::StopStreaming()
+{
+  //cerr << "STOP STREAMING" << endl;
+}
+
+//------------------------------------------------------------------------------
+void vtkPrioritizedStreamer::SetNumberOfPasses(int nv)
+{
+  if (this->NumberOfPasses == nv)
+  {
+    return;
+  }
+  this->NumberOfPasses = nv;
+  vtkCollection *harnesses = this->GetHarnesses();
+  if (harnesses)
+    {
+    vtkCollectionIterator *iter = harnesses->NewIterator();
+    iter->InitTraversal();
+    while(!iter->IsDoneWithTraversal())
+      {
+      vtkStreamingHarness *harness = vtkStreamingHarness::SafeDownCast
+        (iter->GetCurrentObject());
+      iter->GoToNextItem();
+      harness->SetNumberOfPieces(nv);
+      }
+    iter->Delete();
+    }
+  this->Modified();
 }

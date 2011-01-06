@@ -73,6 +73,19 @@
         </Documentation>
       </InputProperty>
 
+      <IntVectorProperty
+          name="LockRefinement"
+          command="SetLockRefinement"
+          number_of_elements="1"
+          default_values="0">
+        <BooleanDomain name="bool" />
+      </IntVectorProperty>
+
+      <Property
+          name="RestartRefinement"
+          command="RestartRefinement">
+      </Property>
+
       <!-- End of StreamingHarness -->
     </SourceProxy>
 
@@ -85,16 +98,201 @@
         name="IteratingDriver"
         class="vtkIterativeStreamer"
         processes="client|renderserver|dataserver">
+
+      <Property
+          name="StopStreaming"
+          command="StopStreaming">
+      </Property>
+
+      <IntVectorProperty
+          name="ShowWhen"
+          command="SetDisplayFrequency"
+          number_of_elements="1"
+          default_values="0">
+       <EnumerationDomain>
+         <Entry value="0" text="Fully Drawn"/>
+         <Entry value="1" text="Each Piece Drawn"/>
+       </EnumerationDomain>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+          name="CacheSize"
+          command="SetCacheSize"
+          number_of_elements="1"
+          default_values="32">
+        <IntRangeDomain name="range" min="-1"/>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+          name="NumberOfPasses"
+          command="SetNumberOfPasses"
+          number_of_elements="1"
+          default_values="32">
+        <IntRangeDomain name="range" min="1"/>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+          name="LastPass"
+          command="SetLastPass"
+          number_of_elements="1"
+          default_values="32">
+        <IntRangeDomain name="range" min="-1"/>
+      </IntVectorProperty>
+
     </Proxy>
+
     <Proxy
         name="PrioritizingDriver"
         class="vtkPrioritizedStreamer"
         processes="client|renderserver|dataserver">
+
+      <Property
+          name="StopStreaming"
+          command="StopStreaming">
+      </Property>
+
+      <IntVectorProperty
+          name="ShowWhen"
+          command="SetDisplayFrequency"
+          number_of_elements="1"
+          default_values="0">
+       <EnumerationDomain>
+         <Entry value="0" text="Fully Drawn"/>
+         <Entry value="1" text="Each Piece Drawn"/>
+       </EnumerationDomain>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+          name="CacheSize"
+          command="SetCacheSize"
+          number_of_elements="1"
+          default_values="32">
+        <IntRangeDomain name="range" min="-1"/>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+          name="NumberOfPasses"
+          command="SetNumberOfPasses"
+          number_of_elements="1"
+          default_values="32">
+        <IntRangeDomain name="range" min="1"/>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+          name="LastPass"
+          command="SetLastPass"
+          number_of_elements="1"
+          default_values="32">
+        <IntRangeDomain name="range" min="-1"/>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+          name="PipelinePrioritization"
+          command="SetPipelinePrioritization"
+          number_of_elements="1"
+          default_values="1">
+        <BooleanDomain name="bool" />
+      </IntVectorProperty>
+
+      <IntVectorProperty
+          name="ViewPrioritization"
+          command="SetViewPrioritization"
+          number_of_elements="1"
+          default_values="1">
+        <BooleanDomain name="bool" />
+      </IntVectorProperty>
+
     </Proxy>
     <Proxy
         name="MultiResolutionDriver"
         class="vtkMultiResolutionStreamer"
         processes="client|renderserver|dataserver">
+
+      <Property
+          name="StopStreaming"
+          command="StopStreaming">
+      </Property>
+
+      <IntVectorProperty
+          name="ShowWhen"
+          command="SetDisplayFrequency"
+          number_of_elements="1"
+          default_values="0">
+       <EnumerationDomain>
+         <Entry value="0" text="Fully Drawn"/>
+         <Entry value="1" text="Each Piece Drawn"/>
+       </EnumerationDomain>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+          name="CacheSize"
+          command="SetCacheSize"
+          number_of_elements="1"
+          default_values="32">
+        <IntRangeDomain name="range" min="-1"/>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+          name="PipelinePrioritization"
+          command="SetPipelinePrioritization"
+          number_of_elements="1"
+          default_values="1">
+        <BooleanDomain name="bool" />
+      </IntVectorProperty>
+
+      <IntVectorProperty
+          name="ViewPrioritization"
+          command="SetViewPrioritization"
+          number_of_elements="1"
+          default_values="1">
+        <BooleanDomain name="bool" />
+      </IntVectorProperty>
+
+      <IntVectorProperty
+          name="ProgressionMode"
+          command="SetProgressionMode"
+          number_of_elements="1"
+          default_values="0">
+       <EnumerationDomain>
+         <Entry value="0" text="Manual"/>
+         <Entry value="1" text="Automatic"/>
+       </EnumerationDomain>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+          name="RefinementDepth"
+          command="SetRefinementDepth"
+          number_of_elements="1"
+          default_values="5">
+        <IntRangeDomain name="range" min="1" max="10"/>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+          name="DepthLimit"
+          command="SetDepthLimit"
+          number_of_elements="1"
+          default_values="10">
+        <IntRangeDomain name="range" min="1" max="10"/>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+          name="MaxSplits"
+          command="SetMaxSplits"
+          number_of_elements="1"
+          default_values="8">
+        <IntRangeDomain name="range" min="1" max="10000"/>
+      </IntVectorProperty>
+
+      <Property
+          name="Refine"
+          command="Refine">
+      </Property>
+
+      <Property
+          name="Coarsen"
+          command="Coarsen">
+      </Property>
+
     </Proxy>
   </ProxyGroup>
 
@@ -118,6 +316,11 @@
         <Proxy name="Harness"
           proxygroup="filters" proxyname="StreamingHarness">
         </Proxy>
+
+        <ExposedProperties>
+          <Property name="LockRefinement"/>
+          <Property name="RestartRefinement"/>
+        </ExposedProperties>
       </SubProxy>
 
     </StreamingRepresentationProxy>
@@ -153,6 +356,14 @@
             proxygroup="utilities"
             proxyname="IteratingDriver">
         </Proxy>
+        <ExposedProperties>
+          <!-- TODO I don't like the need for this, but can't access driver directly -->
+          <Property name="StopStreaming"/>
+          <Property name="ShowWhen"/>
+          <Property name="CacheSize"/>
+          <Property name="NumberOfPasses"/>
+          <Property name="LastPass"/>
+        </ExposedProperties>
       </SubProxy>
     </StreamingViewProxy>
 
@@ -168,6 +379,16 @@
             proxygroup="utilities"
             proxyname="PrioritizingDriver">
         </Proxy>
+        <ExposedProperties>
+          <!-- TODO I don't like the need for this, but can't access driver directly -->
+          <Property name="StopStreaming"/>
+          <Property name="ShowWhen"/>
+          <Property name="CacheSize"/>
+          <Property name="NumberOfPasses"/>
+          <Property name="LastPass"/>
+          <Property name="PipelinePrioritization"/>
+          <Property name="ViewPrioritization"/>
+        </ExposedProperties>
       </SubProxy>
     </StreamingViewProxy>
 
@@ -183,6 +404,21 @@
             proxygroup="utilities"
             proxyname="MultiResolutionDriver">
         </Proxy>
+
+        <ExposedProperties>
+          <!-- TODO I don't like the need for this, but can't access driver directly -->
+          <Property name="StopStreaming"/>
+          <Property name="ShowWhen"/>
+          <Property name="CacheSize"/>
+          <Property name="PipelinePrioritization"/>
+          <Property name="ViewPrioritization"/>
+          <Property name="ProgressionMode"/>
+          <Property name="RefinementDepth"/>
+          <Property name="DepthLimit"/>
+          <Property name="MaxSplits"/>
+          <Property name="Refine"/>
+          <Property name="Coarsen"/>
+        </ExposedProperties>
       </SubProxy>
     </StreamingViewProxy>
   </ProxyGroup>

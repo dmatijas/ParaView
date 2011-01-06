@@ -20,6 +20,11 @@ IF(PARAVIEW_BUILD_QT_GUI)
     PrioritizingView.h
     RefiningView.h
     StreamingView.h
+    pqStreamingControls.h
+    )
+
+  QT4_WRAP_UI(UI_BUILT_SOURCES
+    pqStreamingControls.ui
     )
 
   ADD_PARAVIEW_VIEW_MODULE( VIEW1_IFACE VIEW1_IFACE_SRCS
@@ -43,6 +48,12 @@ IF(PARAVIEW_BUILD_QT_GUI)
     VIEW_XML_NAME RefiningView
     )
 
+  # invoke macro that adds the refinement view control panel
+  ADD_PARAVIEW_DOCK_WINDOW(
+    INSPECTOR_IFACE1 INSPECTOR_IFACE1_SRCS
+    CLASS_NAME pqStreamingControls
+    DOCK_AREA Left)
+
 ENDIF()
 
 add_paraview_plugin(
@@ -61,16 +72,19 @@ add_paraview_plugin(
     ${VIEW1_IFACE}
     ${VIEW2_IFACE}
     ${VIEW3_IFACE}
+    ${INSPECTOR_IFACE1}
   GUI_SOURCES
     ${MOC_SRCS}
+    ${UI_BUILT_SOURCES}
     ${VIEW1_IFACE_SRCS}
     ${VIEW2_IFACE_SRCS}
     ${VIEW3_IFACE_SRCS}
+    ${INSPECTOR_IFACE1_SRCS}
     StreamingView.cxx
     IteratingView.cxx
     PrioritizingView.cxx
     RefiningView.cxx
+    pqStreamingControls.cxx
 )
 
-#TARGET_LINK_LIBRARIES ( StreamingView vtkStreaming )
 TARGET_LINK_LIBRARIES ( StreamingView vtkStreamingCS )

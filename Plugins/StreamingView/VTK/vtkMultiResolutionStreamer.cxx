@@ -53,6 +53,12 @@ public:
 vtkMultiResolutionStreamer::vtkMultiResolutionStreamer()
 {
   this->Internal = new Internals(this);
+  this->PipelinePrioritization = 1;
+  this->ViewPrioritization = 1;
+  this->ProgressionMode = 0;
+  this->RefinementDepth = 5;
+  this->DepthLimit = 10;
+  this->MaxSplits = 8;
 }
 
 //----------------------------------------------------------------------------
@@ -189,7 +195,11 @@ bool vtkMultiResolutionStreamer::IsCompletelyDone()
        int p = piece.GetPiece();
        int np = piece.GetNumPieces();
        double res = piece.GetResolution();
-       double priority = harness->ComputePriority(p, np, res);
+       double priority = 1.0;
+      if (this->PipelinePrioritization)
+        {
+        priority = harness->ComputePriority(p, np, res);
+        }
        DEBUGPRINT_PRIORITY
          (
           if (!priority)
@@ -208,7 +218,11 @@ bool vtkMultiResolutionStreamer::IsCompletelyDone()
        harness->ComputeMetaInformation
          (p, np, res,
           pbbox, gConf, aMin, aMax, aConf);
-       double gPri = this->CalculateViewPriority(pbbox);
+       double gPri = 1.0;
+       if (this->ViewPrioritization)
+         {
+         gPri = this->CalculateViewPriority(pbbox);
+         }
        DEBUGPRINT_PRIORITY
          (
           if (!gPri)
@@ -344,10 +358,7 @@ bool vtkMultiResolutionStreamer::IsCompletelyDone()
  //----------------------------------------------------------------------------
  int vtkMultiResolutionStreamer::Refine(vtkStreamingHarness *harness)
 {
-  //TODO: maxHeight must be common to both reap and refine and
-  //should be setable
-  int maxHeight = 4;
-  double res_delta = (1.0/maxHeight);
+  double res_delta = (1.0/this->RefinementDepth);
 
   vtkPieceList *ToDo = harness->GetPieceList1();
   vtkPieceList *NextFrame = harness->GetPieceList2();
@@ -360,6 +371,12 @@ bool vtkMultiResolutionStreamer::IsCompletelyDone()
   //NextFrame->Print();
 
   //find candidates for refinement
+  double maxRes = 1.0;
+  if (this->DepthLimit>0.0)
+    {
+    maxRes = res_delta*this->DepthLimit;
+    maxRes = (maxRes<1.0?maxRes:1.0);
+    }
   int numSplittable = 0;
   while (NextFrame->GetNumberOfPieces() != 0)
     {
@@ -369,7 +386,7 @@ bool vtkMultiResolutionStreamer::IsCompletelyDone()
     bool reaped = piece.GetReapedFlag();
     if (!reaped &&
         priority > 0.0 &&
-        (res+res_delta <= 1.0))
+        (res+res_delta <= maxRes))
       {
       numSplittable++;
       ToSplit->AddPiece(piece);
@@ -382,12 +399,12 @@ bool vtkMultiResolutionStreamer::IsCompletelyDone()
 
   //loop through the splittable pieces, and split some of them
   int numSplit = 0;
-  //TODO: maxSplits should be setable
-  int maxSplits = 4;
-  //TODO: Degree might be variable, but algorithm would need work
+  //TODO:
+  //Degree is potentially variable, but it would take some work
   int degree = 2;
   for (;
-       numSplit < maxSplits && ToSplit->GetNumberOfPieces() != 0;
+       numSplit < this->MaxSplits
+         && ToSplit->GetNumberOfPieces() != 0;
        numSplit++)
   {
     //get the next piece
@@ -466,10 +483,7 @@ void vtkMultiResolutionStreamer::Reap(vtkStreamingHarness *harness)
   //cerr << "TODO:" << endl;
   //ToDo->Print();
 
-  //TODO: maxHeight must be common to both Reap() and Refine() and
-  //should be setable
-  int maxHeight = 4;
-  double res_delta = (1.0/maxHeight);
+  double res_delta = (1.0/this->RefinementDepth);
 
   vtkPieceList *toMerge = vtkPieceList::New();
   for (int i = total-1; i>=important; --i)
@@ -670,4 +684,22 @@ void vtkMultiResolutionStreamer::EndRenderEvent()
     //there is more to draw, so keep going
     this->RenderEventually();
     }
+}
+
+//------------------------------------------------------------------------------
+void vtkMultiResolutionStreamer::StopStreaming()
+{
+  //cerr << "STOP STREAMING" << endl;
+}
+
+//------------------------------------------------------------------------------
+void vtkMultiResolutionStreamer::Refine()
+{
+  //cerr << "REFINE" << endl;
+}
+
+//------------------------------------------------------------------------------
+void vtkMultiResolutionStreamer::Coarsen()
+{
+  //cerr << "COARSEN" << endl;
 }

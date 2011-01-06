@@ -1,11 +1,11 @@
 /*=========================================================================
 
-  Program:   ParaView
-  Module:    vtkSMStreamingViewProxy.h
+  Program:   Visualization Toolkit
+  Module:    PrioritizingView.cxx
 
-  Copyright (c) Kitware, Inc.
+  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
-  See Copyright.txt or http://www.paraview.org/HTML/Copyright.html for details.
+  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -15,7 +15,7 @@
 /*=========================================================================
 
   Program:   VTK/ParaView Los Alamos National Laboratory Modules (PVLANL)
-  Module:    vtkSMStreamingViewProxy.h
+  Module:    PrioritizingView.cxx
 
 Copyright (c) 2007, Los Alamos National Security, LLC
 
@@ -58,66 +58,21 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =========================================================================*/
-// .NAME vtkSMStreamingViewProxy - paraview control of a view that renders
-// in a streaming fashion
-// .SECTION Description
-// vtkSMStreamingViewProxy controls vtkPVStreamingView instances which
-// do the actual multi-pass rendering.
 
-#ifndef __vtkSMStreamingViewProxy_h
-#define __vtkSMStreamingViewProxy_h
+#include "PrioritizingView.h"
 
-#include "vtkSMRenderViewProxy.h"
+#include "vtkSMOutputPort.h"
 
-class vtkSMRepresentationProxy;
-
-class VTK_EXPORT vtkSMStreamingViewProxy : public vtkSMRenderViewProxy
+//-----------------------------------------------------------------------------
+PrioritizingView::PrioritizingView(
+  const QString& viewType,
+  const QString& group,
+  const QString& name,
+  vtkSMViewProxy* viewProxy,
+  pqServer* server,
+  QObject* p)
+  : StreamingView(viewType, group, name, viewProxy, server, p)
 {
-public:
-  static vtkSMStreamingViewProxy* New();
-  vtkTypeMacro(vtkSMStreamingViewProxy, vtkSMRenderViewProxy);
-  void PrintSelf(ostream& os, vtkIndent indent);
-
-  // Description:
-  // Overrridded to create streaming representations and to give the PV
-  // Views access to their StreamingDrivers.
-  virtual vtkSMRepresentationProxy* CreateDefaultRepresentation(
-    vtkSMProxy*, int opport);
-
-  // Description:
-  // Disable surface selection since it conflicts with multipass rendering.
-  virtual bool IsSelectionAvailable() { return false; }
-
-  // Description:
-  // Ask the PVViews if multipass rendering has finished, if not we mark
-  // them modified so that the next render executes their pipelines fully.
-  bool IsDisplayDone();
-
-  // TODO:
-  // Allow direct access to the driver proxy to avoid messy exposed
-  // properties in the XML. Problem is this is assigned only after something is shown.
-  //vtkSMProxy *GetDriver() { return this->Driver; };
-
-//BTX
-protected:
-  vtkSMStreamingViewProxy();
-  ~vtkSMStreamingViewProxy();
-
-  // Description:
-  // Overridded to initialized the CS wrapped VTK streaming library.
-  virtual void CreateVTKObjects();
-
-  // Description:
-  // The entity that drives streaming.
-  vtkSMProxy *Driver;
-
-private:
-
-  vtkSMStreamingViewProxy(const vtkSMStreamingViewProxy&); // Not implemented.
-  void operator=(const vtkSMStreamingViewProxy&); // Not implemented.
-
-//ETX
-};
-
-
-#endif
+  //choose a default piece to ask about for info
+  vtkSMOutputPort::SetDefaultPiece(0,1,0.0);
+}

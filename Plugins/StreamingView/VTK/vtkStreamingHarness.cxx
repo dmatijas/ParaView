@@ -42,6 +42,7 @@ vtkStreamingHarness::vtkStreamingHarness()
   this->PieceList2 = NULL;
   this->NoneToRefine = false;
   this->CacheFilter = NULL;
+  this->LockRefinement = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -294,5 +295,22 @@ void vtkStreamingHarness::ComputeMetaInformation(
   sddp->SetUpdateResolution(outInfo, oldResolution);
 
   this->ForOther = false;
+}
 
+//------------------------------------------------------------------------------
+void vtkStreamingHarness::SetLockRefinement(int nv)
+{
+  if (nv == this->LockRefinement)
+    {
+    return;
+    }
+  //cerr << "lock refinement" << endl;
+  this->LockRefinement = nv;
+  this->Modified();
+}
+
+//------------------------------------------------------------------------------
+void vtkStreamingHarness::RestartRefinement()
+{
+  //cerr << "restart refinement" << endl;
 }

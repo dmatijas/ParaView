@@ -99,6 +99,18 @@ public:
   void SetCacheFilter(vtkPieceCacheFilter *);
   vtkGetObjectMacro(CacheFilter, vtkPieceCacheFilter);
 
+  //Description:
+  //In multiresolution streaming, this prevents the associated object from
+  //changing resolution level. Default is 0, off.
+  //vtkSetMacro(LockRefinement, int);
+  void SetLockRefinement(int );
+  vtkGetMacro(LockRefinement, int);
+
+  //Description:
+  //In multiresolution streaming, this causes the associated object to
+  //restart at the lowest resolution.
+  void RestartRefinement();
+
 protected:
   vtkStreamingHarness();
   ~vtkStreamingHarness();
@@ -129,6 +141,7 @@ protected:
   vtkPieceList *PieceList2;
   vtkPieceCacheFilter *CacheFilter;
 
+  int LockRefinement;
 private:
   vtkStreamingHarness(const vtkStreamingHarness&);  // Not implemented.
   void operator=(const vtkStreamingHarness&);  // Not implemented.

@@ -68,6 +68,22 @@ public:
   vtkSetMacro(ManualStart, bool);
   vtkSetMacro(ManualFinish, bool);
 
+  //Description:
+  //Controls if the display is updated when fully drawn (0), or
+  //when each new piece is drawn (1). Fully drawn is the default.
+  vtkSetMacro(DisplayFrequency, int);
+  vtkGetMacro(DisplayFrequency, int);
+
+  //Description:
+  //Sets the cache size of all of the piece cache filters for all
+  //harnesses shown in in the window. Default is 32.
+  void SetCacheSize(int);
+  vtkGetMacro(CacheSize, int);
+
+  //Description:
+  //A command to halt streaming as soon as possible.
+  virtual void StopStreaming() = 0;
+
   // Description:
   // For internal use, window events call back here.
   virtual void StartRenderEvent() = 0;
@@ -95,6 +111,9 @@ protected:
 
   bool ManualStart;
   bool ManualFinish;
+
+  int CacheSize;
+  int DisplayFrequency;
 
 private:
   vtkStreamingDriver(const vtkStreamingDriver&);  // Not implemented.

@@ -20,6 +20,7 @@
 #include "vtkCollectionIterator.h"
 #include "vtkInteractorStyle.h"
 #include "vtkObjectFactory.h"
+#include "vtkPieceCacheFilter.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
@@ -103,6 +104,9 @@ vtkStreamingDriver::vtkStreamingDriver()
   this->Internal = new Internals(this);
   this->ManualStart = false;
   this->ManualFinish = false;
+
+  this->DisplayFrequency = 0;
+  this->CacheSize = 32;
 }
 
 //----------------------------------------------------------------------------
@@ -303,4 +307,33 @@ bool vtkStreamingDriver::HasCameraMoved()
 double vtkStreamingDriver::CalculateViewPriority(double *pbbox)
 {
   return this->Internal->ViewSorter->CalculatePriority(pbbox);
+}
+
+//------------------------------------------------------------------------------
+void vtkStreamingDriver::SetCacheSize(int nv)
+{
+  if (this->CacheSize == nv)
+    {
+    return;
+    }
+  this->CacheSize = nv;
+  vtkCollection *harnesses = this->GetHarnesses();
+  if (harnesses)
+    {
+    vtkCollectionIterator *iter = harnesses->NewIterator();
+    iter->InitTraversal();
+    while(!iter->IsDoneWithTraversal())
+      {
+      vtkStreamingHarness *harness = vtkStreamingHarness::SafeDownCast
+        (iter->GetCurrentObject());
+      iter->GoToNextItem();
+      vtkPieceCacheFilter *pcf = harness->GetCacheFilter();
+      if (pcf)
+        {
+        pcf->SetCacheSize(nv);
+        }
+      }
+    iter->Delete();
+    }
+  this->Modified();
 }

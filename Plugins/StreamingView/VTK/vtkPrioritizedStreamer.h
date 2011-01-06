@@ -33,6 +33,34 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
   static vtkPrioritizedStreamer *New();
 
+  //Description:
+  //A command to halt streaming as soon as possible.
+  void StopStreaming();
+
+  //Description:
+  //Controls the number of pieces all harness shown by this driver
+  //break their data into. Default is 32.
+  void SetNumberOfPasses(int);
+  vtkGetMacro(NumberOfPasses, int);
+
+  //Description:
+  //Controls the number of pieces all harness shown by this driver
+  //break their data into. Default is -1, meaning unlimited.
+  vtkSetMacro(LastPass, int);
+  vtkGetMacro(LastPass, int);
+
+  //Description:
+  //Enables or disables data centric prioritization and culling.
+  //Default is 1, meaning enabled.
+  vtkSetMacro(PipelinePrioritization, int);
+  vtkGetMacro(PipelinePrioritization, int);
+
+  //Description:
+  //Enables or disables camera centric prioritization and culling.
+  //Default is 1, meaning enabled.
+  vtkSetMacro(ViewPrioritization, int);
+  vtkGetMacro(ViewPrioritization, int);
+
 //BTX
 protected:
   vtkPrioritizedStreamer();
@@ -45,6 +73,10 @@ protected:
   virtual void AdvanceEveryone();
   virtual bool IsEveryoneDone();
 
+  int NumberOfPasses;
+  int LastPass;
+  int PipelinePrioritization;
+  int ViewPrioritization;
 private:
   vtkPrioritizedStreamer(const vtkPrioritizedStreamer&);  // Not implemented.
   void operator=(const vtkPrioritizedStreamer&);  // Not implemented.

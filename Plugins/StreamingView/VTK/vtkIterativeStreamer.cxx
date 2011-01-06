@@ -28,6 +28,8 @@ vtkStandardNewMacro(vtkIterativeStreamer);
 vtkIterativeStreamer::vtkIterativeStreamer()
 {
   this->CameraMoved = true;
+  this->NumberOfPasses = 32;
+  this->LastPass = -1;
 }
 
 //----------------------------------------------------------------------------
@@ -151,4 +153,35 @@ void vtkIterativeStreamer::EndRenderEvent()
     }
 
   iter->Delete();
+}
+
+//------------------------------------------------------------------------------
+void vtkIterativeStreamer::StopStreaming()
+{
+  //cerr << "STOP STREAMING" << endl;
+}
+
+//------------------------------------------------------------------------------
+void vtkIterativeStreamer::SetNumberOfPasses(int nv)
+{
+  if (this->NumberOfPasses == nv)
+  {
+    return;
+  }
+  this->NumberOfPasses = nv;
+  vtkCollection *harnesses = this->GetHarnesses();
+  if (harnesses)
+    {
+    vtkCollectionIterator *iter = harnesses->NewIterator();
+    iter->InitTraversal();
+    while(!iter->IsDoneWithTraversal())
+      {
+      vtkStreamingHarness *harness = vtkStreamingHarness::SafeDownCast
+        (iter->GetCurrentObject());
+      iter->GoToNextItem();
+      harness->SetNumberOfPieces(nv);
+      }
+    iter->Delete();
+    }
+  this->Modified();
 }
