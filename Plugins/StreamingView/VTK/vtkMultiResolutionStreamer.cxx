@@ -38,6 +38,7 @@ public:
     this->Owner = owner;
     this->WendDone = true;
     this->CameraMoved = true;
+    this->StopNow = false;
     this->DebugPass = 0;
   }
   ~Internals()
@@ -46,6 +47,7 @@ public:
   vtkMultiResolutionStreamer *Owner;
   bool WendDone;
   bool CameraMoved;
+  bool StopNow;
   int DebugPass; //used solely for debug messages
 };
 
@@ -627,7 +629,7 @@ void vtkMultiResolutionStreamer::StartRenderEvent()
 
   //don't swap back to front automatically
   //only update the screen once the last piece is drawn
-  rw->SwapBuffersOff(); //comment this out to see each piece rendered
+  rw->SwapBuffersOff();
 
   //assume that we are not done covering all the domains
   this->Internal->WendDone = false;
@@ -654,8 +656,10 @@ void vtkMultiResolutionStreamer::EndRenderEvent()
   ren->EraseOff();
   rw->EraseOff();
 
-  if (this->IsCompletelyDone())
+  if (this->IsCompletelyDone() || this->Internal->StopNow)
     {
+    this->Internal->StopNow = false;
+
     DEBUGPRINT_PASSES
       (
        cerr << "ALL DONE" << endl;
@@ -681,6 +685,11 @@ void vtkMultiResolutionStreamer::EndRenderEvent()
       this->Internal->WendDone = true;
       }
 
+    if (this->DisplayFrequency == 1)
+      {
+      this->CopyBackBufferToFront();
+      }
+
     //there is more to draw, so keep going
     this->RenderEventually();
     }
@@ -689,7 +698,7 @@ void vtkMultiResolutionStreamer::EndRenderEvent()
 //------------------------------------------------------------------------------
 void vtkMultiResolutionStreamer::StopStreaming()
 {
-  //cerr << "STOP STREAMING" << endl;
+  this->Internal->StopNow = true;
 }
 
 //------------------------------------------------------------------------------

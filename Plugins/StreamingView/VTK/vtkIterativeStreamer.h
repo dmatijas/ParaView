@@ -43,7 +43,7 @@ public:
 
   //Description:
   //Controls the number of pieces all harness shown by this driver
-  //break their data into. Default is -1, meaning unlimited.
+  //break their data into. Default is 32.
   vtkSetMacro(LastPass, int);
   vtkGetMacro(LastPass, int);
 
@@ -65,6 +65,7 @@ protected:
 
   int NumberOfPasses;
   int LastPass;
+  bool StopNow;
 private:
   vtkIterativeStreamer(const vtkIterativeStreamer&);  // Not implemented.
   void operator=(const vtkIterativeStreamer&);  // Not implemented.

@@ -191,7 +191,7 @@
             <string>allows you to stop before the last piece to get faster response time</string>
            </property>
            <property name="minimum">
-            <number>-1</number>
+            <number>1</number>
            </property>
            <property name="maximum">
             <number>10000</number>

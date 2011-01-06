@@ -103,11 +103,15 @@ protected:
   // This is common to prioritized subclasses, so I've placed it here
   virtual bool HasCameraMoved();
 
-  // Description
+  // Description:
   // Determines view priority of an object relative to camera frustum
   // Must call Is Restart prior to calling this.
   // This is common to prioritized subclasses, so I've placed it here
   double CalculateViewPriority(double *bbox);
+
+  // Description:
+  // For diagnostic mode rendering, copies renwins back buffer to its front
+  void CopyBackBufferToFront();
 
   bool ManualStart;
   bool ManualFinish;

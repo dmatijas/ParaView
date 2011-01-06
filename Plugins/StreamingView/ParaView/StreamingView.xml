@@ -136,7 +136,7 @@
           command="SetLastPass"
           number_of_elements="1"
           default_values="32">
-        <IntRangeDomain name="range" min="-1"/>
+        <IntRangeDomain name="range" min="1"/>
       </IntVectorProperty>
 
     </Proxy>
@@ -183,7 +183,7 @@
           command="SetLastPass"
           number_of_elements="1"
           default_values="32">
-        <IntRangeDomain name="range" min="-1"/>
+        <IntRangeDomain name="range" min="1"/>
       </IntVectorProperty>
 
       <IntVectorProperty

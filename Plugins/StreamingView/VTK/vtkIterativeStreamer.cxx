@@ -29,7 +29,8 @@ vtkIterativeStreamer::vtkIterativeStreamer()
 {
   this->CameraMoved = true;
   this->NumberOfPasses = 32;
-  this->LastPass = -1;
+  this->LastPass = 32;
+  this->StopNow = false;
 }
 
 //----------------------------------------------------------------------------
@@ -76,7 +77,7 @@ void vtkIterativeStreamer::StartRenderEvent()
       rw->EraseOn();
 
       //and none but the last pass should swap back to front automatically
-      rw->SwapBuffersOff(); //comment this out to see it render each piece
+      rw->SwapBuffersOff();
       }
 
     int maxPiece = harness->GetNumberOfPieces();
@@ -118,6 +119,10 @@ void vtkIterativeStreamer::EndRenderEvent()
       (iter->GetCurrentObject());
     iter->GoToNextItem();
     int maxPiece = harness->GetNumberOfPieces();
+    if (this->LastPass < maxPiece)
+      {
+      maxPiece = this->LastPass;
+      }
     int pieceNow = harness->GetPiece();
     int pieceNext = pieceNow;
     if (pieceNow+1 < maxPiece && !this->CameraMoved)
@@ -130,8 +135,10 @@ void vtkIterativeStreamer::EndRenderEvent()
     harness->SetPiece(pieceNext);
     }
   this->CameraMoved = false;
-  if (everyone_done)
+  if (everyone_done || this->StopNow)
     {
+    this->StopNow = false;
+
     //we just drew the last frame everyone has to start over next time
     iter->InitTraversal();
     while(!iter->IsDoneWithTraversal())
@@ -148,6 +155,11 @@ void vtkIterativeStreamer::EndRenderEvent()
     }
   else
     {
+    if (this->DisplayFrequency == 1)
+      {
+      this->CopyBackBufferToFront();
+      }
+
     //we haven't finished yet so schedule the next pass
     this->RenderEventually();
     }
@@ -158,7 +170,7 @@ void vtkIterativeStreamer::EndRenderEvent()
 //------------------------------------------------------------------------------
 void vtkIterativeStreamer::StopStreaming()
 {
-  //cerr << "STOP STREAMING" << endl;
+  this->StopNow = true;
 }
 
 //------------------------------------------------------------------------------

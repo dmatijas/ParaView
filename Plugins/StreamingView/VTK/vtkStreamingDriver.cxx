@@ -25,13 +25,8 @@
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkStreamingHarness.h"
+#include "vtkUnsignedCharArray.h"
 #include "vtkVisibilityPrioritizer.h"
-
-//TODO:
-//consider multiple renderers and non harnessed sources carefully
-//consider other UI events
-//interface to schedule render callbacks at a later time
-//interface to progressor
 
 class vtkStreamingDriver::Internals
 {
@@ -48,6 +43,7 @@ public:
     //auxilliary functionality, that help view sorting sublasses
     this->ViewSorter = vtkVisibilityPrioritizer::New();
     this->CameraTime = 0;
+    this->PixelArray = NULL;
   }
   ~Internals()
   {
@@ -59,6 +55,10 @@ public:
     }
   this->Harnesses->Delete();
   this->ViewSorter->Delete();
+  if (this->PixelArray)
+    {
+    this->PixelArray->Delete();
+    }
   }
 
   vtkStreamingDriver *Owner;
@@ -68,6 +68,7 @@ public:
   vtkCollection *Harnesses;
   void (*RenderLaterFunction) (void *);
   void *RenderLaterArgument;
+  vtkUnsignedCharArray *PixelArray;
 
   //auxilliary functionality, that help view sorting sublasses
   vtkVisibilityPrioritizer *ViewSorter;
@@ -336,4 +337,33 @@ void vtkStreamingDriver::SetCacheSize(int nv)
     iter->Delete();
     }
   this->Modified();
+}
+
+//------------------------------------------------------------------------------
+void vtkStreamingDriver::CopyBackBufferToFront()
+{
+  vtkRenderWindow *rw = this->GetRenderWindow();
+  if (!rw)
+    {
+    return;
+    }
+  //allocate pixel storage
+  int *size = rw->GetSize();
+  if (!this->Internal->PixelArray)
+    {
+    this->Internal->PixelArray = vtkUnsignedCharArray::New();
+    this->Internal->PixelArray->SetNumberOfComponents(4);
+    }
+  if(size[0]*size[1] != this->Internal->PixelArray->GetNumberOfTuples())
+    {
+    this->Internal->PixelArray->SetNumberOfTuples(size[0]*size[1]);
+    }
+
+  //capture back buffer
+  rw->GetRGBACharPixelData
+    (0, 0, size[0]-1, size[1]-1, 0, this->Internal->PixelArray);
+
+  //copy into the front buffer
+  rw->SetRGBACharPixelData
+    (0, 0, size[0]-1, size[1]-1, this->Internal->PixelArray, 1);
 }

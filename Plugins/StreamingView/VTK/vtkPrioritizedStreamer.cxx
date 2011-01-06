@@ -36,6 +36,7 @@ public:
     this->Owner = owner;
     this->StartOver = true;
     this->DebugPass = 0;
+    this->StopNow = false;
   }
   ~Internals()
   {
@@ -43,6 +44,7 @@ public:
 
   vtkPrioritizedStreamer *Owner;
   bool StartOver;
+  bool StopNow;
   int DebugPass;  //used solely for debug messages
 };
 
@@ -51,7 +53,7 @@ vtkPrioritizedStreamer::vtkPrioritizedStreamer()
 {
   this->Internal = new Internals(this);
   this->NumberOfPasses = 32;
-  this->LastPass = -1;
+  this->LastPass = 32;
   this->PipelinePrioritization = 1;
   this->ViewPrioritization = 1;
 }
@@ -235,6 +237,10 @@ bool vtkPrioritizedStreamer::IsEveryoneDone()
     //check if anyone hasn't drawn the last necessary pass
     int passNow = next->GetPass();
     int maxPass = next->GetNumberOfPieces();
+    if (this->LastPass < maxPass)
+      {
+      maxPass = this->LastPass;
+      }
     if (passNow <= maxPass-2)
       {
       vtkPieceList *pl = next->GetPieceList1();
@@ -299,7 +305,7 @@ void vtkPrioritizedStreamer::StartRenderEvent()
 
   //don't swap back to front automatically
   //only update the screen once the last piece is drawn
-  rw->SwapBuffersOff(); //comment this out to see each piece rendered
+  rw->SwapBuffersOff();
 
   //assume that we are not done covering all the domains
   this->Internal->StartOver = false;
@@ -325,8 +331,9 @@ void vtkPrioritizedStreamer::EndRenderEvent()
   ren->EraseOff();
   rw->EraseOff();
 
-  if (this->IsEveryoneDone()) //stop when there are no more non culled pieces
+  if (this->IsEveryoneDone()||this->Internal->StopNow)
     {
+    this->Internal->StopNow = false;
     DEBUGPRINT_PASSES
       (
        cerr << "ALL DONE" << endl;
@@ -341,6 +348,11 @@ void vtkPrioritizedStreamer::EndRenderEvent()
     }
   else
     {
+    if (this->DisplayFrequency == 1)
+      {
+      this->CopyBackBufferToFront();
+      }
+
     //we haven't finished yet so schedule the next pass
     this->RenderEventually();
     }
@@ -349,7 +361,7 @@ void vtkPrioritizedStreamer::EndRenderEvent()
 //------------------------------------------------------------------------------
 void vtkPrioritizedStreamer::StopStreaming()
 {
-  //cerr << "STOP STREAMING" << endl;
+  this->Internal->StopNow = true;
 }
 
 //------------------------------------------------------------------------------
