@@ -304,7 +304,7 @@ void vtkStreamingHarness::SetLockRefinement(int nv)
     {
     return;
     }
-  //cerr << "lock refinement" << endl;
+  //cerr << this << " lock refinement " << nv << endl;
   this->LockRefinement = nv;
   this->Modified();
 }

@@ -62,7 +62,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "pqStreamingControls.h"
 #include "ui_pqStreamingControls.h"
 
-#include "pqActiveView.h"
+#include "pqActiveObjects.h"
 #include "pqApplicationCore.h"
 #include "pqDataRepresentation.h"
 #include "pqOutputPort.h"
@@ -129,24 +129,13 @@ pqStreamingControls::pqStreamingControls(QWidget* p)
   this->setEnabled(false);
 
   //keep self up to date whenever the active view changes
-  QObject::connect(&pqActiveView::instance(),
-    SIGNAL(changed(pqView*)),
-    this, SLOT(updateTrackedView()));
+  QObject::connect(&pqActiveObjects::instance(),
+                   SIGNAL(viewChanged(pqView*)),
+                   this, SLOT(updateTrackedView()));
 
   //or a new source becomes the active one
-  pqServerManagerSelectionModel *selection =
-      pqApplicationCore::instance()->getSelectionModel();
-  QObject::connect(selection,
-                   SIGNAL(currentChanged(pqServerManagerModelItem*)),
-                   this, SLOT(updateTrackedRepresentation())
-                   );
-  pqServerManagerModel * model =
-      pqApplicationCore::instance()->getServerManagerModel();
-  QObject::connect(model,
-                   SIGNAL(sourceAdded(pqPipelineSource*)),
-                   this, SLOT(updateTrackedRepresentation()));
-  QObject::connect(model,
-                   SIGNAL(sourceRemoved(pqPipelineSource*)),
+  QObject::connect(&pqActiveObjects::instance(),
+                   SIGNAL(representationChanged(pqDataRepresentation*)),
                    this, SLOT(updateTrackedRepresentation()));
 
   //connect command widgets to handlers for them
@@ -157,7 +146,6 @@ pqStreamingControls::pqStreamingControls(QWidget* p)
                    this, SLOT(onRefine()));
   QObject::connect(this->Internals->coarsen, SIGNAL(pressed()),
                    this, SLOT(onCoarsen()));
-
   QObject::connect(this->Internals->restart_refinement, SIGNAL(pressed()),
                    this, SLOT(onRestartRefinement()));
 
@@ -176,7 +164,7 @@ void pqStreamingControls::updateTrackedView()
 {
   //cerr << "CHECK VIEW" << endl;
   //find the active adaptive view
-  pqView* view = pqActiveView::instance().current();
+  pqView* view = pqActiveObjects::instance().activeView();
   if (view == this->currentView)
     {
     return;
@@ -319,7 +307,7 @@ void pqStreamingControls::updateTrackedView()
     }
   else
     {
-    cerr << "Don't recognize that streaming view type." << endl;
+    cerr << "Can not recognize that streaming view type." << endl;
     }
 
   this->updateTrackedRepresentation();
@@ -330,82 +318,29 @@ void pqStreamingControls::updateTrackedRepresentation()
 {
   //break stale connections between widgets and properties
   this->Internals->RepresentationLinks.removeAllPropertyLinks();
-
-  StreamingView* sView = qobject_cast<StreamingView*>(this->currentView);
-  if (!sView)
-    {
-    this->currentRep = NULL;
-    return;
-    }
+  this->currentRep = NULL;
+  this->Internals->lock_refinement->setCheckState(Qt::Unchecked);
 
   //find the active filter so that this panel can reflect its properties
-  pqServerManagerModelItem *item =
-    pqApplicationCore::instance()->getSelectionModel()->currentItem();
-  if (item)
+  pqDataRepresentation* rep =
+    pqActiveObjects::instance().activeRepresentation();
+  if (rep)
     {
-    pqOutputPort* opPort = qobject_cast<pqOutputPort*>(item);
-    pqPipelineSource *source = opPort? opPort->getSource() :
-      qobject_cast<pqPipelineSource*>(item);
-    if (source)
+    vtkSMStreamingRepresentationProxy *sRepProxy =
+      vtkSMStreamingRepresentationProxy::SafeDownCast(rep->getProxy());
+    if (!sRepProxy)
       {
-      pqDataRepresentation* dRep =
-        source->getRepresentation(0, this->currentView);
-      if (dRep)
-        {
-        //we have a representation that we can connect to. do so now
-        this->connectToRepresentation(source, dRep);
-        }
-      else
-        {
-        //try later when there might be something to connect to
-        QObject::connect
-          (source,
-           SIGNAL(visibilityChanged(pqPipelineSource*,
-                                    pqDataRepresentation*)),
-           this,
-           SLOT(connectToRepresentation(pqPipelineSource*,
-                                        pqDataRepresentation*))
-           );
-        }
+      return;
       }
-    }
-}
+    this->currentRep = sRepProxy;
 
-//---------------------------------------------------------------------------
-void pqStreamingControls::connectToRepresentation(
-  pqPipelineSource* source,
-  pqDataRepresentation* rep)
-{
-  //cerr << "CHECK REP" << endl;
-  //stop watching what we were
-  this->currentRep = NULL;
-  this->Internals->RepresentationLinks.removeAllPropertyLinks();
-  QObject::disconnect
-    (source, SIGNAL(visibilityChanged(pqPipelineSource*,
-                                      pqDataRepresentation*)),
-     this, SLOT(connectToRepresentation(pqPipelineSource*,
-                                        pqDataRepresentation*))
-     );
-  pqDataRepresentation* dRep =
-    source->getRepresentation(0, this->currentView);
-  if (!dRep)
-    {
-    return;
-    }
-  vtkSMStreamingRepresentationProxy *sRepProxy =
-    vtkSMStreamingRepresentationProxy::SafeDownCast(dRep->getProxy());
-  if (!sRepProxy)
-    {
-    return;
-    }
-  //cerr << "FOUND SREP" << endl;
-  this->currentRep = sRepProxy;
-  RefiningView* rView = qobject_cast<RefiningView*>(this->currentView);
-  if (rView)
-    {
-    this->Internals->RepresentationLinks.addPropertyLink
-      (this->Internals->lock_refinement, "checked", SIGNAL(stateChanged(int)),
-       sRepProxy, sRepProxy->GetProperty("LockRefinement"));
+    RefiningView* rView = qobject_cast<RefiningView*>(this->currentView);
+    if (rView)
+      {
+      this->Internals->RepresentationLinks.addPropertyLink
+        (this->Internals->lock_refinement, "checked", SIGNAL(stateChanged(int)),
+         sRepProxy, sRepProxy->GetProperty("LockRefinement"));
+      }
     }
 }
 

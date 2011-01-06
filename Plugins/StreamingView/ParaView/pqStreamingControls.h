@@ -95,7 +95,6 @@ private slots:
   //representation and view
   void updateTrackedView();
   void updateTrackedRepresentation();
-  void connectToRepresentation(pqPipelineSource*, pqDataRepresentation*);
 
 private:
   vtkSMStreamingRepresentationProxy *currentRep;
