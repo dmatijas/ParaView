@@ -61,20 +61,22 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "StreamingView.h"
 
+#include <QMainWindow>
+#include <QStatusBar>
 #include <QString>
 #include <QTimer>
-
-#include <vtkSMProxy.h>
-#include <vtkSMRenderViewProxy.h>
-#include "vtkSMStreamingViewProxy.h"
-
-#include <pqServer.h>
-#include <pqApplicationCore.h>
 
 #include "vtkPNGWriter.h"
 #include "vtkRenderWindow.h"
 #include "vtkSMOutputPort.h"
+#include "vtkSMProxy.h"
+#include "vtkSMRenderViewProxy.h"
+#include "vtkSMStreamingViewProxy.h"
 #include "vtkWindowToImageFilter.h"
+
+#include <pqServer.h>
+#include <pqApplicationCore.h>
+#include <pqCoreUtilities.h>
 
 //-----------------------------------------------------------------------------
 StreamingView::StreamingView(
@@ -183,6 +185,9 @@ void StreamingView::scheduleNextPass()
   writer->Delete();
 #endif
 
+  QString message("streaming pass ");
+  message.append(QString::number(this->Pass));
+
   if (!vp->IsDisplayDone())
     {
     //schedule next render pass
@@ -191,10 +196,14 @@ void StreamingView::scheduleNextPass()
     QObject::connect(t, SIGNAL(timeout()),
                      this, SLOT(render()), Qt::QueuedConnection);
     t->start();
+    this->Pass++;
     }
   else
     {
-    //this->Pass = 0;
+    this->Pass = 0;
+    message.append(" DONE");
     }
-  this->Pass++;
+
+  QMainWindow *mainWindow = qobject_cast<QMainWindow *>(pqCoreUtilities::mainWidget());
+  mainWindow->statusBar()->showMessage(message, 500);
 }
