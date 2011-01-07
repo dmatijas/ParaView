@@ -57,7 +57,6 @@ void vtkIterativeStreamer::StartRenderEvent()
 
   vtkCollectionIterator *iter = harnesses->NewIterator();
   iter->InitTraversal();
-  bool everyone_done = true;
   //watch for camera movement and restart when that happens so we don't
   //"streak"
   this->CameraMoved = this->HasCameraMoved();
@@ -79,19 +78,7 @@ void vtkIterativeStreamer::StartRenderEvent()
       //and none but the last pass should swap back to front automatically
       rw->SwapBuffersOff();
       }
-
-    int maxPiece = harness->GetNumberOfPieces();
-    if (pieceNow < maxPiece-1)
-      {
-      everyone_done = false;
-      }
     }
-
-  if (everyone_done)
-    {
-    //cerr << "This is the last pass" << endl;
-    }
-
   iter->Delete();
 }
 
