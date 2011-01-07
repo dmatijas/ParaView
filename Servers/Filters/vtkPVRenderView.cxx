@@ -703,10 +703,7 @@ void vtkPVRenderView::Render(bool interactive, bool skip_rendering)
     // Keep bounds information up-to-date.
     // FIXME: How can be make this so that we don't have to do parallel
     // communication each time.
-
-//DDM this is resetting camera which changes Z, upsetting streaming.
-//    this->GatherBoundsInformation(use_distributed_rendering);
-
+    this->GatherBoundsInformation(use_distributed_rendering);
     this->UpdateCenterAxes(this->LastComputedBounds);
     }
 

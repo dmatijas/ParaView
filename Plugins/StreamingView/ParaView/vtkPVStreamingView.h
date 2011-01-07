@@ -99,6 +99,10 @@ public:
   // to cause repeated renders.
   void RenderSchedule();
 
+  // Description:
+  // Overridden to prevent the Z scale from changing in between pieces
+  virtual void ResetCameraClippingRange();
+
 //BTX
 protected:
   vtkPVStreamingView();
@@ -110,6 +114,8 @@ protected:
   int IsDisplayDone;
 
   vtkStreamingDriver *StreamDriver;
+
+  double RunningBounds[6];
 
 private:
   vtkPVStreamingView(const vtkPVStreamingView&); // Not implemented

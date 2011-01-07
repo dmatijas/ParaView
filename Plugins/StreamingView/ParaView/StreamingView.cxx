@@ -204,6 +204,7 @@ void StreamingView::scheduleNextPass()
     message.append(" DONE");
     }
 
-  QMainWindow *mainWindow = qobject_cast<QMainWindow *>(pqCoreUtilities::mainWidget());
+  QMainWindow *mainWindow =
+    qobject_cast<QMainWindow *>(pqCoreUtilities::mainWidget());
   mainWindow->statusBar()->showMessage(message, 500);
 }

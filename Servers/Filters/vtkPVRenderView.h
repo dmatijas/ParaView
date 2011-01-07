@@ -219,7 +219,7 @@ public:
   // Description:
   // Resets the clipping range. One does not need to call this directly ever. It
   // is called periodically by the vtkRenderer to reset the camera range.
-  void ResetCameraClippingRange();
+  virtual void ResetCameraClippingRange();
 
   // Description:
   // Enable/Disable light kit.

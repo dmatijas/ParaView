@@ -61,8 +61,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "vtkPVStreamingView.h"
 
+#include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkPVStreamingRepresentation.h"
+#include "vtkRenderer.h"
 #include "vtkStreamingDriver.h"
 
 vtkStandardNewMacro(vtkPVStreamingView);
@@ -78,6 +80,7 @@ vtkPVStreamingView::vtkPVStreamingView()
 {
   this->StreamDriver = NULL;
   this->IsDisplayDone = 1;
+  vtkMath::UninitializeBounds(this->RunningBounds);
 }
 
 //----------------------------------------------------------------------------
@@ -154,4 +157,33 @@ void vtkPVStreamingView::Render(bool interactive, bool skip_rendering)
 void vtkPVStreamingView::RenderSchedule()
 {
   this->IsDisplayDone = 0;
+}
+
+//----------------------------------------------------------------------------
+void vtkPVStreamingView::ResetCameraClippingRange()
+{
+  //extend the bounds we use whenever we find a piece that is outside of what
+  //we've used before.
+  int i;
+  for (i = 0; i < 6; i+=2)
+    {
+    if (this->LastComputedBounds[i] < this->RunningBounds[i])
+      {
+      this->RunningBounds[i] = this->LastComputedBounds[i];
+      }
+    }
+  for (i = 1; i < 6; i+=2)
+    {
+    if (this->LastComputedBounds[i] > this->RunningBounds[i])
+      {
+      this->RunningBounds[i] = this->LastComputedBounds[i];
+      }
+    }
+  for (i = 0; i<6; i++)
+    {
+    this->LastComputedBounds[i] = this->RunningBounds[i];
+    }
+
+  this->GetRenderer()->ResetCameraClippingRange(this->LastComputedBounds);
+  this->GetNonCompositedRenderer()->ResetCameraClippingRange(this->LastComputedBounds);
 }
