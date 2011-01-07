@@ -74,6 +74,7 @@ void vtkIterativeStreamer::StartRenderEvent()
       //first pass has to clear to start off
       ren->EraseOn();
       rw->EraseOn();
+      rw->Frame();
 
       //and none but the last pass should swap back to front automatically
       rw->SwapBuffersOff();
@@ -137,8 +138,7 @@ void vtkIterativeStreamer::EndRenderEvent()
       }
 
     //we also need to bring back buffer forward to show what we drew
-    rw->SwapBuffersOn();
-    rw->Frame();
+    this->CopyBackBufferToFront();
     }
   else
     {

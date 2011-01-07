@@ -286,12 +286,12 @@ void vtkPrioritizedStreamer::StartRenderEvent()
        );
 
     //show whatever we partially drew before the camera moved
-    rw->SwapBuffersOn();
-    rw->Frame();
+    this->CopyBackBufferToFront();
 
     //start off initial pass by clearing the screen
     ren->EraseOn();
     rw->EraseOn();
+    rw->Frame();
 
     //compute priority of subsequent passes
     //set pipeline to show the most important one this pass
@@ -343,8 +343,7 @@ void vtkPrioritizedStreamer::EndRenderEvent()
     this->Internal->StartOver = true;
 
     //bring back buffer forward to show what we drew
-    rw->SwapBuffersOn();
-    rw->Frame();
+    this->CopyBackBufferToFront();
     }
   else
     {

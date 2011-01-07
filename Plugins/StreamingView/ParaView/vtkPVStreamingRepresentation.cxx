@@ -106,6 +106,10 @@ void vtkPVStreamingRepresentation::SetPieceCache(vtkPieceCacheFilter *PCF)
     {
     this->PieceCache->Register(this);
     }
+  if (this->Harness)
+    {
+    this->Harness->SetCacheFilter(this->PieceCache);
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -124,6 +128,7 @@ void vtkPVStreamingRepresentation::SetHarness(vtkStreamingHarness *harness)
   if (this->Harness)
     {
     this->Harness->Register(this);
+    this->Harness->SetCacheFilter(this->PieceCache);
     }
 }
 
