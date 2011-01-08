@@ -61,8 +61,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // .NAME pqStreamingControls - GUI panel to drive streaming
 // .SECTION Description
 // This class provides a panel that controls streaming in the currently active
-// view. It also has controls pertaining to the currently active
-// representation within that view.
+// view and representation within that view. The widgets on the panel are
+// static but modal. That is dependent on the streaming driver in the active
+// view, only those widgets that pertain to that view type will be enabled.
 
 #ifndef __pqStreamingControls_h
 #define __pqStreamingControls_h

@@ -52,10 +52,15 @@ public:
   vtkGetMacro(CacheSize,int);
 
   //Description:
-  //Returns the data set stored in the i'th cache slot.
+  //Returns the dataset stored in the i'th cache slot.
   //Note: There is no SetPiece because Pieces are put into slots
   //during pipeline updates.
   vtkDataSet *GetPiece(int i);
+
+  //Description:
+  //Returns the time that dataset stored in the i'th cache slot
+  //was created.
+  unsigned long GetMTime(int i);
 
   //Description:
   //Deletes the data set stored in the i'th cache slot.

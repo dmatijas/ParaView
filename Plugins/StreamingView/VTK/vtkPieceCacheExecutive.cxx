@@ -82,11 +82,18 @@ int vtkPieceCacheExecutive
   int updatePiece = outInfo->Get(UPDATE_PIECE_NUMBER());
   int updateNumberOfPieces = outInfo->Get(UPDATE_NUMBER_OF_PIECES());
   int index = myPCF->ComputeIndex(updatePiece, updateNumberOfPieces);
+
+  // See if the cached data is invalid.
+  unsigned long pmt = this->GetPipelineMTime();
+  if (myPCF->GetMTime(index) < pmt)
+    {
+    myPCF->DeletePiece(index);
+    return 1;
+    }
   double updateResolution = outInfo->Get(UPDATE_RESOLUTION());
   if(dataInfo->Get(vtkDataObject::DATA_EXTENT_TYPE()) == VTK_PIECES_EXTENT)
     {
     int updateGhostLevel = outInfo->Get(UPDATE_NUMBER_OF_GHOST_LEVELS());
-
     // check to see if any data in the cache fits this request
     vtkDataSet *ds = myPCF->GetPiece(index);
     if (ds)
@@ -164,8 +171,6 @@ int vtkPieceCacheExecutive
     }
   else if (dataInfo->Get(vtkDataObject::DATA_EXTENT_TYPE()) == VTK_3D_EXTENT)
     {
-    //WARNING: THIS CODE HASN'T BEEN TESTED RECENTLY
-
     // Check the structured extent.  If the update extent is outside
     // of the extent and not empty, we need to execute.
     int dataExtent[6];
