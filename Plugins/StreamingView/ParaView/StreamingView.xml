@@ -78,7 +78,7 @@
           command="SetLockRefinement"
           number_of_elements="1"
           default_values="0">
-        <BooleanDomain name="bool" />
+        <BooleanDomain name="bool"/>
       </IntVectorProperty>
 
       <Property

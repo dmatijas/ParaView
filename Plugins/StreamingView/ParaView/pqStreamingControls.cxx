@@ -200,7 +200,7 @@ void pqStreamingControls::updateTrackedView()
   RefiningView* rView = qobject_cast<RefiningView*>(view);
   if (iView)
     {
-    //cerr << "FOUND IVIEW" << endl;
+    //cerr << "FOUND IVIEW " << iView << endl;
     this->Internals->streaming_controls->setEnabled(true);
     this->Internals->number_of_passes->setEnabled(true);
     this->Internals->last_pass->setEnabled(true);
@@ -227,7 +227,7 @@ void pqStreamingControls::updateTrackedView()
     }
   else if (pView)
     {
-    //cerr << "FOUND PVIEW" << endl;
+    //cerr << "FOUND PVIEW " << pView << endl;
     this->Internals->streaming_controls->setEnabled(true);
     this->Internals->number_of_passes->setEnabled(true);
     this->Internals->last_pass->setEnabled(true);
@@ -262,7 +262,7 @@ void pqStreamingControls::updateTrackedView()
     }
   else if (rView)
     {
-    //cerr << "FOUND RVIEW" << endl;
+    //cerr << "FOUND RVIEW " << rView << endl;
     this->Internals->streaming_controls->setEnabled(true);
     this->Internals->number_of_passes->setEnabled(false);
     this->Internals->last_pass->setEnabled(false);
@@ -316,6 +316,7 @@ void pqStreamingControls::updateTrackedView()
 //------------------------------------------------------------------------------
 void pqStreamingControls::updateTrackedRepresentation()
 {
+  //cerr << "CHECK REP" << endl;
   //break stale connections between widgets and properties
   this->Internals->RepresentationLinks.removeAllPropertyLinks();
   this->currentRep = NULL;
@@ -333,6 +334,7 @@ void pqStreamingControls::updateTrackedRepresentation()
       return;
       }
     this->currentRep = sRepProxy;
+    //cerr << "FOUND SREP " << this->currentRep << endl;
 
     RefiningView* rView = qobject_cast<RefiningView*>(this->currentView);
     if (rView)
@@ -369,6 +371,7 @@ void pqStreamingControls::onRefine()
     vtkSMStreamingViewProxy::SafeDownCast(this->currentView->getProxy());
   vtkSMProxy *driver = svp;//svp->GetDriver();
   driver->InvokeCommand("Refine");
+  rView->render();
 }
 
 //------------------------------------------------------------------------------
@@ -383,6 +386,7 @@ void pqStreamingControls::onCoarsen()
     vtkSMStreamingViewProxy::SafeDownCast(this->currentView->getProxy());
   vtkSMProxy *driver = svp;//svp->GetDriver();
   driver->InvokeCommand("Coarsen");
+  rView->render();
 }
 
 //------------------------------------------------------------------------------

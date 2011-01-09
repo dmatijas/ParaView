@@ -52,8 +52,8 @@ public:
 
   // Description:
   // Whether the user drives progression manually (0) or wether the driver
-  // does automatically (1).
-  // The default value is manual.
+  // does automatically (1). The default value is manual.
+  enum {MANUAL, AUTOMATIC};
   vtkSetMacro(ProgressionMode, int);
   vtkGetMacro(ProgressionMode, int);
 
@@ -99,7 +99,10 @@ protected:
   virtual void PrepareFirstPass();
   virtual void ChooseNextPieces();
   virtual int Refine(vtkStreamingHarness *);
+  virtual int Coarsen(vtkStreamingHarness *);
   virtual void Reap(vtkStreamingHarness *);
+
+  enum {COARSEN, STAY, ADVANCE};
 
   int PipelinePrioritization;
   int ViewPrioritization;
