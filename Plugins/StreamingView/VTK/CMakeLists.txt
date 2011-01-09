@@ -46,18 +46,18 @@ IF (BUILD_AGAINST_PARAVIEW)
     ${PARAVIEW_INCLUDE_DIRS}
     )
 
-  # Be sure to wrap vtkMantaRenderWindow.h, which lives in the build directory.
-  # This code was lifted from ParaViewPlugins.cmake
   SET(HDRS)
   SET(REALSRCS)
   SET(INST_SRCS)
   FOREACH(SRC
+      vtkACosmoReader.cxx
       vtkIterativeStreamer.cxx
       vtkMultiResolutionStreamer.cxx
       vtkPrioritizedStreamer.cxx
       vtkPieceCacheExecutive.cxx
       vtkPieceCacheFilter.cxx
       vtkPieceList.cxx
+      vtkRawStridedReader1
       vtkStreamedMandelbrot.cxx
       vtkStreamingDriver.cxx
       vtkStreamingHarness.cxx
