@@ -837,6 +837,19 @@ void vtkSMOutputPort::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "SourceProxy: " << this->SourceProxy << endl;
 }
 
+//----------------------------------------------------------------------------
+void vtkSMOutputPort::SetUseStreaming(bool value)
+{
+  vtkSMOutputPort::UseStreaming = value;
+};
+
+//----------------------------------------------------------------------------
+void vtkSMOutputPort::SetDefaultPiece(int dp, int dnp, int dr)
+{
+  vtkSMOutputPort::DefaultPass = dp;
+  vtkSMOutputPort::DefaultNumPasses = dnp;
+  vtkSMOutputPort::DefaultResolution = dr;
+};
 
 
 

@@ -116,17 +116,12 @@ public:
   // Description:
   // Streaming plugin turns this on to prevent GUI from updating whole
   // extent at one time.
-  static void SetUseStreaming(bool value) { UseStreaming=value; };
+  static void SetUseStreaming(bool value);
 
   // Description:
   // Streaming plugin uses this to specify the prototypical piece to update
   // the get information from.
-  static void SetDefaultPiece(int dp, int dnp, int dr)
-  {
-    DefaultPass=dp;
-    DefaultNumPasses = dnp;
-    DefaultResolution = dr;
-  };
+  static void SetDefaultPiece(int dp, int dnp, int dr);
 
 protected:
   vtkSMOutputPort();

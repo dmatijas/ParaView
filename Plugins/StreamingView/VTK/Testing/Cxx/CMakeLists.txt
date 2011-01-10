@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 INCLUDE_DIRECTORIES(../..)
 
 ADD_EXECUTABLE(Test_StreamSource Test_StreamSource.cxx)
-TARGET_LINK_LIBRARIES(Test_StreamSource vtkStreaming vtkRendering vtkFiltering vtkGraphics vtkCommon vtkImaging)
+TARGET_LINK_LIBRARIES(Test_StreamSource vtkIO vtkStreaming vtkRendering vtkFiltering vtkGraphics vtkCommon vtkImaging)
 
 ADD_EXECUTABLE(Test_StreamHarness Test_StreamHarness.cxx)
 TARGET_LINK_LIBRARIES(Test_StreamHarness vtkStreaming vtkRendering vtkFiltering vtkGraphics vtkCommon vtkImaging)
