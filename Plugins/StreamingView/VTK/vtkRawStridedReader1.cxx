@@ -14,7 +14,6 @@
 =========================================================================*/
 #include "vtkRawStridedReader1.h"
 
-#include "vtkAdaptiveOptions.h"
 #include "vtkByteSwap.h"
 #include "vtkCellData.h"
 #include "vtkDataArray.h"
@@ -39,46 +38,14 @@
 
 vtkStandardNewMacro(vtkRawStridedReader1);
 
-#if 0
-
 #define DEBUGPRINT_STRIDED_READER_DETAILS(arg)\
   ;
-
 #define DEBUGPRINT_STRIDED_READER(arg)\
-  arg;
-
+  ;
 #define DEBUGPRINT_RESOLUTION(arg)\
-  arg;
-
+  ;
 #define DEBUGPRINT_METAINFORMATION(arg)\
-  arg;
-
-#else
-
-#define DEBUGPRINT_STRIDED_READER_DETAILS(arg)\
-  if (false && vtkAdaptiveOptions::GetEnableStreamMessages()) \
-    { \
-      arg;\
-    }
-
-#define DEBUGPRINT_STRIDED_READER(arg)\
-  if (vtkAdaptiveOptions::GetEnableStreamMessages()) \
-    { \
-      arg;\
-    }
-
-#define DEBUGPRINT_RESOLUTION(arg)\
-  if (vtkAdaptiveOptions::GetEnableStreamMessages()) \
-    { \
-      arg;\
-    }
-
-#define DEBUGPRINT_METAINFORMATION(arg)\
-  if (vtkAdaptiveOptions::GetEnableStreamMessages()) \
-    { \
-      arg;\
-    }
-#endif
+  ;
 
 //==============================================================================
 
@@ -787,6 +754,13 @@ int vtkRawStridedReader1::RequestData(
   float *myfloats = (float*)outData->GetScalarPointer();
 //  double c_alloc = clock();
 
+  if (uext[1] < uext[0] ||
+      uext[3] < uext[2] ||
+      uext[5] < uext[4])
+    {
+    return 1;
+    }
+
   char pfilename[256];
   sprintf(pfilename, "%s.%d_%d_%d_%d_%d_%d_%d_%d_%f.block", this->Filename, uext[0], uext[1], uext[2], uext[3], uext[4], uext[5], P, NP, this->Resolution);
   //cerr << pfilename <<"?" << endl;
@@ -824,10 +798,11 @@ int vtkRawStridedReader1::RequestData(
       return 0;
     }
 
-    DEBUGPRINT_STRIDED_READER(
-    unsigned int memsize = this->Skimmer->get_data_size();
-    cerr << "memsize " << memsize << endl;
-                             );
+    DEBUGPRINT_STRIDED_READER
+      ({
+      unsigned int memsize = this->Skimmer->get_data_size();
+      cerr << "memsize " << memsize << endl;
+      });
     file.close();
 
     //cerr << "creating " << pfilename << " " << endl;
