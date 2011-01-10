@@ -8,8 +8,8 @@ TARGET_LINK_LIBRARIES(Test_StreamSource vtkIO vtkStreaming vtkRendering vtkFilte
 ADD_EXECUTABLE(Test_StreamHarness Test_StreamHarness.cxx)
 TARGET_LINK_LIBRARIES(Test_StreamHarness vtkStreaming vtkRendering vtkFiltering vtkGraphics vtkCommon vtkImaging)
 
-ADD_EXECUTABLE(Test_StreamDriver Test_StreamDriver.cxx)
-TARGET_LINK_LIBRARIES(Test_StreamDriver vtkStreaming vtkRendering vtkFiltering vtkGraphics vtkCommon vtkImaging)
+ADD_EXECUTABLE(Test_StreamIteration Test_StreamIteration.cxx)
+TARGET_LINK_LIBRARIES(Test_StreamIteration vtkStreaming vtkRendering vtkFiltering vtkGraphics vtkCommon vtkImaging)
 
 ADD_EXECUTABLE(Test_StreamPrioritization Test_StreamPrioritization.cxx)
 TARGET_LINK_LIBRARIES(Test_StreamPrioritization vtkStreaming vtkRendering vtkFiltering vtkGraphics vtkCommon vtkImaging)

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    TestPriorityStreaming.cxx
+  Module:    Test_StreamSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,6 +39,20 @@
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
+  vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
+  vtkSmartPointer<vtkRenderWindow> renWin =
+    vtkSmartPointer<vtkRenderWindow>::New();
+  renWin->AddRenderer(renderer);
+  renderer->GetActiveCamera()->SetPosition( 0, 0, 10);
+  renderer->GetActiveCamera()->SetFocalPoint(0, 0, 0);
+  renderer->GetActiveCamera()->SetViewUp(0, 1, 0);
+  renderer->SetBackground(0.0,0.0,0.0);
+  renWin->SetSize(300,300);
+  vtkSmartPointer<vtkRenderWindowInteractor> iren =
+    vtkSmartPointer<vtkRenderWindowInteractor>::New();
+  iren->SetRenderWindow(renWin);
+  renWin->Render();
+
   // create a streaming capable source.
   // it provides data and meta data (including world space bounds and
   // possibly scalar ranges) for any requested piece at any requested resolution
@@ -87,19 +101,6 @@ int main(int argc, char *argv[])
   vtkSmartPointer<vtkDataSetMapper> map1 =
     vtkSmartPointer<vtkDataSetMapper>::New();
   map1->SetInputConnection(contour->GetOutputPort());
-
-  vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
-  vtkSmartPointer<vtkRenderWindow> renWin =
-    vtkSmartPointer<vtkRenderWindow>::New();
-  renWin->AddRenderer(renderer);
-  renderer->GetActiveCamera()->SetPosition( 0, 0, 10);
-  renderer->GetActiveCamera()->SetFocalPoint(0, 0, 0);
-  renderer->GetActiveCamera()->SetViewUp(0, 1, 0);
-  renderer->SetBackground(0.0,0.0,0.0);
-  renWin->SetSize(300,300);
-  vtkSmartPointer<vtkRenderWindowInteractor> iren =
-    vtkSmartPointer<vtkRenderWindowInteractor>::New();
-  iren->SetRenderWindow(renWin);
 
   vtkSmartPointer<vtkActor> act1 = vtkSmartPointer<vtkActor>::New();
   act1->SetMapper(map1);

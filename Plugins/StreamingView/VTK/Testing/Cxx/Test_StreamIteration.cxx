@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    TestPriorityStreaming.cxx
+  Module:    Test_StreamIteration.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,17 +27,26 @@
 #include "vtkStreamedMandelbrot.h"
 #include "vtkIterativeStreamer.h"
 #include "vtkStreamingHarness.h"
-#include "vtkTesting.h"
 
 #include "vtksys/SystemTools.hxx"
 
-void foo(void)
-{
-  cerr << "FOO" << endl;
-}
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
+  vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
+  vtkSmartPointer<vtkRenderWindow> renWin =
+    vtkSmartPointer<vtkRenderWindow>::New();
+  renWin->AddRenderer(renderer);
+  renderer->GetActiveCamera()->SetPosition( 0, 0, 10);
+  renderer->GetActiveCamera()->SetFocalPoint(0, 0, 0);
+  renderer->GetActiveCamera()->SetViewUp(0, 1, 0);
+  renderer->SetBackground(0.0,0.0,0.0);
+  renWin->SetSize(300,300);
+  vtkSmartPointer<vtkRenderWindowInteractor> iren =
+    vtkSmartPointer<vtkRenderWindowInteractor>::New();
+  iren->SetRenderWindow(renWin);
+  renWin->Render();
+
   // create a streaming capable source.
   // it provides data and meta data (including world space bounds and
   // possibly scalar ranges) for any requested piece at any requested
@@ -66,19 +75,6 @@ int main(int argc, char *argv[])
     vtkSmartPointer<vtkDataSetMapper>::New();
   map1->SetInputConnection(harness->GetOutputPort());
 
-  vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
-  vtkSmartPointer<vtkRenderWindow> renWin =
-    vtkSmartPointer<vtkRenderWindow>::New();
-  renWin->AddRenderer(renderer);
-  renderer->GetActiveCamera()->SetPosition( 0, 0, 10);
-  renderer->GetActiveCamera()->SetFocalPoint(0, 0, 0);
-  renderer->GetActiveCamera()->SetViewUp(0, 1, 0);
-  renderer->SetBackground(0.0,0.0,0.0);
-  renWin->SetSize(300,300);
-  vtkSmartPointer<vtkRenderWindowInteractor> iren =
-    vtkSmartPointer<vtkRenderWindowInteractor>::New();
-  iren->SetRenderWindow(renWin);
-
   vtkSmartPointer<vtkActor> act1 = vtkSmartPointer<vtkActor>::New();
   act1->SetMapper(map1);
   renderer->AddActor(act1);
@@ -92,11 +88,6 @@ int main(int argc, char *argv[])
   //TODO:
   //add a meaningful test of render later/interuptability
   //sd->AssignRenderLaterFunction(foo);
-
-  //TODO:
-  //test multiple harnessed objects
-  //test harness objects with different num pieces (from 1 to high)
-  //test rendering of non harnessed objects
 
   renWin->Render();
 

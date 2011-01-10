@@ -21,8 +21,6 @@
 #include "vtkObject.h"
 #include "vtkPiece.h"
 
-class vtkInternals;
-
 class VTK_EXPORT vtkPieceList : public vtkObject
 {
 public:
@@ -95,14 +93,15 @@ protected:
   vtkPieceList();
   ~vtkPieceList();
 
-  vtkInternals *Internals;
-
   //Description:
   void CopyInternal(vtkPieceList *other, int merge);
 
 private:
   vtkPieceList(const vtkPieceList&); // Not implemented
   void operator=(const vtkPieceList&); // Not implemented
+
+  class Internal;
+  Internal *Internals;
 };
 
 #endif

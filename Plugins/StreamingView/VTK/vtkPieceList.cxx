@@ -8,15 +8,15 @@
 vtkStandardNewMacro(vtkPieceList);
 
 //////////////////////////////////////////////////////////////////////////////
-class vtkInternals
+class vtkPieceList::Internal
 {
 public:
-  vtkInternals()
+  Internal()
   {
     this->SerializeBuffer = NULL;
     this->BufferSize = 0;
   }
-  ~vtkInternals()
+  ~Internal()
   {
   if (this->SerializeBuffer != NULL)
     {
@@ -43,7 +43,7 @@ public:
 vtkPieceList::vtkPieceList()
 {
   //cerr << "PL(" <<this<< ") create" << endl;
-  this->Internals = new vtkInternals;
+  this->Internals = new Internal;
 }
 
 //----------------------------------------------------------------------------
