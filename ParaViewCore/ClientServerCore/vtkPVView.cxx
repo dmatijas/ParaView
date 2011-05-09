@@ -189,6 +189,7 @@ void vtkPVView::Update()
     this->RequestInformation, this->ReplyInformationVector);
 }
 
+#include "vtkGeometryRepresentation.h"
 //----------------------------------------------------------------------------
 void vtkPVView::CallProcessViewRequest(
   vtkInformationRequestKey* type, vtkInformation* inInfo, vtkInformationVector* outVec)
@@ -219,6 +220,15 @@ void vtkPVView::CallProcessViewRequest(
     outInfo->Clear();
     vtkDataRepresentation* repr = this->GetRepresentation(cc);
     vtkPVDataRepresentation* pvrepr = vtkPVDataRepresentation::SafeDownCast(repr);
+    vtkGeometryRepresentation* geom = vtkGeometryRepresentation::SafeDownCast(repr);
+    if (geom)
+      {
+      cerr << "UPDATE REP " << geom->GetDebugString() << " " << repr << endl;
+      }
+    else
+      {
+      cerr << "UPDATE REP " << repr->GetClassName() << " " << repr << endl;
+      }
     if (pvrepr)
       {
       pvrepr->ProcessViewRequest(type, inInfo, outInfo);

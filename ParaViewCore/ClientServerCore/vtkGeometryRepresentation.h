@@ -165,6 +165,7 @@ public:
   // be applied to this representation, return NULL.
   virtual vtkSelection* ConvertSelection(vtkView* view, vtkSelection* selection);
 
+  vtkGetStringMacro(DebugString);
 //BTX
 protected:
   vtkGeometryRepresentation();

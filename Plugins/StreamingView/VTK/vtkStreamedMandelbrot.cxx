@@ -334,8 +334,10 @@ int vtkStreamedMandelbrot::ProcessRequest(vtkInformation *request,
 
   if(request->Has(vtkStreamingDemandDrivenPipeline::REQUEST_UPDATE_EXTENT()))
     {
-    DEBUGPRINT
-      (cerr << "SMS(" << this << ") RUE ============================" << endl;);
+    //DEBUGPRINT
+    //(
+       cerr << "SMS(" << this << ") RUE ============================" << endl;
+       // );
     }
 
   if(request->Has
@@ -425,29 +427,44 @@ int vtkStreamedMandelbrot::ProcessRequest(vtkInformation *request,
   //This is overridden just to intercept requests for debugging purposes.
   if(request->Has(vtkDemandDrivenPipeline::REQUEST_DATA()))
     {
-    DEBUGPRINT
-      (cerr << "SMS(" << this << ") RD =============================" << endl;);
+    //DEBUGPRINT
+    //(
+       cerr << "SMS(" << this << ") RD =============================" << endl;
+       // );
+    vtkInformation *outInfo = outputVector->GetInformationObject(0);
+    int P = outInfo->Get(
+                         vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
+    int NP = outInfo->Get(
+                          vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
+    double res = outInfo->Get(
+                              vtkStreamingDemandDrivenPipeline::UPDATE_RESOLUTION());
+    cerr << "SMS(" << this << ") RD " << P << "/" << NP << "@" << res << endl;
 
-    vtkInformation* outInfo = outputVector->GetInformationObject(0);
+
     int updateExtent[6];
     int wholeExtent[6];
     outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT(),
       updateExtent);
     outInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(),
       wholeExtent);
+    /*
     double res = this->Resolution;
     if (outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_RESOLUTION()))
       {
       res = outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_RESOLUTION());
       }
+    */
     bool match = true;
     for (int i = 0; i< 6; i++)
       {
-        if (updateExtent[i] != wholeExtent[i])
-          {
-          match = false;
-          }
+      cerr << updateExtent[i] << "?" << wholeExtent[i] << " ";
+
+      if (updateExtent[i] != wholeExtent[i])
+        {
+        match = false;
+        }
       }
+    cerr << endl;
     if (match && (res == 1.0))
       {
       vtkErrorMacro("Whole extent requested, streaming is not working.");

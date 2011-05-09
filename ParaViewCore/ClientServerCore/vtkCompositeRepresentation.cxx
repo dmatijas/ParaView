@@ -14,6 +14,7 @@
 =========================================================================*/
 #include "vtkCompositeRepresentation.h"
 
+#include "vtkAlgorithmOutput.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkMemberFunctionCommand.h"
@@ -190,46 +191,63 @@ int vtkCompositeRepresentation::FillInputPortInformation(
 void vtkCompositeRepresentation::SetInputConnection(
   int port, vtkAlgorithmOutput* input)
 {
+  cerr << this->GetClassName() << " SET INPUT CONN 1 "
+       << (input?input->GetProducer()->GetClassName():"") << ":";
   vtkInternals::RepresentationMap::iterator iter;
   for (iter = this->Internals->Representations.begin();
     iter != this->Internals->Representations.end(); iter++)
     {
+    cerr << "\t" << iter->second.GetPointer()->GetClassName() << " " << iter->second.GetPointer() << ",\n";
     iter->second.GetPointer()->SetInputConnection(port, input);
     }
+  cerr << endl;
 }
 
 //----------------------------------------------------------------------------
 void vtkCompositeRepresentation::SetInputConnection(vtkAlgorithmOutput* input)
 {
+  cerr << this->GetClassName() << " SET INPUT CONN 2 "
+       << (input?input->GetProducer()->GetClassName():"") << ":";
   vtkInternals::RepresentationMap::iterator iter;
   for (iter = this->Internals->Representations.begin();
     iter != this->Internals->Representations.end(); iter++)
     {
+    cerr << "\t" << iter->second.GetPointer()->GetClassName() << " "
+         << iter->second.GetPointer() << ",\n";
     iter->second.GetPointer()->SetInputConnection(input);
     }
+  cerr << endl;
 }
 
 //----------------------------------------------------------------------------
 void vtkCompositeRepresentation::AddInputConnection(
   int port, vtkAlgorithmOutput* input)
 {
+  cerr << this->GetClassName() << "ADD INPUT CONN 1 "
+       << (input?input->GetProducer()->GetClassName():"") << ":";
   vtkInternals::RepresentationMap::iterator iter;
   for (iter = this->Internals->Representations.begin();
     iter != this->Internals->Representations.end(); iter++)
     {
+    cerr << iter->second.GetPointer()->GetClassName() << ",";
     iter->second.GetPointer()->AddInputConnection(port, input);
     }
+  cerr << endl;
 }
 
 //----------------------------------------------------------------------------
 void vtkCompositeRepresentation::AddInputConnection(vtkAlgorithmOutput* input)
 {
+  cerr << this->GetClassName() << "ADD INPUT CONN 2 "
+       << (input?input->GetProducer()->GetClassName():"") << ":";
   vtkInternals::RepresentationMap::iterator iter;
   for (iter = this->Internals->Representations.begin();
     iter != this->Internals->Representations.end(); iter++)
     {
+    cerr << iter->second.GetPointer()->GetClassName() << ",";
     iter->second.GetPointer()->AddInputConnection(input);
     }
+  cerr << endl;
 }
 
 //----------------------------------------------------------------------------

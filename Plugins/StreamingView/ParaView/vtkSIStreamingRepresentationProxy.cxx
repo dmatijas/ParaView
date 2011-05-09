@@ -95,6 +95,7 @@ bool vtkSIStreamingRepresentationProxy::CreateVTKObjects(vtkSMMessage* message)
     {
     return true;
     }
+  cerr << "CREATEVTKOBJ" << endl;
   if(!this->Superclass::CreateVTKObjects(message))
     {
     return false;
@@ -134,11 +135,19 @@ void vtkSIStreamingRepresentationProxy::AddInput( int inputPort,
                                                   vtkAlgorithmOutput* connection,
                                                   const char* method)
 {
+  cerr << "ADD INPUT" << endl;
+  if (!this->ObjectsCreated)
+    {
+    cerr << "NOT CREATED" << endl;
+    //this->CreateVTKObjects();
+    }
+
   vtkProcessModule* pm = vtkProcessModule::GetProcessModule();
   vtkPVSession *pvses = vtkPVSession::SafeDownCast(pm->GetSession());
 
   if (pvses->GetProcessRoles() & vtkPVSession::SERVERS)
     {
+    cerr << "insert prefilers " << method << endl;
     //in c/s mode, client will not have the subproxies, thus the guard above
     // Get objects
     vtkSISourceProxy* pieceCache =
@@ -149,16 +158,18 @@ void vtkSIStreamingRepresentationProxy::AddInput( int inputPort,
 
     vtkSISourceProxy* harness =
       vtkSISourceProxy::SafeDownCast(this->GetSubSIProxy("Harness"));
-    vtkAlgorithmOutput* harnessOutput = harness->GetOutputPort(0);
+    //vtkAlgorithmOutput* harnessOutput = harness->GetOutputPort(0);
     vtkAlgorithm* harnessAlg = vtkAlgorithm::SafeDownCast
       (harness->GetVTKObject());
+    cerr << "HARNESS ALG IS " << harnessAlg << endl;
 
     pieceCacheAlg->SetInputConnection(0, connection);
-    harnessAlg->SetInputConnection(pieceOutput);
-    this->Superclass::AddInput(inputPort, harnessOutput, method);
+    harnessAlg->SetInputConnection(pieceCacheAlg->GetOutputPort());
+    this->Superclass::AddInput(inputPort, harnessAlg->GetOutputPort(), method);
     }
   else
     {
+    cerr << "ignore prefilters" << endl;
     this->Superclass::AddInput(inputPort, connection, method);
     }
 }

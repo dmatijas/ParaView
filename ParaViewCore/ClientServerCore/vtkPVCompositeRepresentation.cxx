@@ -20,6 +20,8 @@
 #include "vtkSelectionRepresentation.h"
 #include "vtkView.h"
 
+#include "vtkAlgorithmOutput.h"
+
 vtkStandardNewMacro(vtkPVCompositeRepresentation);
 vtkCxxSetObjectMacro(vtkPVCompositeRepresentation, SelectionRepresentation,
   vtkSelectionRepresentation);
@@ -71,13 +73,17 @@ void vtkPVCompositeRepresentation::SetSelectionVisibility(bool visible)
 //----------------------------------------------------------------------------
 void vtkPVCompositeRepresentation::SetInputConnection(int port, vtkAlgorithmOutput* input)
 {
+  cerr << this->GetClassName() << "PV SET INPUT CONN 1 "
+       << (input?input->GetProducer()->GetClassName():"") << ":\n";
   if (port == 0)
     {
+    cerr << "SET CUBE " << this->CubeAxesRepresentation << endl;
     this->CubeAxesRepresentation->SetInputConnection(0, input);
     this->Superclass::SetInputConnection(0, input);
     }
   else if (port == 1)
     {
+    cerr << "SET SEL" << endl;
     this->SelectionRepresentation->SetInputConnection(0, input);
     }
 }
@@ -85,6 +91,8 @@ void vtkPVCompositeRepresentation::SetInputConnection(int port, vtkAlgorithmOutp
 //----------------------------------------------------------------------------
 void vtkPVCompositeRepresentation::SetInputConnection(vtkAlgorithmOutput* input)
 {
+  cerr << this->GetClassName() << "PV SET INPUT CONN 2 "
+       << (input?input->GetProducer()->GetClassName():"") << ":\n";
   // port is assumed to be 0.
   this->CubeAxesRepresentation->SetInputConnection(input);
   this->Superclass::SetInputConnection(input);
@@ -94,13 +102,17 @@ void vtkPVCompositeRepresentation::SetInputConnection(vtkAlgorithmOutput* input)
 void vtkPVCompositeRepresentation::AddInputConnection(
   int port, vtkAlgorithmOutput* input)
 {
+  cerr << this->GetClassName() << "PV ADD INPUT CONN 1 "
+       << (input?input->GetProducer()->GetClassName():"") << ":\n";
  if (port == 0)
     {
+    cerr << "ADD CUBE" << endl;
     this->CubeAxesRepresentation->AddInputConnection(0, input);
     this->Superclass::AddInputConnection(0, input);
     }
   else if (port == 1)
     {
+    cerr << "ADD SEL" << endl;
     this->SelectionRepresentation->AddInputConnection(0, input);
     }
 }
@@ -108,6 +120,8 @@ void vtkPVCompositeRepresentation::AddInputConnection(
 //----------------------------------------------------------------------------
 void vtkPVCompositeRepresentation::AddInputConnection(vtkAlgorithmOutput* input)
 {
+  cerr << this->GetClassName() << "PV ADD INPUT CONN 2 "
+       << (input?input->GetProducer()->GetClassName():"") << ":\n";
   // port is assumed to be 0.
   this->CubeAxesRepresentation->AddInputConnection(input);
   this->Superclass::AddInputConnection(input);
@@ -116,6 +130,8 @@ void vtkPVCompositeRepresentation::AddInputConnection(vtkAlgorithmOutput* input)
 //----------------------------------------------------------------------------
 void vtkPVCompositeRepresentation::RemoveInputConnection(int port, vtkAlgorithmOutput* input)
 {
+  cerr << this->GetClassName() << "PV REMOVE INPUT CONN "
+       << (input?input->GetProducer()->GetClassName():"") << ":\n";
   if (port == 0)
     {
     this->CubeAxesRepresentation->RemoveInputConnection(0, input);
@@ -130,8 +146,12 @@ void vtkPVCompositeRepresentation::RemoveInputConnection(int port, vtkAlgorithmO
 //----------------------------------------------------------------------------
 bool vtkPVCompositeRepresentation::AddToView(vtkView* view)
 {
+  cerr << "ADD TO VIEW " << endl;
+  cerr << "CUBE REP " << this->CubeAxesRepresentation << endl;
   view->AddRepresentation(this->CubeAxesRepresentation);
+  cerr << "SELECTION REP " << this->SelectionRepresentation << endl;
   view->AddRepresentation(this->SelectionRepresentation);
+  cerr << "Add internals to view" << endl;
   return this->Superclass::AddToView(view);
 }
 

@@ -112,6 +112,8 @@ vtkGeometryRepresentation::vtkGeometryRepresentation()
   this->SetDebugString(this->GetClassName());
 
   this->SetupDefaults();
+
+  cerr << "CREATED GEOM REP " << this << " " << this->GetClassName() << endl;
 }
 
 //----------------------------------------------------------------------------
