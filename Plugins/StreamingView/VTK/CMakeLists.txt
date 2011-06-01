@@ -12,7 +12,16 @@ INCLUDE ( ${VTK_USE_FILE} )
 SET ( VTK_LINK_LIBRARIES
   vtkRendering vtkGraphics vtkFiltering vtkCommon vtkIO vtkImaging vtkNetCDF)
 
+FIND_LIBRARY(KAKADU_LIBRARY libkdu.a PATHS /opt/demo/kakadu/v6_4_1-01135N/lib/Linux-x86-64-gcc)
+FIND_LIBRARY(KAKADU_AUX_LIBRARY libkdu_aux.a PATHS /opt/demo/kakadu/v6_4_1-01135N/lib/Linux-x86-64-gcc)
+
+FIND_PATH (KAKADU_INCLUDE
+  kdu_arch.h /opt/demo/kakadu/v6_4_1-01135N/coresys/common
+  DOC "kakadu managed all includes directory" 
+  )
+
 INCLUDE_DIRECTORIES(${VTKNETCDF_BINARY_DIR})
+INCLUDE_DIRECTORIES(${KAKADU_INCLUDE})
 
 SET(vtkStreaming_SOURCES
   vtkACosmoReader.cxx
@@ -21,6 +30,7 @@ SET(vtkStreaming_SOURCES
   vtkGridSampler2.cxx
   vtkImageNetCDFPOPReader.cxx
   vtkIterativeStreamer.cxx
+  vtkKakaduReader.cxx
   vtkMetaInfoDatabase.cxx
   vtkMultiResolutionStreamer.cxx
   vtkParallelStreamHelper.cxx
@@ -45,6 +55,7 @@ ENDIF(NOT WIN32)
 ADD_LIBRARY(vtkStreaming ${vtkStreaming_SOURCES})
 
 TARGET_LINK_LIBRARIES( vtkStreaming ${VTK_LINK_LIBRARIES} )
+TARGET_LINK_LIBRARIES( vtkStreaming ${KAKADU_AUX_LIBRARY} ${KAKADU_LIBRARY})
 
 IF (BUILD_AGAINST_PARAVIEW)
 
@@ -60,6 +71,7 @@ IF (BUILD_AGAINST_PARAVIEW)
       vtkACosmoReader
       vtkImageNetCDFPOPReader
       vtkIterativeStreamer
+      vtkKakaduReader
       vtkMultiResolutionStreamer
       vtkParallelStreamHelper
       vtkPrioritizedStreamer

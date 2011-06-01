@@ -14,4 +14,9 @@
           file_description="POP Ocean NetCDF (streaming image)">
   </Reader>
 
+  <Reader name="KakaduReader"
+          extensions="jpx jp2"
+          file_description="jpeg2000 streaming images">
+  </Reader>
+
 </ParaViewReaders>
